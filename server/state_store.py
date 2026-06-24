@@ -44,6 +44,10 @@ class StateStore:
         """
         with self.lock:
             self.parameters[key] = value
+    
+    def update_snapshot(self, snapshot):
+        with self.lock:
+            self.parameters = snapshot
 
     def add_event(self, event):
         """

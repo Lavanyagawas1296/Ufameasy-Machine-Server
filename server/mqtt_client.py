@@ -5,7 +5,7 @@ Owns the Paho MQTT client, subscribes to machine topics, converts incoming
 parameter payloads, and updates the shared state store. This module is the
 ingest side of the MQTT -> StateStore -> API architecture.
 """
-
+import json
 import paho.mqtt.client as mqtt
 
 from server.state_store import state
@@ -31,7 +31,7 @@ def on_connect(client, userdata, flags, reason_code, properties=None):
     print("Connected to MQTT broker")
     # One wildcard subscription keeps routing centralized in on_message.
     # client.subscribe("ufameasy/#")
-    client.subscribe("ufameasy/parameters/LASER_POWER")
+    client.subscribe("ufameasy/#")
 
 
 def on_message(client, userdata, msg):
@@ -56,8 +56,16 @@ def on_message(client, userdata, msg):
     print(f"Received topic={msg.topic}")
     payload = msg.payload.decode()
 
-    if msg.topic.startswith("ufameasy/parameters/"):
-        # The final topic segment is the state key exposed through the API.
+    # Snapshot message
+    if msg.topic.startswith("ufameasy/params/snapshot/"):
+        snapshot = json.loads(payload)
+
+        state.update_snapshot(snapshot)
+
+        print(f"[SNAPSHOT] Loaded "f"{len(snapshot)} parameters")
+
+    # Single parameter message
+    elif msg.topic.startswith("ufameasy/parameters/"):
         param_name = msg.topic.split("/")[-1]
 
         try:
@@ -65,10 +73,9 @@ def on_message(client, userdata, msg):
         except ValueError:
             value = payload
 
-        state.update_parameter(param_name, value)
+        state.update_parameter(param_name,value)
 
-        print(f"[PARAM] {param_name} = {value}")
-
+        print(f"[PARAM] "f"{param_name} = {value}")
 
 client = mqtt.Client(mqtt.CallbackAPIVersion.VERSION2)
 
