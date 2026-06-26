@@ -6,11 +6,13 @@ startup, and exposes lightweight state and health-style endpoints. This
 module connects the HTTP layer to the shared in-memory state store.
 """
 
-from fastapi import FastAPI
+from fastapi import FastAPI, WebSocket, WebSocketDisconnect
+from fastapi.responses import FileResponse
 from server.state_store import state
 from contextlib import asynccontextmanager
 from server.mqtt_client import start_mqtt
 from server.routes import router
+from server.ws_manager import manager
 
 
 @asynccontextmanager
@@ -50,12 +52,12 @@ def debug():
 @app.get("/")
 def root():
     """
-    Return a simple service status response.
+    Return the machine parameter UI.
 
     Returns:
-        Dictionary indicating that the API process is running.
+        HTML file response for the browser UI.
     """
-    return {"status": "running"}
+    return FileResponse("ui/index.html")
 
 @app.get("/state")
 def get_state():
@@ -66,5 +68,24 @@ def get_state():
         Shared parameter dictionary maintained by the state store.
     """
     return state.parameters
+
+@app.get("/snapshots")
+def get_snapshots():
+    return state.get_all_snapshots()
+
+@app.get("/events")
+def get_events():
+    return state.events
+
+@app.websocket("/ws")
+async def websocket_endpoint(websocket: WebSocket):
+    await manager.connect(websocket)
+    try:
+        while True:
+            await websocket.receive_text()
+    except WebSocketDisconnect:
+        pass
+    finally:
+        manager.disconnect(websocket)
 
 app.include_router(router)

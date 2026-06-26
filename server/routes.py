@@ -64,3 +64,8 @@ def health():
         Dictionary indicating that the route layer is responsive.
     """
     return {"status": "ok"}
+
+@router.get("/snapshots")
+def get_snapshots():
+    print(f"GET snapshots "f"id(state)={id(state)} "f"id(snapshot_store)={id(state.slice_snapshots)} "f"keys={list(state.slice_snapshots.keys())}")
+    return state.get_all_snapshots()

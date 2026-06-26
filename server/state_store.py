@@ -25,6 +25,7 @@ class StateStore:
             Creates mutable dictionaries/lists owned by this store instance.
         """
         self.parameters = {}
+        self.slice_snapshots = {}
         self.events = []
         self.lock = Lock()
 
@@ -45,27 +46,26 @@ class StateStore:
         with self.lock:
             self.parameters[key] = value
     
-    def update_snapshot(self, snapshot):
+    def update_snapshot(self, slice_idx, snapshot):
         with self.lock:
-            self.parameters = snapshot
+            print(f"STORE BEFORE: {list(self.slice_snapshots.keys())}")
 
-    def add_event(self, event):
-        """
-        Append an event to the bounded in-memory event history.
+            self.slice_snapshots[str(slice_idx)] = snapshot
 
-        Args:
-            event: Event payload to retain for recent-history inspection.
-
-        Returns:
-            None.
-
-        Side Effects:
-            Mutates the event list and drops the oldest event after 100 items.
-        """
-        self.events.append(event)
-
-        # Keep memory usage predictable for a long-running API process.
-        if len(self.events) > 100:
+            print(f"STORE AFTER : {list(self.slice_snapshots.keys())}")
+        
+    def get_all_snapshots(self):
+        with self.lock:
+            return self.slice_snapshots
+    
+    def add_event(self, event_type: str, details: dict):
+        from datetime import datetime
+        self.events.append({
+            "type": event_type,
+            "timestamp": datetime.now().strftime("%H:%M:%S"),
+            "details": details
+        })
+        if len(self.events) > 50:
             self.events.pop(0)
 
 
