@@ -303,6 +303,26 @@
       <div class="label">Machine State</div>
       <div id="rtState"><span class="state-badge idle">IDLE</span></div>
     </div>
+    <!-- Estimated Time -->
+    <div class="rt-card">
+      <div class="label">Estimated Time</div>
+      <div class="val" id="est-time">â€”</div>
+    </div>
+    <!-- Powder Usage -->
+    <div class="rt-card">
+      <div class="label">Powder Usage</div>
+      <div class="val" id="est-powder">â€”</div>
+    </div>
+    <!-- Deposition Efficiency -->
+    <div class="rt-card">
+      <div class="label">Dep. Efficiency</div>
+      <div class="val" id="est-efficiency">â€”</div>
+    </div>
+    <!-- Energy -->
+    <div class="rt-card">
+      <div class="label">Energy (Wh)</div>
+      <div class="val" id="est-energy">â€”</div>
+    </div>
   </div>
 </div>
 
@@ -380,6 +400,10 @@
   const rtLaser    = document.getElementById("rtLaser");
   const rtPower    = document.getElementById("rtPower");
   const rtState    = document.getElementById("rtState");
+  const estTime    = document.getElementById("est-time");
+  const estPowder  = document.getElementById("est-powder");
+  const estEfficiency = document.getElementById("est-efficiency");
+  const estEnergy  = document.getElementById("est-energy");
 
   // ── State ──
   const rowsByKey = new Map();
@@ -438,6 +462,10 @@
     rtGas.innerHTML   = pill(false);
     rtLaser.innerHTML = pill(false);
     rtState.innerHTML = stateBadge(null);
+    estTime.textContent = "â€”";
+    estPowder.textContent = "â€”";
+    estEfficiency.textContent = "â€”";
+    estEnergy.textContent = "â€”";
     totalLayers = 0;
   }
 
@@ -752,6 +780,16 @@
             execution_state: d.execution_state  ?? d.RT001,
           });
           logEvent("runtime_update");
+          break;
+        }
+
+        case "estimate_result": {
+          const d = msg.data || {};
+          estTime.textContent = d.total_time_fmt ?? "â€”";
+          estPowder.textContent = d.total_powder_g != null ? d.total_powder_g.toFixed(1) + "g" : "â€”";
+          estEfficiency.textContent = d.deposition_efficiency != null ? (d.deposition_efficiency * 100).toFixed(1) + "%" : "â€”";
+          estEnergy.textContent = d.total_energy_wh != null ? d.total_energy_wh.toFixed(2) : "â€”";
+          logEvent("estimate_result");
           break;
         }
 

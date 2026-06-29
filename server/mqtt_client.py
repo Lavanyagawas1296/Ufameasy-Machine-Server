@@ -7,6 +7,7 @@ ingest side of the MQTT -> StateStore -> API architecture.
 """
 import asyncio
 import json
+import threading
 import paho.mqtt.client as mqtt
 
 from server.db import (
@@ -105,6 +106,30 @@ def on_message(client, userdata, msg):
 
     if len(topic_parts) >= 3 and topic_parts[0] == "ufameasy":
         device_id = topic_parts[1]
+
+        if topic_parts[2:] == ["estimate_request"]:
+            data = json.loads(payload)
+
+            def _run():
+                import sys
+
+                workbench_path = r"D:\UFAMeasy_Workspace\UFAMeasy\Mod\RadialInfillWorkbench"
+                if workbench_path not in sys.path:
+                    sys.path.insert(0, workbench_path)
+
+                from core.job_estimator import estimate_gcode_file, format_duration
+
+                r = estimate_gcode_file(data["combined_gcode_path"])
+                _broadcast({"type": "estimate_result", "data": {
+                    "total_time_fmt": format_duration(r["total_time_s"]),
+                    "total_powder_g": r["total_powder_g"],
+                    "deposition_efficiency": r["kpis"].get("deposition_efficiency", 0),
+                    "total_energy_wh": r["total_energy_wh"],
+                    "layer_count": r["layer_count"],
+                }})
+
+            threading.Thread(target=_run, daemon=True).start()
+            return
 
         if topic_parts[2:] == ["session", "start"]:
             data = json.loads(payload)
