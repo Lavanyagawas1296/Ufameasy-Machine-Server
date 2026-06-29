@@ -31,6 +31,7 @@ async def lifespan(app: FastAPI):
         Starts the MQTT network loop in a background thread.
     """
     # MQTT must start before requests are served so API reads see live updates.
+    init_db()
     start_mqtt()
     yield
 

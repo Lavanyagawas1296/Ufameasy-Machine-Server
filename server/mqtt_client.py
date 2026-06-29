@@ -170,8 +170,22 @@ def on_message(client, userdata, msg):
             session_id = _active_sessions.get(device_id)
 
             if session_id is None:
-                print(f"[SESSION] No active session for device_id={device_id}; ignoring slice {slice_idx}")
-                return
+                auto_session_id = f"auto-{device_id}"
+                try:
+                    register_device(device_id, device_id)
+                    create_session(auto_session_id, device_id, "unknown", 0)
+                except Exception as exc:
+                    print(f"[DB] auto-session create failed: {exc}")
+                _active_sessions[device_id] = auto_session_id
+                session_id = auto_session_id
+                _broadcast({
+                    "type": "session_start",
+                    "device_id": device_id,
+                    "session_id": session_id,
+                    "file_name": "unknown",
+                    "total_layers": 0,
+                })
+                print(f"[SESSION] Auto-created session for device_id={device_id}")
 
             try:
                 insert_slice_data(session_id, slice_idx, data)
