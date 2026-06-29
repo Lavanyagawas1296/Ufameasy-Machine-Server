@@ -107,7 +107,7 @@ def on_message(client, userdata, msg):
     if len(topic_parts) >= 3 and topic_parts[0] == "ufameasy":
         device_id = topic_parts[1]
 
-        if topic_parts[2:] == ["estimate_request"]:
+        if topic_parts[2:] == ["estimate", "request"]:
             data = json.loads(payload)
 
             def _run():

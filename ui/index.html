@@ -270,18 +270,18 @@
     <!-- File name -->
     <div class="rt-card wide">
       <div class="label">Current File</div>
-      <div class="val" id="rtFile">—</div>
+      <div class="val" id="rtFile">&mdash;</div>
     </div>
     <!-- Layer progress -->
     <div class="rt-card progress-card">
       <div class="label">Layer Progress</div>
-      <div class="layer-text"><span id="rtLayer">—</span> / <span id="rtTotal">—</span></div>
+      <div class="layer-text"><span id="rtLayer">&mdash;</span> / <span id="rtTotal">&mdash;</span></div>
       <div class="prog-bar"><div class="prog-fill" id="rtProgFill"></div></div>
     </div>
     <!-- Time remaining -->
     <div class="rt-card">
       <div class="label">Time Remaining</div>
-      <div class="val" id="rtTime">—</div>
+      <div class="val" id="rtTime">&mdash;</div>
     </div>
     <!-- Gas -->
     <div class="rt-card">
@@ -296,7 +296,7 @@
     <!-- Laser Power -->
     <div class="rt-card">
       <div class="label">Laser Power</div>
-      <div class="val" id="rtPower">—</div>
+      <div class="val" id="rtPower">&mdash;</div>
     </div>
     <!-- Machine State -->
     <div class="rt-card">
@@ -306,22 +306,22 @@
     <!-- Estimated Time -->
     <div class="rt-card">
       <div class="label">Estimated Time</div>
-      <div class="val" id="est-time">â€”</div>
+      <div class="val" id="est-time">&mdash;</div>
     </div>
     <!-- Powder Usage -->
     <div class="rt-card">
       <div class="label">Powder Usage</div>
-      <div class="val" id="est-powder">â€”</div>
+      <div class="val" id="est-powder">&mdash;</div>
     </div>
     <!-- Deposition Efficiency -->
     <div class="rt-card">
       <div class="label">Dep. Efficiency</div>
-      <div class="val" id="est-efficiency">â€”</div>
+      <div class="val" id="est-efficiency">&mdash;</div>
     </div>
     <!-- Energy -->
     <div class="rt-card">
       <div class="label">Energy (Wh)</div>
-      <div class="val" id="est-energy">â€”</div>
+      <div class="val" id="est-energy">&mdash;</div>
     </div>
   </div>
 </div>
@@ -462,10 +462,10 @@
     rtGas.innerHTML   = pill(false);
     rtLaser.innerHTML = pill(false);
     rtState.innerHTML = stateBadge(null);
-    estTime.textContent = "â€”";
-    estPowder.textContent = "â€”";
-    estEfficiency.textContent = "â€”";
-    estEnergy.textContent = "â€”";
+    estTime.textContent = "—";
+    estPowder.textContent = "—";
+    estEfficiency.textContent = "—";
+    estEnergy.textContent = "—";
     totalLayers = 0;
   }
 
@@ -514,10 +514,11 @@
 
   function normalizeParam(paramId, param, sliceIdx) {
     const d = param || {};
+    const v = d.value;
     return {
       param_id: String(d.param_id || paramId || ""),
       field:    String(d.field || ""),
-      value:    d.value == null ? "" : String(d.value),
+      value:    v == null ? "" : (typeof v === 'object' && v !== null ? Object.entries(v).map(([k,vv]) => `${k}: ${vv}`).join(', ') : v),
       unit:     String(d.unit || ""),
       domain:   String(d.domain || "Uncategorized"),
       slice_idx:String(d.slice_idx || sliceIdx || "")
@@ -536,9 +537,9 @@
     return rows.sort((a, b) => {
       const d = a.domain.localeCompare(b.domain);
       if (d) return d;
-      const p = a.param_id.localeCompare(b.param_id, undefined, { numeric: true });
-      if (p) return p;
-      return a.slice_idx.localeCompare(b.slice_idx, undefined, { numeric: true });
+      const s = a.slice_idx.localeCompare(b.slice_idx, undefined, { numeric: true });
+      if (s) return s;
+      return a.param_id.localeCompare(b.param_id, undefined, { numeric: true });
     });
   }
 
@@ -575,15 +576,30 @@
     return tr;
   }
 
+  function createSliceHeaderRow(sliceIdx) {
+    const tr = document.createElement("tr");
+    tr.className = "slice-header";
+    const td = document.createElement("td");
+    td.colSpan = 6; td.textContent = `Slice ${sliceIdx}`;
+    tr.appendChild(td);
+    return tr;
+  }
+
   function renderTable(rows) {
     tableBody.textContent = "";
     rowsByKey.clear();
     const sorted = sortRows(rows);
     let currentDomain = null;
+    let currentSlice = null;
     sorted.forEach(row => {
       if (row.domain !== currentDomain) {
         currentDomain = row.domain;
+        currentSlice = null;
         tableBody.appendChild(createDomainRow(currentDomain));
+      }
+      if (row.slice_idx !== currentSlice) {
+        currentSlice = row.slice_idx;
+        tableBody.appendChild(createSliceHeaderRow(currentSlice));
       }
       const tr = createDataRow(row);
       rowsByKey.set(rowKey(row.param_id, row.slice_idx), tr);
@@ -757,7 +773,7 @@
             current_file: msg.file_name,
             total_layers: msg.total_layers,
             current_layer: 0,
-            execution_state: "running"
+            execution_state: "idle"
           });
           logEvent("session_start", msg.file_name);
           break;
@@ -785,10 +801,10 @@
 
         case "estimate_result": {
           const d = msg.data || {};
-          estTime.textContent = d.total_time_fmt ?? "â€”";
-          estPowder.textContent = d.total_powder_g != null ? d.total_powder_g.toFixed(1) + "g" : "â€”";
-          estEfficiency.textContent = d.deposition_efficiency != null ? (d.deposition_efficiency * 100).toFixed(1) + "%" : "â€”";
-          estEnergy.textContent = d.total_energy_wh != null ? d.total_energy_wh.toFixed(2) : "â€”";
+          estTime.textContent = d.total_time_fmt ?? "—";
+          estPowder.textContent = d.total_powder_g != null ? d.total_powder_g.toFixed(1) + "g" : "—";
+          estEfficiency.textContent = d.deposition_efficiency != null ? (d.deposition_efficiency * 100).toFixed(1) + "%" : "—";
+          estEnergy.textContent = d.total_energy_wh != null ? d.total_energy_wh.toFixed(2) : "—";
           logEvent("estimate_result");
           break;
         }
