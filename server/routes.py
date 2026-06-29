@@ -8,6 +8,8 @@ MQTT -> StateStore -> API data flow.
 
 from fastapi import APIRouter
 from server.state_store import state
+from server.db import get_sessions_by_device, get_runtime_latest
+import sqlite3, os
 
 router = APIRouter()
 
@@ -69,3 +71,21 @@ def health():
 def get_snapshots():
     print(f"GET snapshots "f"id(state)={id(state)} "f"id(snapshot_store)={id(state.slice_snapshots)} "f"keys={list(state.slice_snapshots.keys())}")
     return state.get_all_snapshots()
+
+DB_PATH = os.path.join(os.path.dirname(__file__), "data", "params.db")
+
+@router.get("/devices")
+def get_devices():
+    conn = sqlite3.connect(DB_PATH)
+    conn.row_factory = sqlite3.Row
+    rows = conn.execute("SELECT * FROM devices").fetchall()
+    conn.close()
+    return [dict(r) for r in rows]
+
+@router.get("/devices/{device_id}/sessions")
+def get_device_sessions(device_id: str):
+    return get_sessions_by_device(device_id)
+
+@router.get("/sessions/{session_id}/runtime")
+def get_session_runtime(session_id: str):
+    return get_runtime_latest(session_id)

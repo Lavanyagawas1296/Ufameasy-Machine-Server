@@ -9,11 +9,19 @@ import asyncio
 import json
 import paho.mqtt.client as mqtt
 
+from server.db import (
+    close_session,
+    create_session,
+    insert_runtime_log,
+    insert_slice_data,
+    register_device,
+)
 from server.state_store import state
 from server.ws_manager import manager
 
 
 mqtt_event_loop = None
+_active_sessions = {}
 
 
 def _log_broadcast_error(future):
@@ -24,6 +32,15 @@ def _log_broadcast_error(future):
         future.result()
     except Exception as exc:
         print(f"[WS] Broadcast failed: {exc}")
+
+
+def _broadcast(message):
+    if mqtt_event_loop is not None:
+        future = asyncio.run_coroutine_threadsafe(
+            manager.broadcast(message),
+            mqtt_event_loop,
+        )
+        future.add_done_callback(_log_broadcast_error)
 
 
 def on_connect(client, userdata, flags, reason_code, properties=None):
@@ -83,6 +100,92 @@ def on_message(client, userdata, msg):
             future.add_done_callback(_log_broadcast_error)
         print("[SESSION] Reset — cleared all snapshots")
         return
+
+    topic_parts = msg.topic.split("/")
+
+    if len(topic_parts) >= 3 and topic_parts[0] == "ufameasy":
+        device_id = topic_parts[1]
+
+        if topic_parts[2:] == ["session", "start"]:
+            data = json.loads(payload)
+            session_id = data.get("session_id")
+            file_name = data.get("file_name")
+            total_layers = data.get("total_layers")
+
+            try:
+                register_device(device_id, device_id)
+                create_session(session_id, device_id, file_name, total_layers)
+            except Exception as exc:
+                print(f"[DB] session/start failed: {exc}")
+            _active_sessions[device_id] = session_id
+
+            _broadcast({
+                "type": "session_start",
+                "device_id": device_id,
+                "session_id": session_id,
+                "file_name": file_name,
+                "total_layers": total_layers,
+            })
+            return
+
+        if topic_parts[2:] == ["session", "end"]:
+            data = json.loads(payload)
+            session_id = data.get("session_id")
+            status = data.get("status")
+
+            try:
+                close_session(session_id, status)
+            except Exception as exc:
+                print(f"[DB] session/end failed: {exc}")
+            _active_sessions.pop(device_id, None)
+
+            _broadcast({
+                "type": "session_end",
+                "device_id": device_id,
+                "session_id": session_id,
+                "status": status,
+            })
+            return
+
+        if topic_parts[2:] == ["runtime"]:
+            data = json.loads(payload)
+            session_id = data.get("session_id")
+
+            try:
+                insert_runtime_log(session_id, data)
+            except Exception as exc:
+                print(f"[DB] runtime failed: {exc}")
+
+            _broadcast({
+                "type": "runtime_update",
+                "device_id": device_id,
+                "session_id": session_id,
+                "data": data,
+            })
+            return
+
+        if len(topic_parts) == 4 and topic_parts[2] == "slice":
+            data = json.loads(payload)
+            slice_idx = topic_parts[3]
+            session_id = _active_sessions.get(device_id)
+
+            if session_id is None:
+                print(f"[SESSION] No active session for device_id={device_id}; ignoring slice {slice_idx}")
+                return
+
+            try:
+                insert_slice_data(session_id, slice_idx, data)
+            except Exception as exc:
+                print(f"[DB] slice failed: {exc}")
+
+            _broadcast({
+                "type": "slice_update",
+                "device_id": device_id,
+                "session_id": session_id,
+                "slice_idx": slice_idx,
+                "data": data,
+            })
+            return
 
     # Snapshot message
     if msg.topic.startswith("ufameasy/params/snapshot/"):

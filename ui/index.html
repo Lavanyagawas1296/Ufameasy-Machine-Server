@@ -3,702 +3,794 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>UFAMeasy Machine Parameters</title>
+  <title>UFAMeasy Machine Server</title>
   <style>
     :root {
-      color-scheme: dark;
-      --bg: #1a1a1a;
-      --panel: #242424;
-      --panel-soft: #2d2d2d;
-      --border: #3a3a3a;
-      --text: #f2f2f2;
-      --muted: #a8a8a8;
-      --green: #27c46a;
-      --red: #ef4444;
-      --yellow: #facc15;
+      --bg: #0f1117;
+      --panel: #181c26;
+      --panel2: #1e2333;
+      --border: #2a2f42;
+      --text: #e8eaf0;
+      --muted: #7a8099;
+      --green: #22d36e;
+      --red: #f04e4e;
+      --yellow: #f5c842;
+      --blue: #3b82f6;
+      --accent: #00e5b0;
+      --font-mono: "JetBrains Mono", "Consolas", monospace;
+      --font-ui: "Inter", "Segoe UI", Arial, sans-serif;
     }
-
-    * {
-      box-sizing: border-box;
-    }
-
+    * { box-sizing: border-box; margin: 0; padding: 0; }
     body {
-      margin: 0;
-      min-height: 100vh;
       background: var(--bg);
       color: var(--text);
-      font-family: Arial, Helvetica, sans-serif;
+      font-family: var(--font-ui);
+      min-height: 100vh;
+      font-size: 14px;
     }
 
+    /* ── TOPBAR ── */
     .topbar {
-      position: sticky;
-      top: 0;
-      z-index: 10;
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      gap: 16px;
-      padding: 14px 20px;
-      background: #202020;
+      display: flex; align-items: center; gap: 16px;
+      padding: 0 20px; height: 52px;
+      background: #13161f;
+      border-bottom: 1px solid var(--border);
+      position: sticky; top: 0; z-index: 100;
+    }
+    .brand {
+      font-size: 15px; font-weight: 700; letter-spacing: 0.04em;
+      color: var(--accent); white-space: nowrap;
+    }
+    .brand span { color: var(--muted); font-weight: 400; }
+    .topbar-mid { flex: 1; display: flex; align-items: center; gap: 10px; }
+    select#deviceSelect {
+      background: var(--panel2); color: var(--text);
+      border: 1px solid var(--border); border-radius: 5px;
+      padding: 5px 10px; font-size: 13px; font-family: var(--font-ui);
+      min-width: 180px; cursor: pointer; outline: none;
+    }
+    select#deviceSelect:focus { border-color: var(--accent); }
+    .topbar-right { display: flex; align-items: center; gap: 14px; }
+    .conn-badge {
+      display: flex; align-items: center; gap: 7px;
+      font-size: 13px; color: var(--muted);
+    }
+    .dot {
+      width: 9px; height: 9px; border-radius: 50%;
+      background: var(--red);
+      box-shadow: 0 0 8px rgba(240,78,78,0.5);
+      flex-shrink: 0;
+    }
+    .dot.on { background: var(--green); box-shadow: 0 0 8px rgba(34,211,110,0.5); }
+
+    /* ── RUNTIME PANEL ── */
+    .runtime-panel {
+      padding: 16px 20px 12px;
+      background: var(--panel);
       border-bottom: 1px solid var(--border);
     }
-
-    .brand {
-      font-size: 18px;
-      font-weight: 700;
-      letter-spacing: 0;
+    .runtime-row {
+      display: flex; gap: 10px; flex-wrap: wrap;
+      align-items: stretch;
     }
-
-    .status-area {
-      display: flex;
-      align-items: center;
-      gap: 18px;
-      color: var(--muted);
-      font-size: 14px;
-    }
-
-    .connection {
-      display: inline-flex;
-      align-items: center;
-      gap: 8px;
-      color: var(--text);
-    }
-
-    .dot {
-      width: 10px;
-      height: 10px;
-      border-radius: 999px;
-      background: var(--red);
-      box-shadow: 0 0 10px rgba(239, 68, 68, 0.45);
-    }
-
-    .dot.connected {
-      background: var(--green);
-      box-shadow: 0 0 10px rgba(39, 196, 106, 0.45);
-    }
-
-    main {
-      width: min(1280px, calc(100vw - 32px));
-      margin: 24px auto;
-    }
-
-    .toolbar {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      gap: 16px;
-      margin-bottom: 16px;
-    }
-
-    .search {
-      width: min(420px, 100%);
-      padding: 11px 13px;
-      color: var(--text);
-      background: var(--panel);
+    .rt-card {
+      background: var(--panel2);
       border: 1px solid var(--border);
-      border-radius: 6px;
-      font-size: 15px;
-      outline: none;
+      border-radius: 7px;
+      padding: 10px 14px;
+      min-width: 140px; flex: 1;
+    }
+    .rt-card .label {
+      font-size: 10px; text-transform: uppercase;
+      letter-spacing: 0.08em; color: var(--muted);
+      margin-bottom: 6px;
+    }
+    .rt-card .val {
+      font-family: var(--font-mono);
+      font-size: 18px; font-weight: 600;
+      color: var(--text);
+    }
+    .rt-card.wide { min-width: 220px; }
+    .rt-card.progress-card { min-width: 260px; }
+
+    /* progress bar */
+    .prog-bar {
+      height: 5px; border-radius: 3px;
+      background: var(--border); margin-top: 8px; overflow: hidden;
+    }
+    .prog-fill {
+      height: 100%; border-radius: 3px;
+      background: var(--accent);
+      transition: width 0.4s ease;
+      width: 0%;
+    }
+    .layer-text {
+      font-family: var(--font-mono); font-size: 14px; color: var(--text);
     }
 
-    .search:focus {
-      border-color: #6b7280;
+    /* ON/OFF toggle display */
+    .pill {
+      display: inline-block;
+      padding: 2px 10px; border-radius: 999px;
+      font-size: 12px; font-weight: 700;
+      letter-spacing: 0.05em; font-family: var(--font-mono);
     }
+    .pill.on  { background: rgba(34,211,110,0.15); color: var(--green); border: 1px solid var(--green); }
+    .pill.off { background: rgba(240,78,78,0.12);  color: var(--red);   border: 1px solid var(--red); }
 
-    .summary {
-      color: var(--muted);
-      font-size: 14px;
-      white-space: nowrap;
+    /* machine state badge */
+    .state-badge {
+      display: inline-block; padding: 3px 10px;
+      border-radius: 5px; font-size: 13px; font-weight: 600;
+      font-family: var(--font-mono); background: var(--border); color: var(--muted);
     }
+    .state-badge.running { background: rgba(34,211,110,0.12); color: var(--green); }
+    .state-badge.paused  { background: rgba(245,200,66,0.12);  color: var(--yellow); }
+    .state-badge.idle    { background: var(--border); color: var(--muted); }
+
+    /* ── COLLAPSIBLE SECTIONS ── */
+    .section-bar {
+      display: flex; align-items: center; gap: 10px;
+      padding: 10px 20px;
+      border-bottom: 1px solid var(--border);
+      background: var(--panel);
+    }
+    .toggle-btn {
+      display: flex; align-items: center; gap: 7px;
+      background: var(--panel2); border: 1px solid var(--border);
+      color: var(--text); border-radius: 5px;
+      padding: 6px 13px; font-size: 13px; cursor: pointer;
+      font-family: var(--font-ui);
+      transition: border-color 0.15s;
+    }
+    .toggle-btn:hover { border-color: var(--accent); }
+    .toggle-btn .arrow { transition: transform 0.2s; }
+    .toggle-btn.open .arrow { transform: rotate(180deg); }
+
+    /* ── COLLAPSIBLE CONTENT ── */
+    .collapse { display: none; }
+    .collapse.open { display: block; }
+
+    /* ── MAIN CONTENT AREA ── */
+    main { padding: 0; }
+
+    /* ── PARAMS TABLE ── */
+    .params-area { padding: 16px 20px; }
+    .toolbar {
+      display: flex; align-items: center; gap: 12px;
+      margin-bottom: 12px;
+    }
+    .search {
+      flex: 1; max-width: 380px;
+      padding: 8px 12px;
+      background: var(--panel2); border: 1px solid var(--border);
+      border-radius: 5px; color: var(--text);
+      font-size: 13px; font-family: var(--font-ui); outline: none;
+    }
+    .search:focus { border-color: var(--accent); }
+    .summary { color: var(--muted); font-size: 13px; }
 
     .table-wrap {
-      max-height: calc(100vh - 300px);
-      overflow: auto;
-      border: 1px solid var(--border);
-      border-radius: 8px;
+      border: 1px solid var(--border); border-radius: 7px;
+      overflow: auto; max-height: 380px;
       background: var(--panel);
     }
+    .table-wrap.hidden { display: none; }
 
-    table {
-      width: 100%;
-      border-collapse: collapse;
-      min-width: 760px;
-    }
-
-    th,
-    td {
-      padding: 11px 12px;
-      border-bottom: 1px solid var(--border);
-      text-align: left;
-      vertical-align: middle;
-    }
-
+    table { width: 100%; border-collapse: collapse; min-width: 680px; }
+    th, td { padding: 9px 11px; border-bottom: 1px solid var(--border); text-align: left; }
     th {
-      position: sticky;
-      top: 0;
-      z-index: 5;
-      background: #1a1a1a;
-      color: #d9d9d9;
-      font-size: 12px;
-      letter-spacing: 0;
-      text-transform: uppercase;
+      position: sticky; top: 0; z-index: 5;
+      background: #13161f; color: var(--muted);
+      font-size: 11px; letter-spacing: 0.07em; text-transform: uppercase;
     }
-
-    td {
-      color: #ececec;
-      font-size: 14px;
-    }
-
+    td { font-size: 13px; color: #d6dae8; }
     .domain-row th {
-      position: static;
-      padding: 9px 12px;
-      background: var(--panel-soft);
-      color: #ffffff;
+      position: static; background: var(--panel2);
+      color: var(--text); font-size: 12px; text-transform: none;
+      border-top: 1px solid #3a3f55; padding: 7px 11px;
+    }
+    .param-id, .value, .slice { font-family: var(--font-mono); }
+    .value { transition: background 0.8s ease; }
+    .value.flash { background: rgba(245,200,66,0.28); color: var(--yellow); transition: background 0s; }
+
+    /* ── SESSION LIST ── */
+    .sessions-area { padding: 16px 20px; }
+    .session-list { display: flex; flex-direction: column; gap: 7px; }
+    .session-item {
+      display: flex; align-items: center; gap: 14px;
+      background: var(--panel2); border: 1px solid var(--border);
+      border-radius: 6px; padding: 10px 14px;
       font-size: 13px;
-      text-transform: none;
-      border-top: 1px solid #464646;
     }
-
-    .param-id,
-    .value,
-    .slice {
-      font-family: Consolas, "Courier New", monospace;
+    .session-item .sfile { font-family: var(--font-mono); flex: 1; color: var(--text); }
+    .session-item .stime { color: var(--muted); white-space: nowrap; }
+    .session-item .slayers { color: var(--muted); white-space: nowrap; }
+    .session-status {
+      padding: 2px 8px; border-radius: 999px; font-size: 11px; font-weight: 700;
+      font-family: var(--font-mono);
     }
+    .session-status.active { background: rgba(34,211,110,0.15); color: var(--green); }
+    .session-status.ended  { background: var(--border); color: var(--muted); }
+    .no-sessions { color: var(--muted); font-size: 13px; padding: 8px 0; }
 
-    .value {
-      transition: background-color 0.9s ease;
-    }
-
-    .value.flash {
-      background: var(--yellow);
-      color: #151515;
-      transition: background-color 0s;
-    }
-
+    /* ── EMPTY STATE ── */
     .empty {
-      display: none;
-      padding: 42px 16px;
-      color: var(--muted);
-      text-align: center;
-      border: 1px solid var(--border);
-      border-radius: 8px;
-      background: var(--panel);
+      display: none; padding: 36px 16px; text-align: center;
+      color: var(--muted); border: 1px solid var(--border);
+      border-radius: 7px; background: var(--panel);
     }
+    .empty.visible { display: block; }
 
-    .empty.visible {
-      display: block;
+    /* ── EVENTS ── */
+    .events-wrap {
+      margin: 0 20px 20px;
+      background: var(--panel); border: 1px solid var(--border);
+      border-radius: 7px; overflow: hidden;
     }
-
-    .events-panel {
-      height: 200px;
-      overflow-y: auto;
-      margin-top: 16px;
-      padding: 14px;
-      color: #d7d7d7;
-      background: #222222;
-      border: 1px solid var(--border);
-      border-radius: 8px;
-      font-family: Consolas, "Courier New", monospace;
+    .events-head {
+      padding: 8px 14px; font-size: 11px; font-weight: 700;
+      letter-spacing: 0.07em; text-transform: uppercase;
+      color: var(--muted); border-bottom: 1px solid var(--border);
+      background: var(--panel2);
     }
-
-    .events-panel h2 {
-      margin: 0 0 10px;
-      font-family: Arial, Helvetica, sans-serif;
-      font-size: 15px;
-      font-weight: 700;
+    .events-body {
+      height: 120px; overflow-y: auto; padding: 8px 14px;
+      font-family: var(--font-mono); font-size: 12px;
     }
+    .events-list { list-style: none; display: flex; flex-direction: column-reverse; gap: 4px; }
+    .events-list li { color: var(--muted); }
+    .events-list li span { color: var(--accent); margin-right: 6px; }
 
-    .events-list {
-      display: flex;
-      flex-direction: column-reverse;
-      gap: 6px;
-      margin: 0;
-      padding: 0;
-      list-style: none;
-      font-size: 13px;
-    }
-
-    .events-list li {
-      color: #cfcfcf;
-    }
-
-    .table-wrap.hidden {
-      display: none;
-    }
-
-    @media (max-width: 720px) {
-      .topbar,
-      .toolbar {
-        align-items: flex-start;
-        flex-direction: column;
-      }
-
-      .status-area {
-        align-items: flex-start;
-        flex-direction: column;
-        gap: 8px;
-      }
-
-      .search {
-        width: 100%;
-      }
+    @media (max-width: 700px) {
+      .runtime-row { flex-direction: column; }
+      .topbar { flex-wrap: wrap; height: auto; padding: 10px; }
     }
   </style>
 </head>
 <body>
-  <header class="topbar">
-    <div class="brand">UFAMeasy Machine Parameters</div>
-    <div class="status-area">
-      <div class="connection" aria-live="polite">
-        <span id="statusDot" class="dot"></span>
-        <span id="statusText">Disconnected</span>
+
+<!-- TOPBAR -->
+<header class="topbar">
+  <div class="brand">UFAMeasy <span>Machine Server</span></div>
+  <div class="topbar-mid">
+    <select id="deviceSelect"><option value="">— select device —</option></select>
+  </div>
+  <div class="topbar-right">
+    <div class="conn-badge">
+      <span id="statusDot" class="dot"></span>
+      <span id="statusText">Disconnected</span>
+    </div>
+  </div>
+</header>
+
+<!-- RUNTIME PANEL (always visible) -->
+<div class="runtime-panel">
+  <div class="runtime-row">
+    <!-- File name -->
+    <div class="rt-card wide">
+      <div class="label">Current File</div>
+      <div class="val" id="rtFile">—</div>
+    </div>
+    <!-- Layer progress -->
+    <div class="rt-card progress-card">
+      <div class="label">Layer Progress</div>
+      <div class="layer-text"><span id="rtLayer">—</span> / <span id="rtTotal">—</span></div>
+      <div class="prog-bar"><div class="prog-fill" id="rtProgFill"></div></div>
+    </div>
+    <!-- Time remaining -->
+    <div class="rt-card">
+      <div class="label">Time Remaining</div>
+      <div class="val" id="rtTime">—</div>
+    </div>
+    <!-- Gas -->
+    <div class="rt-card">
+      <div class="label">Gas</div>
+      <div id="rtGas"><span class="pill off">OFF</span></div>
+    </div>
+    <!-- Laser -->
+    <div class="rt-card">
+      <div class="label">Laser</div>
+      <div id="rtLaser"><span class="pill off">OFF</span></div>
+    </div>
+    <!-- Laser Power -->
+    <div class="rt-card">
+      <div class="label">Laser Power</div>
+      <div class="val" id="rtPower">—</div>
+    </div>
+    <!-- Machine State -->
+    <div class="rt-card">
+      <div class="label">Machine State</div>
+      <div id="rtState"><span class="state-badge idle">IDLE</span></div>
+    </div>
+  </div>
+</div>
+
+<!-- SECTION TOGGLES -->
+<div class="section-bar">
+  <button class="toggle-btn" id="btnParams" onclick="toggleSection('params')">
+    View Parameters <span class="arrow">▼</span>
+  </button>
+  <button class="toggle-btn" id="btnSessions" onclick="toggleSection('sessions')">
+    Session History <span class="arrow">▼</span>
+  </button>
+</div>
+
+<main>
+  <!-- PARAMS SECTION -->
+  <div class="collapse" id="secParams">
+    <div class="params-area">
+      <div class="toolbar">
+        <input id="searchInput" class="search" type="search" placeholder="Search Param ID or Field…" autocomplete="off">
+        <span id="summary" class="summary">0 parameters</span>
       </div>
-      <div id="lastUpdated">Last updated: --:--:--</div>
+      <div id="emptyState" class="empty">No snapshot data yet</div>
+      <div id="tableWrap" class="table-wrap hidden">
+        <table>
+          <thead>
+            <tr>
+              <th>Param ID</th><th>Field</th><th>Value</th>
+              <th>Unit</th><th>Domain</th><th>Slice</th>
+            </tr>
+          </thead>
+          <tbody id="tableBody"></tbody>
+        </table>
+      </div>
     </div>
-  </header>
+  </div>
 
-  <main>
-    <div class="toolbar">
-      <input id="searchInput" class="search" type="search" placeholder="Search by Param ID or Field" autocomplete="off">
-      <div id="summary" class="summary">0 parameters</div>
+  <!-- SESSIONS SECTION -->
+  <div class="collapse" id="secSessions">
+    <div class="sessions-area">
+      <div id="sessionList" class="session-list">
+        <div class="no-sessions">Select a device to view session history.</div>
+      </div>
     </div>
+  </div>
 
-    <div id="emptyState" class="empty">No data yet</div>
-
-    <div id="tableWrap" class="table-wrap hidden">
-      <table>
-        <thead>
-          <tr>
-            <th>Param ID</th>
-            <th>Field</th>
-            <th>Value</th>
-            <th>Unit</th>
-            <th>Domain</th>
-            <th>Slice</th>
-          </tr>
-        </thead>
-        <tbody id="tableBody"></tbody>
-      </table>
-    </div>
-
-    <div class="events-panel">
-      <h2>Recent Activity</h2>
+  <!-- EVENTS LOG -->
+  <div class="events-wrap">
+    <div class="events-head">Activity Log</div>
+    <div class="events-body">
       <ul id="eventsList" class="events-list"></ul>
     </div>
-  </main>
+  </div>
+</main>
 
-  <script>
-    const tableBody = document.getElementById("tableBody");
-    const tableWrap = document.getElementById("tableWrap");
-    const emptyState = document.getElementById("emptyState");
-    const searchInput = document.getElementById("searchInput");
-    const summary = document.getElementById("summary");
-    const statusDot = document.getElementById("statusDot");
-    const statusText = document.getElementById("statusText");
-    const lastUpdated = document.getElementById("lastUpdated");
-    const eventsList = document.getElementById("eventsList");
+<script>
+  // ── DOM refs ──
+  const tableBody     = document.getElementById("tableBody");
+  const tableWrap     = document.getElementById("tableWrap");
+  const emptyState    = document.getElementById("emptyState");
+  const searchInput   = document.getElementById("searchInput");
+  const summary       = document.getElementById("summary");
+  const statusDot     = document.getElementById("statusDot");
+  const statusText    = document.getElementById("statusText");
+  const eventsList    = document.getElementById("eventsList");
+  const deviceSelect  = document.getElementById("deviceSelect");
+  const sessionList   = document.getElementById("sessionList");
 
-    const rowsByKey = new Map();
-    let socket = null;
-    let reconnectTimer = null;
+  // ── Runtime card refs ──
+  const rtFile     = document.getElementById("rtFile");
+  const rtLayer    = document.getElementById("rtLayer");
+  const rtTotal    = document.getElementById("rtTotal");
+  const rtProgFill = document.getElementById("rtProgFill");
+  const rtTime     = document.getElementById("rtTime");
+  const rtGas      = document.getElementById("rtGas");
+  const rtLaser    = document.getElementById("rtLaser");
+  const rtPower    = document.getElementById("rtPower");
+  const rtState    = document.getElementById("rtState");
 
-    function rowKey(paramId, sliceIdx) {
-      return `${sliceIdx}::${paramId}`;
+  // ── State ──
+  const rowsByKey = new Map();
+  let socket = null;
+  let reconnectTimer = null;
+  let totalLayers = 0;
+
+  // ── Section toggle ──
+  function toggleSection(name) {
+    const secs = { params: "secParams", sessions: "secSessions" };
+    const btns = { params: "btnParams", sessions: "btnSessions" };
+    const sec = document.getElementById(secs[name]);
+    const btn = document.getElementById(btns[name]);
+    const isOpen = sec.classList.contains("open");
+    // close all
+    Object.values(secs).forEach(id => document.getElementById(id).classList.remove("open"));
+    Object.values(btns).forEach(id => document.getElementById(id).classList.remove("open"));
+    if (!isOpen) {
+      sec.classList.add("open");
+      btn.classList.add("open");
     }
+  }
 
-    function normalizeParam(paramId, param, sliceIdx) {
-      const data = param || {};
+  // ── Runtime panel updates ──
+  function pill(on) {
+    return `<span class="pill ${on ? 'on' : 'off'}">${on ? 'ON' : 'OFF'}</span>`;
+  }
+  function stateBadge(s) {
+    const cls = s === "running" ? "running" : s === "paused" ? "paused" : "idle";
+    return `<span class="state-badge ${cls}">${String(s || "IDLE").toUpperCase()}</span>`;
+  }
 
-      return {
-        param_id: String(data.param_id || paramId || ""),
-        field: String(data.field || ""),
-        value: data.value == null ? "" : String(data.value),
-        unit: String(data.unit || ""),
-        domain: String(data.domain || "Uncategorized"),
-        slice_idx: String(data.slice_idx || sliceIdx || "")
-      };
+  function updateRuntime(data) {
+    if (!data) return;
+    if (data.current_file  !== undefined) rtFile.textContent  = data.current_file || "—";
+    if (data.current_layer !== undefined) {
+      rtLayer.textContent = data.current_layer;
+      const pct = totalLayers > 0 ? Math.min(100, (data.current_layer / totalLayers) * 100) : 0;
+      rtProgFill.style.width = pct + "%";
     }
+    if (data.total_layers  !== undefined) {
+      totalLayers = data.total_layers || 0;
+      rtTotal.textContent = totalLayers || "—";
+    }
+    if (data.time_remaining !== undefined) rtTime.textContent = data.time_remaining ?? "—";
+    if (data.gas_enabled    !== undefined) rtGas.innerHTML   = pill(data.gas_enabled);
+    if (data.laser_enabled  !== undefined) rtLaser.innerHTML  = pill(data.laser_enabled);
+    if (data.laser_power_pct !== undefined) rtPower.textContent = (data.laser_power_pct ?? "—") + (data.laser_power_pct != null ? "%" : "");
+    if (data.execution_state !== undefined) rtState.innerHTML = stateBadge(data.execution_state);
+  }
 
-    function flattenSnapshots(snapshots) {
-      const rows = [];
+  function clearRuntime() {
+    rtFile.textContent = "—"; rtLayer.textContent = "—"; rtTotal.textContent = "—";
+    rtTime.textContent = "—"; rtPower.textContent = "—";
+    rtProgFill.style.width = "0%";
+    rtGas.innerHTML   = pill(false);
+    rtLaser.innerHTML = pill(false);
+    rtState.innerHTML = stateBadge(null);
+    totalLayers = 0;
+  }
 
-      Object.entries(snapshots || {}).forEach(([sliceIdx, params]) => {
-        Object.entries(params || {}).forEach(([paramId, param]) => {
-          rows.push(normalizeParam(paramId, param, sliceIdx));
-        });
+  // ── Device dropdown ──
+  async function loadDevices() {
+    try {
+      const res = await fetch("/devices");
+      const devs = await res.json();
+      devs.forEach(d => {
+        const opt = document.createElement("option");
+        opt.value = d.device_id;
+        opt.textContent = d.device_id;
+        deviceSelect.appendChild(opt);
       });
+    } catch(e) { console.error("loadDevices", e); }
+  }
 
-      return rows;
-    }
-
-    function sortRows(rows) {
-      return rows.sort((a, b) => {
-        const domainCompare = a.domain.localeCompare(b.domain);
-        if (domainCompare !== 0) return domainCompare;
-
-        const paramCompare = a.param_id.localeCompare(b.param_id, undefined, { numeric: true });
-        if (paramCompare !== 0) return paramCompare;
-
-        return a.slice_idx.localeCompare(b.slice_idx, undefined, { numeric: true });
-      });
-    }
-
-    function createCell(text, className) {
-      const cell = document.createElement("td");
-      cell.textContent = text;
-      if (className) cell.className = className;
-      return cell;
-    }
-
-    function createDataRow(row) {
-      const tr = document.createElement("tr");
-      tr.id = `row-${row.slice_idx}-${row.param_id}`;
-      tr.dataset.key = rowKey(row.param_id, row.slice_idx);
-      tr.dataset.paramId = row.param_id.toLowerCase();
-      tr.dataset.field = row.field.toLowerCase();
-      tr.dataset.domain = row.domain;
-
-      tr.appendChild(createCell(row.param_id, "param-id"));
-      tr.appendChild(createCell(row.field, "field"));
-      tr.appendChild(createCell(row.value, "value"));
-      tr.appendChild(createCell(row.unit, "unit"));
-      tr.appendChild(createCell(row.domain, "domain"));
-      tr.appendChild(createCell(row.slice_idx, "slice"));
-
-      return tr;
-    }
-
-    function createDomainRow(domain) {
-      const tr = document.createElement("tr");
-      tr.className = "domain-row";
-      tr.dataset.domainHeader = domain;
-
-      const th = document.createElement("th");
-      th.colSpan = 6;
-      th.textContent = domain;
-      tr.appendChild(th);
-
-      return tr;
-    }
-
-    function renderTable(rows) {
-      tableBody.textContent = "";
-      rowsByKey.clear();
-
-      const sortedRows = sortRows(rows);
-      let currentDomain = null;
-
-      sortedRows.forEach((row) => {
-        if (row.domain !== currentDomain) {
-          currentDomain = row.domain;
-          tableBody.appendChild(createDomainRow(currentDomain));
-        }
-
-        const tr = createDataRow(row);
-        rowsByKey.set(rowKey(row.param_id, row.slice_idx), tr);
-        tableBody.appendChild(tr);
-      });
-
-      updateVisibility();
-    }
-
-    function syncSummary() {
-      const visibleRows = Array.from(tableBody.querySelectorAll("tr[data-key]")).filter((row) => row.style.display !== "none").length;
-      const label = visibleRows === 1 ? "parameter" : "parameters";
-      summary.textContent = `${visibleRows} ${label}`;
-    }
-
-    function updateEmptyState() {
-      const totalRows = rowsByKey.size;
-      const hasVisibleRows = Array.from(rowsByKey.values()).some((row) => row.style.display !== "none");
-
-      emptyState.classList.toggle("visible", totalRows === 0 || !hasVisibleRows);
-      emptyState.textContent = totalRows === 0 ? "No data yet" : "No matching data";
-      tableWrap.classList.toggle("hidden", totalRows === 0);
-    }
-
-    function updateDomainHeaders() {
-      const headers = Array.from(tableBody.querySelectorAll("tr[data-domain-header]"));
-
-      headers.forEach((header) => {
-        const domain = header.dataset.domainHeader;
-        const hasVisibleRows = Array.from(rowsByKey.values())
-          .filter((row) => row.dataset.domain === domain)
-          .some((row) => row.style.display !== "none");
-        header.style.display = hasVisibleRows ? "" : "none";
-      });
-    }
-
-    function updateVisibility() {
-      const query = searchInput.value.trim().toLowerCase();
-
-      rowsByKey.forEach((row) => {
-        const matches = !query || row.dataset.paramId.startsWith(query) || row.dataset.field.includes(query);
-        row.style.display = matches ? "" : "none";
-      });
-
-      updateDomainHeaders();
-      updateEmptyState();
-      syncSummary();
-    }
-
-    function flashCell(cell) {
-      cell.classList.remove("flash");
-      void cell.offsetWidth;
-      cell.classList.add("flash");
-      window.setTimeout(() => cell.classList.remove("flash"), 500);
-    }
-
-    function removeNoDataPlaceholder() {
-      const placeholderRow = tableBody.querySelector(".no-data-placeholder");
-      if (placeholderRow) {
-        placeholderRow.remove();
+  deviceSelect.addEventListener("change", async () => {
+    const id = deviceSelect.value;
+    if (!id) { sessionList.innerHTML = '<div class="no-sessions">Select a device to view session history.</div>'; return; }
+    try {
+      const res  = await fetch(`/devices/${id}/sessions`);
+      const rows = await res.json();
+      if (!rows.length) {
+        sessionList.innerHTML = '<div class="no-sessions">No sessions recorded for this device.</div>';
+        return;
       }
+      sessionList.innerHTML = "";
+      rows.forEach(s => {
+        const div = document.createElement("div");
+        div.className = "session-item";
+        const statusCls = s.status === "active" ? "active" : "ended";
+        div.innerHTML = `
+          <span class="sfile">${s.file_name || "—"}</span>
+          <span class="stime">${s.started_at || ""}</span>
+          <span class="slayers">${s.total_layers != null ? s.total_layers + " layers" : ""}</span>
+          <span class="session-status ${statusCls}">${(s.status || "ended").toUpperCase()}</span>
+        `;
+        sessionList.appendChild(div);
+      });
+    } catch(e) { console.error("sessions fetch", e); }
+  });
 
-      emptyState.classList.remove("visible");
-      tableWrap.classList.remove("hidden");
-    }
+  // ── Params table (preserved logic) ──
+  function rowKey(paramId, sliceIdx) { return `${sliceIdx}::${paramId}`; }
 
-    function updateCell(rowElement, selector, value) {
-      const cell = rowElement.querySelector(selector);
-      if (cell.textContent !== value) {
-        cell.textContent = value;
-        flashCell(cell);
-      }
-    }
+  function normalizeParam(paramId, param, sliceIdx) {
+    const d = param || {};
+    return {
+      param_id: String(d.param_id || paramId || ""),
+      field:    String(d.field || ""),
+      value:    d.value == null ? "" : String(d.value),
+      unit:     String(d.unit || ""),
+      domain:   String(d.domain || "Uncategorized"),
+      slice_idx:String(d.slice_idx || sliceIdx || "")
+    };
+  }
 
-    function compareRows(a, b) {
-      const domainCompare = a.domain.localeCompare(b.domain);
-      if (domainCompare !== 0) return domainCompare;
+  function flattenSnapshots(snapshots) {
+    const rows = [];
+    Object.entries(snapshots || {}).forEach(([si, params]) => {
+      Object.entries(params || {}).forEach(([pid, p]) => rows.push(normalizeParam(pid, p, si)));
+    });
+    return rows;
+  }
 
-      const paramCompare = a.param_id.localeCompare(b.param_id, undefined, { numeric: true });
-      if (paramCompare !== 0) return paramCompare;
-
+  function sortRows(rows) {
+    return rows.sort((a, b) => {
+      const d = a.domain.localeCompare(b.domain);
+      if (d) return d;
+      const p = a.param_id.localeCompare(b.param_id, undefined, { numeric: true });
+      if (p) return p;
       return a.slice_idx.localeCompare(b.slice_idx, undefined, { numeric: true });
-    }
+    });
+  }
 
-    function getRowData(tr) {
-      return {
-        param_id: tr.children[0].textContent,
-        field: tr.children[1].textContent,
-        value: tr.children[2].textContent,
-        unit: tr.children[3].textContent,
-        domain: tr.children[4].textContent,
-        slice_idx: tr.children[5].textContent
-      };
-    }
+  function createCell(text, cls) {
+    const td = document.createElement("td");
+    td.textContent = text;
+    if (cls) td.className = cls;
+    return td;
+  }
 
-    function ensureDomainHeader(domain) {
-      let header = Array.from(tableBody.querySelectorAll("tr[data-domain-header]"))
-        .find((item) => item.dataset.domainHeader === domain);
-      if (header) return header;
+  function createDataRow(row) {
+    const tr = document.createElement("tr");
+    tr.id = `row-${row.slice_idx}-${row.param_id}`;
+    tr.dataset.key = rowKey(row.param_id, row.slice_idx);
+    tr.dataset.paramId = row.param_id.toLowerCase();
+    tr.dataset.field = row.field.toLowerCase();
+    tr.dataset.domain = row.domain;
+    tr.appendChild(createCell(row.param_id, "param-id"));
+    tr.appendChild(createCell(row.field, "field"));
+    tr.appendChild(createCell(row.value, "value"));
+    tr.appendChild(createCell(row.unit, "unit"));
+    tr.appendChild(createCell(row.domain, "domain"));
+    tr.appendChild(createCell(row.slice_idx, "slice"));
+    return tr;
+  }
 
-      header = createDomainRow(domain);
-      const headers = Array.from(tableBody.querySelectorAll("tr[data-domain-header]"));
-      const nextHeader = headers.find((item) => item.dataset.domainHeader.localeCompare(domain) > 0);
+  function createDomainRow(domain) {
+    const tr = document.createElement("tr");
+    tr.className = "domain-row";
+    tr.dataset.domainHeader = domain;
+    const th = document.createElement("th");
+    th.colSpan = 6; th.textContent = domain;
+    tr.appendChild(th);
+    return tr;
+  }
 
-      if (nextHeader) {
-        tableBody.insertBefore(header, nextHeader);
-      } else {
-        tableBody.appendChild(header);
+  function renderTable(rows) {
+    tableBody.textContent = "";
+    rowsByKey.clear();
+    const sorted = sortRows(rows);
+    let currentDomain = null;
+    sorted.forEach(row => {
+      if (row.domain !== currentDomain) {
+        currentDomain = row.domain;
+        tableBody.appendChild(createDomainRow(currentDomain));
       }
-
-      return header;
-    }
-
-    function insertNewRow(row) {
       const tr = createDataRow(row);
-      const header = ensureDomainHeader(row.domain);
-      let cursor = header.nextElementSibling;
-
-      while (cursor && !cursor.dataset.domainHeader) {
-        if (compareRows(row, getRowData(cursor)) < 0) {
-          tableBody.insertBefore(tr, cursor);
-          rowsByKey.set(rowKey(row.param_id, row.slice_idx), tr);
-          return tr;
-        }
-
-        cursor = cursor.nextElementSibling;
-      }
-
-      tableBody.insertBefore(tr, cursor);
       rowsByKey.set(rowKey(row.param_id, row.slice_idx), tr);
-      return tr;
-    }
+      tableBody.appendChild(tr);
+    });
+    updateVisibility();
+  }
 
-    function renderSnapshot(sliceIdx, data) {
-      removeNoDataPlaceholder();
+  function syncSummary() {
+    const n = Array.from(tableBody.querySelectorAll("tr[data-key]")).filter(r => r.style.display !== "none").length;
+    summary.textContent = `${n} parameter${n === 1 ? "" : "s"}`;
+  }
 
-      Object.entries(data || {}).forEach(([paramId, param]) => {
-        const row = normalizeParam(paramId, param, sliceIdx);
-        const id = `row-${row.slice_idx}-${row.param_id}`;
+  function updateEmptyState() {
+    const total = rowsByKey.size;
+    const hasVisible = Array.from(rowsByKey.values()).some(r => r.style.display !== "none");
+    emptyState.classList.toggle("visible", total === 0 || !hasVisible);
+    emptyState.textContent = total === 0 ? "No snapshot data yet" : "No matching parameters";
+    tableWrap.classList.toggle("hidden", total === 0);
+  }
 
-        if (!document.getElementById(id)) {
-          const inserted = insertNewRow(row);
-          flashCell(inserted.querySelector(".value"));
-        }
-      });
+  function updateDomainHeaders() {
+    tableBody.querySelectorAll("tr[data-domain-header]").forEach(h => {
+      const domain = h.dataset.domainHeader;
+      const vis = Array.from(rowsByKey.values()).filter(r => r.dataset.domain === domain).some(r => r.style.display !== "none");
+      h.style.display = vis ? "" : "none";
+    });
+  }
 
-      updateVisibility();
-    }
+  function updateVisibility() {
+    const q = searchInput.value.trim().toLowerCase();
+    rowsByKey.forEach(row => {
+      const match = !q || row.dataset.paramId.startsWith(q) || row.dataset.field.includes(q);
+      row.style.display = match ? "" : "none";
+    });
+    updateDomainHeaders();
+    updateEmptyState();
+    syncSummary();
+  }
 
-    function insertOrUpdateRow(row) {
-      const key = rowKey(row.param_id, row.slice_idx);
-      const existing = rowsByKey.get(key);
+  function flashCell(cell) {
+    cell.classList.remove("flash");
+    void cell.offsetWidth;
+    cell.classList.add("flash");
+    setTimeout(() => cell.classList.remove("flash"), 500);
+  }
 
-      if (existing) {
-        if (existing.dataset.domain !== row.domain) {
-          existing.remove();
-          rowsByKey.delete(key);
-          const inserted = insertNewRow(row);
-          Array.from(inserted.children).forEach(flashCell);
-          updateVisibility();
-          return;
-        }
+  function updateCell(row, sel, val) {
+    const cell = row.querySelector(sel);
+    if (cell && cell.textContent !== val) { cell.textContent = val; flashCell(cell); }
+  }
 
-        updateCell(existing, ".field", row.field);
-        updateCell(existing, ".value", row.value);
-        updateCell(existing, ".unit", row.unit);
-        updateCell(existing, ".domain", row.domain);
-        updateCell(existing, ".slice", row.slice_idx);
-        existing.dataset.paramId = row.param_id.toLowerCase();
-        existing.dataset.field = row.field.toLowerCase();
-        existing.dataset.domain = row.domain;
-        updateVisibility();
-        return;
+  function compareRows(a, b) {
+    const d = a.domain.localeCompare(b.domain); if (d) return d;
+    const p = a.param_id.localeCompare(b.param_id, undefined, { numeric: true }); if (p) return p;
+    return a.slice_idx.localeCompare(b.slice_idx, undefined, { numeric: true });
+  }
+
+  function getRowData(tr) {
+    return { param_id: tr.children[0].textContent, field: tr.children[1].textContent,
+      value: tr.children[2].textContent, unit: tr.children[3].textContent,
+      domain: tr.children[4].textContent, slice_idx: tr.children[5].textContent };
+  }
+
+  function ensureDomainHeader(domain) {
+    let h = Array.from(tableBody.querySelectorAll("tr[data-domain-header]")).find(x => x.dataset.domainHeader === domain);
+    if (h) return h;
+    h = createDomainRow(domain);
+    const next = Array.from(tableBody.querySelectorAll("tr[data-domain-header]")).find(x => x.dataset.domainHeader.localeCompare(domain) > 0);
+    next ? tableBody.insertBefore(h, next) : tableBody.appendChild(h);
+    return h;
+  }
+
+  function insertNewRow(row) {
+    const tr = createDataRow(row);
+    const header = ensureDomainHeader(row.domain);
+    let cursor = header.nextElementSibling;
+    while (cursor && !cursor.dataset.domainHeader) {
+      if (compareRows(row, getRowData(cursor)) < 0) {
+        tableBody.insertBefore(tr, cursor);
+        rowsByKey.set(rowKey(row.param_id, row.slice_idx), tr);
+        return tr;
       }
-
-      const inserted = insertNewRow(row);
-      flashCell(inserted.querySelector(".value"));
-      updateVisibility();
+      cursor = cursor.nextElementSibling;
     }
+    tableBody.insertBefore(tr, cursor);
+    rowsByKey.set(rowKey(row.param_id, row.slice_idx), tr);
+    return tr;
+  }
 
-    async function fetchSnapshots() {
-      try {
-        const response = await fetch("/snapshots", { cache: "no-store" });
-        if (!response.ok) throw new Error(`HTTP ${response.status}`);
-
-        const snapshots = await response.json();
-        renderTable(flattenSnapshots(snapshots));
-      } catch (error) {
-        console.error("Failed to fetch snapshots", error);
+  function renderSnapshot(sliceIdx, data) {
+    emptyState.classList.remove("visible");
+    tableWrap.classList.remove("hidden");
+    Object.entries(data || {}).forEach(([pid, param]) => {
+      const row = normalizeParam(pid, param, sliceIdx);
+      if (!document.getElementById(`row-${row.slice_idx}-${row.param_id}`)) {
+        flashCell(insertNewRow(row).querySelector(".value"));
       }
+    });
+    updateVisibility();
+  }
+
+  function insertOrUpdateRow(row) {
+    const key = rowKey(row.param_id, row.slice_idx);
+    const ex = rowsByKey.get(key);
+    if (ex) {
+      updateCell(ex, ".field", row.field);
+      updateCell(ex, ".value", row.value);
+      updateCell(ex, ".unit", row.unit);
+      updateCell(ex, ".domain", row.domain);
+      updateCell(ex, ".slice", row.slice_idx);
+      updateVisibility(); return;
     }
+    flashCell(insertNewRow(row).querySelector(".value"));
+    updateVisibility();
+  }
 
-    function setConnectionStatus(connected) {
-      statusDot.classList.toggle("connected", connected);
-      statusText.textContent = connected ? "Connected" : "Disconnected";
-    }
+  // ── Events log ──
+  function logEvent(type, detail) {
+    const li = document.createElement("li");
+    const ts = new Date().toLocaleTimeString("en-US", { hour12: false });
+    li.innerHTML = `<span>${ts}</span>${type}${detail ? " — " + detail : ""}`;
+    eventsList.prepend(li);
+    while (eventsList.children.length > 20) eventsList.lastElementChild.remove();
+  }
 
-    function updateLastUpdated() {
-      lastUpdated.textContent = `Last updated: ${new Date().toLocaleTimeString("en-US", { hour12: false })}`;
-    }
+  // ── WebSocket ──
+  function setConn(on) {
+    statusDot.classList.toggle("on", on);
+    statusText.textContent = on ? "Connected" : "Disconnected";
+  }
 
-    function updateStatus(text) {
-      emptyState.textContent = text;
-      emptyState.classList.add("visible");
-      tableWrap.classList.add("hidden");
-      syncSummary();
-    }
+  async function fetchSnapshots() {
+    try {
+      const res = await fetch("/snapshots", { cache: "no-store" });
+      if (!res.ok) return;
+      renderTable(flattenSnapshots(await res.json()));
+    } catch(e) { console.error("fetchSnapshots", e); }
+  }
 
-    function addActivityEvent(event) {
-      const details = event.details || {};
-      const item = document.createElement("li");
-      item.textContent = `[${event.timestamp}] ${event.type} - slice ${details.slice_idx}, ${details.param_count} params`;
-      eventsList.prepend(item);
+  function scheduleReconnect() {
+    if (reconnectTimer) return;
+    reconnectTimer = setTimeout(() => { reconnectTimer = null; connectWS(); }, 3000);
+  }
 
-      while (eventsList.children.length > 10) {
-        eventsList.lastElementChild.remove();
-      }
-    }
+  function connectWS() {
+    if (socket && (socket.readyState === WebSocket.OPEN || socket.readyState === WebSocket.CONNECTING)) return;
+    socket = new WebSocket(`ws://${location.host}/ws`);
 
-    function addSnapshotActivity(sliceIdx, data) {
-      addActivityEvent({
-        type: "snapshot_received",
-        timestamp: new Date().toLocaleTimeString("en-US", { hour12: false }),
-        details: {
-          slice_idx: sliceIdx,
-          param_count: Object.keys(data || {}).length
+    socket.onopen = async () => {
+      setConn(true);
+      await fetchSnapshots();
+      logEvent("WebSocket connected");
+    };
+
+    socket.onmessage = (ev) => {
+      let msg;
+      try { msg = JSON.parse(ev.data); } catch { return; }
+
+      switch (msg.type) {
+
+        case "session_reset":
+          tableBody.innerHTML = ""; rowsByKey.clear();
+          emptyState.classList.add("visible"); tableWrap.classList.add("hidden");
+          clearRuntime();
+          logEvent("session_reset");
+          break;
+
+        case "session_start":
+          updateRuntime({
+            current_file: msg.file_name,
+            total_layers: msg.total_layers,
+            current_layer: 0,
+            execution_state: "running"
+          });
+          logEvent("session_start", msg.file_name);
+          break;
+
+        case "session_end":
+          updateRuntime({ execution_state: "idle" });
+          logEvent("session_end", msg.status);
+          break;
+
+        case "runtime_update": {
+          const d = msg.data || {};
+          updateRuntime({
+            current_layer:   d.current_layer   ?? d.RT005,
+            total_layers:    d.total_layers     ?? d.PS011,
+            current_file:    d.current_file     ?? d.RT013,
+            time_remaining:  d.time_remaining   ?? d.DS028,
+            gas_enabled:     d.gas_enabled      ?? d.RT029,
+            laser_enabled:   d.laser_enabled    ?? d.RT027,
+            laser_power_pct: d.laser_power_pct  ?? d.DS010,
+            execution_state: d.execution_state  ?? d.RT001,
+          });
+          logEvent("runtime_update");
+          break;
         }
-      });
-    }
 
-    function scheduleReconnect() {
-      if (reconnectTimer) return;
-
-      reconnectTimer = window.setTimeout(() => {
-        reconnectTimer = null;
-        connectWebSocket();
-      }, 3000);
-    }
-
-    function connectWebSocket() {
-      if (socket && (socket.readyState === WebSocket.OPEN || socket.readyState === WebSocket.CONNECTING)) {
-        return;
-      }
-
-      socket = new WebSocket(`ws://${window.location.host}/ws`);
-
-      socket.onopen = async () => {
-        setConnectionStatus(true);
-        await fetchSnapshots();
-      };
-
-      socket.onmessage = (event) => {
-        try {
-          const message = JSON.parse(event.data);
-
-          if (message.type === "session_reset") {
-            tableBody.innerHTML = "";
-            rowsByKey.clear();
-            eventsList.innerHTML = "";
-            updateStatus("Session reset — waiting for new data...");
-            return;
-          }
-
-          if (message.type === "snapshot") {
-            const sliceIdx = String(message.slice_idx || "");
-            let needsInsert = false;
-
-            Object.entries(message.data || {}).forEach(([paramId, param]) => {
-              const row = normalizeParam(paramId, param, sliceIdx);
-              const existingRow = document.getElementById(`row-${row.slice_idx}-${row.param_id}`);
-
-              if (existingRow) {
-                updateCell(existingRow, ".value", row.value);
-              } else {
-                needsInsert = true;
-              }
-            });
-
-            if (needsInsert) {
-              renderSnapshot(sliceIdx, message.data);
-            } else {
-              updateVisibility();
-            }
-
-            updateLastUpdated();
-            addSnapshotActivity(sliceIdx, message.data);
-          }
-        } catch (error) {
-          console.error("Invalid WebSocket message", error);
+        case "snapshot": {
+          const si = String(msg.slice_idx || "");
+          let needInsert = false;
+          Object.entries(msg.data || {}).forEach(([pid, param]) => {
+            const row = normalizeParam(pid, param, si);
+            const ex = document.getElementById(`row-${row.slice_idx}-${row.param_id}`);
+            if (ex) updateCell(ex, ".value", row.value);
+            else needInsert = true;
+          });
+          if (needInsert) renderSnapshot(si, msg.data);
+          else updateVisibility();
+          logEvent("snapshot", `slice ${si}`);
+          break;
         }
-      };
 
-      socket.onerror = () => {
-        setConnectionStatus(false);
-      };
+        case "slice_update": {
+          const si = String(msg.slice_idx || "");
+          Object.entries(msg.data || {}).forEach(([pid, param]) => {
+            insertOrUpdateRow(normalizeParam(pid, param, si));
+          });
+          logEvent("slice_update", `slice ${si}`);
+          break;
+        }
+      }
+    };
 
-      socket.onclose = () => {
-        setConnectionStatus(false);
-        scheduleReconnect();
-      };
-    }
+    socket.onerror = () => setConn(false);
+    socket.onclose = () => { setConn(false); scheduleReconnect(); };
+  }
 
-    searchInput.addEventListener("input", updateVisibility);
+  searchInput.addEventListener("input", updateVisibility);
 
-    fetchSnapshots();
-    connectWebSocket();
-  </script>
+  // ── Init ──
+  loadDevices();
+  fetchSnapshots();
+  connectWS();
+</script>
 </body>
 </html>

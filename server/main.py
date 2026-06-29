@@ -13,6 +13,7 @@ from contextlib import asynccontextmanager
 from server.mqtt_client import start_mqtt
 from server.routes import router
 from server.ws_manager import manager
+from server.db import init_db
 
 
 @asynccontextmanager
