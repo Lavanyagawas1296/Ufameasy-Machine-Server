@@ -127,6 +127,14 @@ def close_session(session_id, status):
         )
 
 
+def update_session_total_layers(session_id: str, total_layers: int):
+    with sqlite3.connect(DB_PATH) as conn:
+        conn.execute(
+            "UPDATE sessions SET total_layers = ? WHERE session_id = ?",
+            (total_layers, session_id),
+        )
+
+
 def insert_slice_data(session_id, slice_index, params_dict):
     now = datetime.now(timezone.utc).isoformat()
     with sqlite3.connect(DB_PATH) as conn:

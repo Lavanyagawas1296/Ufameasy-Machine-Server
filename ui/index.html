@@ -502,7 +502,6 @@
           <span class="sfile">${s.file_name || "—"}</span>
           <span class="stime">${s.started_at || ""}</span>
           <span class="slayers">${s.total_layers != null ? s.total_layers + " layers" : ""}</span>
-          <span class="session-status ${statusCls}">${(s.status || "ended").toUpperCase()}</span>
         `;
         sessionList.appendChild(div);
       });
@@ -512,13 +511,20 @@
   // ── Params table (preserved logic) ──
   function rowKey(paramId, sliceIdx) { return `${sliceIdx}::${paramId}`; }
 
+  function stringifyValue(v) {
+    if (v == null) return "";
+    if (Array.isArray(v)) return v.map((item, i) => `${i}: ${stringifyValue(item)}`).join(', ');
+    if (typeof v === 'object') return Object.entries(v).map(([k, vv]) => `${k}: ${stringifyValue(vv)}`).join(', ');
+    return String(v);
+  }
+
   function normalizeParam(paramId, param, sliceIdx) {
     const d = param || {};
     const v = d.value;
     return {
       param_id: String(d.param_id || paramId || ""),
       field:    String(d.field || ""),
-      value:    v == null ? "" : (typeof v === 'object' && v !== null ? Object.entries(v).map(([k,vv]) => `${k}: ${vv}`).join(', ') : v),
+      value:    v == null ? "" : stringifyValue(v),
       unit:     String(d.unit || ""),
       domain:   String(d.domain || "Uncategorized"),
       slice_idx:String(d.slice_idx || sliceIdx || "")

@@ -16,6 +16,7 @@ from server.db import (
     insert_runtime_log,
     insert_slice_data,
     register_device,
+    update_session_total_layers,
 )
 from server.state_store import state
 from server.ws_manager import manager
@@ -119,13 +120,37 @@ def on_message(client, userdata, msg):
 
                 from core.job_estimator import estimate_gcode_file, format_duration
 
-                r = estimate_gcode_file(data["combined_gcode_path"])
+                pre = data.get("estimate_result")
+                if pre and not pre.get("error"):
+                    r = pre
+                else:
+                    r = estimate_gcode_file(data["merged_gcode_path"])
+                layer_count = 0
+                try:
+                    with open(data["merged_gcode_path"], "r", encoding="utf-8", errors="ignore") as f:
+                        for line in f:
+                            if line.strip().upper().startswith("%LAYER_START"):
+                                layer_count += 1
+                except Exception as e:
+                    print(f"[ESTIMATE] layer count error: {e}")
+                session_id = _active_sessions.get(device_id)
+                if session_id:
+                    try:
+                        update_session_total_layers(session_id, layer_count)
+                    except Exception as e:
+                        print(f"[DB] update_session_total_layers failed: {e}")
+                    _broadcast({
+                        "type": "runtime_update",
+                        "device_id": device_id,
+                        "session_id": session_id,
+                        "data": {"total_layers": layer_count},
+                    })
                 _broadcast({"type": "estimate_result", "data": {
                     "total_time_fmt": format_duration(r["total_time_s"]),
                     "total_powder_g": r["total_powder_g"],
                     "deposition_efficiency": r["kpis"].get("deposition_efficiency", 0),
                     "total_energy_wh": r["total_energy_wh"],
-                    "layer_count": r["layer_count"],
+                    "layer_count": layer_count,
                 }})
 
             threading.Thread(target=_run, daemon=True).start()
