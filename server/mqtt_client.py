@@ -214,6 +214,15 @@ def on_message(client, userdata, msg):
             })
             return
 
+        if topic_parts[2:] == ["runtime", "position"]:
+            data = json.loads(payload)
+            _broadcast({
+                "type": "position_update",
+                "device_id": device_id,
+                "data": data,
+            })
+            return
+
         if len(topic_parts) == 4 and topic_parts[2] == "slice":
             data = json.loads(payload)
             slice_idx = topic_parts[3]

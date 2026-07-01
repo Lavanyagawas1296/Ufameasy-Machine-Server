@@ -90,6 +90,12 @@
       font-size: 18px; font-weight: 600;
       color: var(--text);
     }
+    .rt-error {
+      margin-top: 6px;
+      min-height: 16px;
+      font-size: 12px;
+      color: var(--red);
+    }
     .rt-card.wide { min-width: 220px; }
     .rt-card.progress-card { min-width: 260px; }
 
@@ -302,6 +308,12 @@
     <div class="rt-card">
       <div class="label">Machine State</div>
       <div id="rtState"><span class="state-badge idle">IDLE</span></div>
+    </div>
+    <!-- Position -->
+    <div class="rt-card">
+      <div class="label">Xma Position</div>
+      <div class="val" id="rtPosition">X &mdash; Y &mdash; Z &mdash; A &mdash; B &mdash; C &mdash;</div>
+      <div class="rt-error" id="rtConnError"></div>
     </div>
     <!-- Estimated Time -->
     <div class="rt-card">
@@ -518,12 +530,38 @@
     return String(v);
   }
 
+  const LABEL_MAP = {
+    "SR001": "Layer Thickness (mm)", "SR002": "First Layer Thickness (mm)",
+    "SR003": "First Layer Feedrate (mm/min)", "SR004": "Standoff Distance (mm)",
+    "SR005": "Spot Size (mm)", "SR006": "Contour Pass",
+    "SR007": "Contour Bead Width (mm)", "SR008": "Perimeter Feedrate (mm/min)",
+    "SR009": "Perimeter First", "SR010": "Seam Style", "SR011": "Seam X (mm)",
+    "SR012": "Seam Y (mm)", "SR013": "Start Point Policy", "SR014": "Fill Pattern",
+    "SR015": "Fill Angle (°)", "SR016": "Infill Bead Width (mm)",
+    "SR017": "Infill Feedrate (mm/min)", "SR018": "Solid Infill Feedrate (mm/min)",
+    "SR019": "Stepover (mm)", "SR020": "Bead Overlap (%)", "SR021": "Bottom Infill Pattern",
+    "SR022": "Deposition Feedrate (mm/min)", "SR023": "Travel Feedrate (mm/min)",
+    "SR024": "Interlayer Dwell (s)", "SR025": "Safe Distance (mm)",
+    "SR026": "Lead-in Distance (mm)", "SR027": "Lead-in Radius (mm)",
+    "SR028": "Lead-out Distance (mm)", "SR029": "Lead-out Radius (mm)",
+    "SR030": "Lead Feedrate (mm/min)", "SR031": "Comments",
+    "DED001": "Laser Power (%)", "DED002": "First Layer Laser Power (%)",
+    "DED003": "PWM Frequency (Hz)", "DED004": "PWM Duty (%)",
+    "DED005": "Powder Flow Rate (gms/min)", "DED006": "PF1", "DED007": "PF2",
+    "DED008": "PF3", "DED009": "PF4", "DED010": "Pre Heat Source",
+    "DED011": "Pre Heat Temperature (°C)", "DED012": "Laser ON Delay (s)",
+    "DED013": "Laser OFF Delay (s)", "DED014": "Gas Delay (s)",
+    "PH001": "Header Gcode", "PH002": "Footer Gcode", "PH003": "Pre Layer Gcode",
+    "PH004": "Layer Gcode", "PH005": "Post Layer Gcode", "PH006": "Post-Process Script",
+    "PH007": "User Defined Script"
+  };
+
   function normalizeParam(paramId, param, sliceIdx) {
     const d = param || {};
     const v = d.value;
     return {
       param_id: String(d.param_id || paramId || ""),
-      field:    String(d.field || ""),
+      field:    LABEL_MAP[String(d.param_id || paramId || "")] || String(d.field || ""),
       value:    v == null ? "" : stringifyValue(v),
       unit:     String(d.unit || ""),
       domain:   String(d.domain || "Uncategorized"),
