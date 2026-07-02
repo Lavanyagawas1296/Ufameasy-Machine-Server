@@ -124,15 +124,14 @@
     .pill.on  { background: rgba(34,211,110,0.15); color: var(--green); border: 1px solid var(--green); }
     .pill.off { background: rgba(240,78,78,0.12);  color: var(--red);   border: 1px solid var(--red); }
 
-    /* machine state badge */
+    /* connection status badge */
     .state-badge {
       display: inline-block; padding: 3px 10px;
       border-radius: 5px; font-size: 13px; font-weight: 600;
       font-family: var(--font-mono); background: var(--border); color: var(--muted);
     }
-    .state-badge.running { background: rgba(34,211,110,0.12); color: var(--green); }
-    .state-badge.paused  { background: rgba(245,200,66,0.12);  color: var(--yellow); }
-    .state-badge.idle    { background: var(--border); color: var(--muted); }
+    .state-badge.connected { background: rgba(34,211,110,0.12); color: var(--green); }
+    .state-badge.disconnected { background: rgba(240,78,78,0.12); color: var(--red); }
 
     /* ── COLLAPSIBLE SECTIONS ── */
     .section-bar {
@@ -304,10 +303,10 @@
       <div class="label">Laser Power</div>
       <div class="val" id="rtPower">&mdash;</div>
     </div>
-    <!-- Machine State -->
+    <!-- Connection -->
     <div class="rt-card">
-      <div class="label">Machine State</div>
-      <div id="rtState"><span class="state-badge idle">IDLE</span></div>
+      <div class="label">Connection</div>
+      <div id="rtState"><span class="state-badge disconnected">DISCONNECTED</span></div>
     </div>
     <!-- Position -->
     <div class="rt-card">
@@ -334,6 +333,11 @@
     <div class="rt-card">
       <div class="label">Energy (Wh)</div>
       <div class="val" id="est-energy">&mdash;</div>
+    </div>
+    <!-- Live Runtime Parameters -->
+    <div class="rt-card wide" style="flex-basis:100%;">
+      <div class="label">Live Runtime Parameters</div>
+      <div id="rtLiveGrid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:6px;font-family:var(--font-mono);font-size:12px;"></div>
     </div>
   </div>
 </div>
@@ -422,6 +426,8 @@
   let socket = null;
   let reconnectTimer = null;
   let totalLayers = 0;
+  let loggedPositionPayload = false;
+  let liveRuntimeData = {};
 
   // ── Section toggle ──
   function toggleSection(name) {
@@ -443,9 +449,55 @@
   function pill(on) {
     return `<span class="pill ${on ? 'on' : 'off'}">${on ? 'ON' : 'OFF'}</span>`;
   }
-  function stateBadge(s) {
-    const cls = s === "running" ? "running" : s === "paused" ? "paused" : "idle";
-    return `<span class="state-badge ${cls}">${String(s || "IDLE").toUpperCase()}</span>`;
+  function stateBadge(connected) {
+    return `<span class="state-badge ${connected ? 'connected' : 'disconnected'}">${connected ? 'CONNECTED' : 'DISCONNECTED'}</span>`;
+  }
+
+  function normalizeConnected(value) {
+    if (typeof value === "boolean") return value;
+    if (typeof value === "number") return value !== 0;
+    if (typeof value === "string") {
+      const s = value.trim().toLowerCase();
+      if (["connected", "online", "true", "1", "yes"].includes(s)) return true;
+      if (["disconnected", "offline", "false", "0", "no"].includes(s)) return false;
+    }
+    return null;
+  }
+
+  function formatAxis(value) {
+    const n = Number(value);
+    return Number.isFinite(n) ? n.toFixed(3) : "—";
+  }
+
+  function formatLiveRuntimeValue(val) {
+    if (val && typeof val === "object") {
+      return Object.entries(val)
+        .filter(([k]) => !["timestamp", "source"].includes(k))
+        .map(([k, v]) => `${k}:${typeof v === "number" ? v.toFixed(3) : v}`)
+        .join(" ");
+    }
+    return typeof val === "number" ? val.toFixed(3) : val;
+  }
+
+  function renderLiveRuntimeGrid(data) {
+    const grid = document.getElementById("rtLiveGrid");
+    if (!grid) return;
+    grid.innerHTML = "";
+    Object.entries(data || {}).forEach(([key, val]) => {
+      const box = document.createElement("div");
+      box.style.cssText = "background:var(--panel2);border:1px solid var(--border);border-radius:4px;padding:4px 8px;";
+
+      const keyEl = document.createElement("span");
+      keyEl.style.color = "var(--muted)";
+      keyEl.textContent = key;
+
+      const valueEl = document.createElement("div");
+      valueEl.textContent = formatLiveRuntimeValue(val);
+
+      box.appendChild(keyEl);
+      box.appendChild(valueEl);
+      grid.appendChild(box);
+    });
   }
 
   function updateRuntime(data) {
@@ -464,7 +516,10 @@
     if (data.gas_enabled    !== undefined) rtGas.innerHTML   = pill(data.gas_enabled);
     if (data.laser_enabled  !== undefined) rtLaser.innerHTML  = pill(data.laser_enabled);
     if (data.laser_power_pct !== undefined) rtPower.textContent = (data.laser_power_pct ?? "—") + (data.laser_power_pct != null ? "%" : "");
-    if (data.execution_state !== undefined) rtState.innerHTML = stateBadge(data.execution_state);
+    const connected = normalizeConnected(data.connected);
+    const connectionState = normalizeConnected(data.connection_state);
+    const isConnected = connected ?? connectionState;
+    if (isConnected !== null) rtState.innerHTML = stateBadge(isConnected);
   }
 
   function clearRuntime() {
@@ -473,11 +528,13 @@
     rtProgFill.style.width = "0%";
     rtGas.innerHTML   = pill(false);
     rtLaser.innerHTML = pill(false);
-    rtState.innerHTML = stateBadge(null);
+    rtState.innerHTML = stateBadge(false);
     estTime.textContent = "—";
     estPowder.textContent = "—";
     estEfficiency.textContent = "—";
     estEnergy.textContent = "—";
+    liveRuntimeData = {};
+    renderLiveRuntimeGrid(liveRuntimeData);
     totalLayers = 0;
   }
 
@@ -816,14 +873,12 @@
           updateRuntime({
             current_file: msg.file_name,
             total_layers: msg.total_layers,
-            current_layer: 0,
-            execution_state: "idle"
+            current_layer: 0
           });
           logEvent("session_start", msg.file_name);
           break;
 
         case "session_end":
-          updateRuntime({ execution_state: "idle" });
           logEvent("session_end", msg.status);
           break;
 
@@ -837,9 +892,26 @@
             gas_enabled:     d.gas_enabled      ?? d.RT029,
             laser_enabled:   d.laser_enabled    ?? d.RT027,
             laser_power_pct: d.laser_power_pct  ?? d.DS010,
-            execution_state: d.execution_state  ?? d.RT001,
+            connected:       d.machine_connected ?? d.RT006,
+            connection_state: d.connection_state ?? d.RT007,
           });
+          liveRuntimeData = { ...liveRuntimeData, ...d };
+          renderLiveRuntimeGrid(liveRuntimeData);
           logEvent("runtime_update");
+          break;
+        }
+
+        case "position_update": {
+          if (!loggedPositionPayload) {
+            console.debug("position_update payload", msg.data);
+            loggedPositionPayload = true;
+          }
+          const d = (msg.data && msg.data.xma) ? msg.data.xma : (msg.data || {});
+          document.getElementById("rtPosition").textContent =
+            `X ${formatAxis(d.x)} Y ${formatAxis(d.y)} Z ${formatAxis(d.z)} ` +
+            `A ${formatAxis(d.a)} B ${formatAxis(d.b)} C ${formatAxis(d.c)}`;
+          liveRuntimeData = { ...liveRuntimeData, xma_live: d };
+          renderLiveRuntimeGrid(liveRuntimeData);
           break;
         }
 
