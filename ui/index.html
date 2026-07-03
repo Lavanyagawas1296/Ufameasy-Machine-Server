@@ -203,11 +203,13 @@
     .sessions-area { padding: 16px 20px; }
     .session-list { display: flex; flex-direction: column; gap: 7px; }
     .session-item {
-      display: flex; align-items: center; gap: 14px;
       background: var(--panel2); border: 1px solid var(--border);
       border-radius: 6px; padding: 10px 14px;
       font-size: 13px;
     }
+    .session-header { display:flex; justify-content:space-between; align-items:center; margin-bottom:4px; }
+    .session-meta { display:flex; gap:14px; font-size:11px; color:var(--muted); flex-wrap:wrap; }
+    .sid { font-family:var(--font-mono); font-size:10px; }
     .session-item .sfile { font-family: var(--font-mono); flex: 1; color: var(--text); }
     .session-item .stime { color: var(--muted); white-space: nowrap; }
     .session-item .slayers { color: var(--muted); white-space: nowrap; }
@@ -307,12 +309,6 @@
     <div class="rt-card">
       <div class="label">Connection</div>
       <div id="rtState"><span class="state-badge disconnected">DISCONNECTED</span></div>
-    </div>
-    <!-- Position -->
-    <div class="rt-card">
-      <div class="label">Xma Position</div>
-      <div class="val" id="rtPosition">X &mdash; Y &mdash; Z &mdash; A &mdash; B &mdash; C &mdash;</div>
-      <div class="rt-error" id="rtConnError"></div>
     </div>
     <!-- Estimated Time -->
     <div class="rt-card">
@@ -429,7 +425,41 @@
   let loggedPositionPayload = false;
   let liveRuntimeData = {};
 
+  async function fetchSessionDetails(sessionId, sessionSummary = {}) {
+    try {
+      const res = await fetch(`/sessions/${sessionId}/replay`);
+      const data = await res.json();
+      if (data.error) { console.error(data.error); return; }
+
+      const snapshots = {};
+      data.slices.forEach(slice => {
+        snapshots[String(slice.slice_index)] = slice.params_json;
+      });
+      console.log("snapshots object:", snapshots);
+      const flattened = flattenSnapshots(snapshots);
+      console.log("flattened rows:", flattened);
+      console.log("rowsByKey size before render:", rowsByKey.size);
+      renderTable(flattened);
+      openSection("params");
+      updateReplayRuntime(data.runtime, sessionSummary);
+      console.log("rowsByKey size after render:", rowsByKey.size);
+      logEvent("session_loaded", sessionId.slice(-8));
+    } catch(e) { console.error("fetchSessionDetails", e); }
+  }
+
   // ── Section toggle ──
+  function openSection(name) {
+    const secs = { params: "secParams", sessions: "secSessions" };
+    const btns = { params: "btnParams", sessions: "btnSessions" };
+    const sec = document.getElementById(secs[name]);
+    const btn = document.getElementById(btns[name]);
+    if (!sec || sec.classList.contains("open")) return;
+    Object.values(secs).forEach(id => document.getElementById(id).classList.remove("open"));
+    Object.values(btns).forEach(id => document.getElementById(id).classList.remove("open"));
+    sec.classList.add("open");
+    btn.classList.add("open");
+  }
+
   function toggleSection(name) {
     const secs = { params: "secParams", sessions: "secSessions" };
     const btns = { params: "btnParams", sessions: "btnSessions" };
@@ -500,6 +530,32 @@
     });
   }
 
+  function latestRuntimeRecord(records) {
+    return Array.isArray(records) && records.length ? records[records.length - 1] : null;
+  }
+
+  function updateReplayRuntime(records, sessionSummary = {}) {
+    const d = latestRuntimeRecord(records);
+    if (!d) return;
+    updateRuntime({
+      current_layer:   d.current_layer   ?? d.RT005,
+      total_layers:    d.total_layers    ?? d.PS011 ?? sessionSummary.total_layers,
+      current_file:    d.current_file    ?? d.file_name ?? d.RT013 ?? sessionSummary.file_name,
+      time_remaining:  d.time_remaining  ?? d.DS028,
+      gas_enabled:     d.gas_enabled     ?? d.RT029,
+      laser_enabled:   d.laser_enabled   ?? d.laser_on ?? d.RT027,
+      laser_power_pct: d.laser_power_pct ?? d.laser_power ?? d.DS010,
+      connected:       d.machine_connected ?? d.connected ?? d.RT006,
+      connection_state: d.connection_state ?? d.RT007,
+      estimated_time:  d.estimated_time  ?? d.total_time_fmt,
+      powder_usage:    d.powder_usage    ?? d.total_powder_g,
+      deposition_efficiency: d.deposition_efficiency,
+      energy:          d.energy          ?? d.total_energy_wh,
+    });
+    liveRuntimeData = { ...d };
+    renderLiveRuntimeGrid(liveRuntimeData);
+  }
+
   function updateRuntime(data) {
     if (!data) return;
     if (data.current_file  !== undefined) rtFile.textContent  = data.current_file || "—";
@@ -520,6 +576,10 @@
     const connectionState = normalizeConnected(data.connection_state);
     const isConnected = connected ?? connectionState;
     if (isConnected !== null) rtState.innerHTML = stateBadge(isConnected);
+    if (data.estimated_time !== undefined) estTime.textContent = data.estimated_time ?? "-";
+    if (data.powder_usage !== undefined) estPowder.textContent = data.powder_usage != null ? data.powder_usage + "g" : "-";
+    if (data.deposition_efficiency !== undefined) estEfficiency.textContent = data.deposition_efficiency != null ? (data.deposition_efficiency * 100).toFixed(1) + "%" : "-";
+    if (data.energy !== undefined) estEnergy.textContent = data.energy ?? "-";
   }
 
   function clearRuntime() {
@@ -549,7 +609,17 @@
         opt.textContent = d.device_id;
         deviceSelect.appendChild(opt);
       });
+      if (devs.length === 1) {
+        deviceSelect.value = devs[0].device_id;
+        deviceSelect.dispatchEvent(new Event("change"));
+      }
     } catch(e) { console.error("loadDevices", e); }
+  }
+
+  function refreshSessions() {
+    const id = deviceSelect.value;
+    if (!id) return;
+    deviceSelect.dispatchEvent(new Event("change"));
   }
 
   deviceSelect.addEventListener("change", async () => {
@@ -566,12 +636,21 @@
       rows.forEach(s => {
         const div = document.createElement("div");
         div.className = "session-item";
-        const statusCls = s.status === "active" ? "active" : "ended";
+        const status = s.status || "ended";
+        const statusCls = (status === "active" || status === "running") ? "active" : "ended";
         div.innerHTML = `
-          <span class="sfile">${s.file_name || "—"}</span>
-          <span class="stime">${s.started_at || ""}</span>
-          <span class="slayers">${s.total_layers != null ? s.total_layers + " layers" : ""}</span>
+          <div class="session-header">
+            <span class="sfile">${s.file_name || "&mdash;"}</span>
+            <span class="session-status ${statusCls}">${status}</span>
+          </div>
+          <div class="session-meta">
+            <span>Start: ${s.started_at || "&mdash;"}</span>
+            <span>End: ${s.ended_at || "&mdash;"}</span>
+            <span>${s.total_layers != null ? s.total_layers + " layers" : "layers unknown"}</span>
+            <span class="sid">ID: ${s.session_id || ""}</span>
+          </div>
         `;
+        div.onclick = () => fetchSessionDetails(s.session_id, s);
         sessionList.appendChild(div);
       });
     } catch(e) { console.error("sessions fetch", e); }
@@ -827,6 +906,10 @@
     while (eventsList.children.length > 20) eventsList.lastElementChild.remove();
   }
 
+  function sessionIdSuffix(sessionId) {
+    return sessionId ? ` #${String(sessionId).slice(-8)}` : "";
+  }
+
   // ── WebSocket ──
   function setConn(on) {
     statusDot.classList.toggle("on", on);
@@ -848,8 +931,7 @@
 
   function connectWS() {
     if (socket && (socket.readyState === WebSocket.OPEN || socket.readyState === WebSocket.CONNECTING)) return;
-    socket = new WebSocket(`ws://${location.host}/ws`);
-
+    socket = new WebSocket(`${location.protocol === "https:" ? "wss" : "ws"}://${location.host}/ws`);
     socket.onopen = async () => {
       setConn(true);
       await fetchSnapshots();
@@ -875,11 +957,13 @@
             total_layers: msg.total_layers,
             current_layer: 0
           });
-          logEvent("session_start", msg.file_name);
+          refreshSessions();
+          logEvent("session_start", `${msg.file_name || ""}${sessionIdSuffix(msg.session_id)}`);
           break;
 
         case "session_end":
-          logEvent("session_end", msg.status);
+          refreshSessions();
+          logEvent("session_end", `${msg.status || ""}${sessionIdSuffix(msg.session_id)}`);
           break;
 
         case "runtime_update": {
@@ -907,9 +991,6 @@
             loggedPositionPayload = true;
           }
           const d = (msg.data && msg.data.xma) ? msg.data.xma : (msg.data || {});
-          document.getElementById("rtPosition").textContent =
-            `X ${formatAxis(d.x)} Y ${formatAxis(d.y)} Z ${formatAxis(d.z)} ` +
-            `A ${formatAxis(d.a)} B ${formatAxis(d.b)} C ${formatAxis(d.c)}`;
           liveRuntimeData = { ...liveRuntimeData, xma_live: d };
           renderLiveRuntimeGrid(liveRuntimeData);
           break;

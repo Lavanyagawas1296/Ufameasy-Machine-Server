@@ -10,6 +10,7 @@ from fastapi import APIRouter
 from server.state_store import state
 from server.db import get_sessions_by_device, get_runtime_latest
 import sqlite3, os
+import json
 
 router = APIRouter()
 
@@ -88,4 +89,53 @@ def get_device_sessions(device_id: str):
 
 @router.get("/sessions/{session_id}/runtime")
 def get_session_runtime(session_id: str):
+    if not session_id or session_id.strip() == "":
+        return {"error": "invalid session_id"}
     return get_runtime_latest(session_id)
+
+@router.get("/sessions")
+def list_sessions():
+    conn = sqlite3.connect(DB_PATH)
+    conn.row_factory = sqlite3.Row
+    rows = conn.execute("SELECT * FROM sessions ORDER BY started_at DESC").fetchall()
+    conn.close()
+    return [dict(r) for r in rows]
+
+@router.get("/sessions/{session_id}")
+def get_session(session_id: str):
+    if not session_id or session_id.strip() == "":
+        return {"error": "invalid session_id"}
+    conn = sqlite3.connect(DB_PATH)
+    conn.row_factory = sqlite3.Row
+    row = conn.execute("SELECT * FROM sessions WHERE session_id=?", (session_id,)).fetchone()
+    conn.close()
+    return dict(row) if row else {"error": "not found"}
+
+@router.get("/sessions/{session_id}/replay")
+def get_session_replay(session_id: str):
+    if not session_id or session_id.strip() == "":
+        return {"error": "invalid session_id"}
+    try:
+        conn = sqlite3.connect(DB_PATH)
+        conn.row_factory = sqlite3.Row
+        runtime = conn.execute("SELECT * FROM runtime_log WHERE session_id=? ORDER BY recorded_at", (session_id,)).fetchall()
+        slices = conn.execute("SELECT * FROM slice_data WHERE session_id=? ORDER BY slice_index", (session_id,)).fetchall()
+        conn.close()
+
+        # Parse params_json from slices
+        parsed_slices = []
+        for s in slices:
+            row_dict = dict(s)
+            if row_dict.get('params_json'):
+                try:
+                    row_dict['params_json'] = json.loads(row_dict['params_json'])
+                except:
+                    pass
+            parsed_slices.append(row_dict)
+
+        return {
+            "runtime": [dict(r) for r in runtime],
+            "slices": parsed_slices
+        }
+    except Exception as e:
+        return {"error": str(e)}, 500
