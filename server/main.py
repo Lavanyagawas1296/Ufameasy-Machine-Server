@@ -81,7 +81,13 @@ def get_events():
 
 @app.websocket("/ws")
 async def websocket_endpoint(websocket: WebSocket):
+    from server.mqtt_client import _active_sessions
+    import json
     await manager.connect(websocket)
+    await websocket.send_text(json.dumps({
+        "type": "init",
+        "active_sessions": _active_sessions
+    }))
     try:
         while True:
             await websocket.receive_text()

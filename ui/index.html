@@ -944,6 +944,20 @@
 
       switch (msg.type) {
 
+        case "init": {
+          const sessions = msg.active_sessions || {};
+          Object.entries(sessions).forEach(([device_id, session_id]) => {
+            const opt = [...deviceSelect.options].find(o => o.value === device_id);
+            if (!opt) {
+              const o = document.createElement("option");
+              o.value = device_id; o.textContent = device_id;
+              deviceSelect.appendChild(o);
+            }
+          });
+          if (deviceSelect.value) refreshSessions();
+          break;
+        }
+
         case "session_reset":
           tableBody.innerHTML = ""; rowsByKey.clear();
           emptyState.classList.add("visible"); tableWrap.classList.add("hidden");
