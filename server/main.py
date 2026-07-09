@@ -82,12 +82,21 @@ def get_events():
 @app.websocket("/ws")
 async def websocket_endpoint(websocket: WebSocket):
     from server.mqtt_client import _active_sessions
-    import json
+    from server.db import get_session_by_id
+    import json, asyncio
     await manager.connect(websocket)
-    await websocket.send_text(json.dumps({
-        "type": "init",
-        "active_sessions": _active_sessions
-    }))
+    await asyncio.sleep(0.1)
+    try:
+        sessions_data = {}
+        for device_id, session_id in _active_sessions.items():
+            sessions_data[device_id] = get_session_by_id(session_id)
+        await websocket.send_text(json.dumps({
+            "type": "init",
+            "active_sessions": _active_sessions,
+            "sessions_data": sessions_data
+        }))
+    except Exception:
+        pass
     try:
         while True:
             await websocket.receive_text()

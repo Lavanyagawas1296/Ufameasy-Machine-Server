@@ -604,15 +604,13 @@
       const res = await fetch("/devices");
       const devs = await res.json();
       devs.forEach(d => {
-        const opt = document.createElement("option");
-        opt.value = d.device_id;
-        opt.textContent = d.device_id;
-        deviceSelect.appendChild(opt);
+        if (![...deviceSelect.options].some(o => o.value === d.device_id)) {
+          const opt = document.createElement("option");
+          opt.value = d.device_id;
+          opt.textContent = d.device_id;
+          deviceSelect.appendChild(opt);
+        }
       });
-      if (devs.length === 1) {
-        deviceSelect.value = devs[0].device_id;
-        deviceSelect.dispatchEvent(new Event("change"));
-      }
     } catch(e) { console.error("loadDevices", e); }
   }
 
@@ -623,6 +621,7 @@
   }
 
   deviceSelect.addEventListener("change", async () => {
+    clearRuntime();
     const id = deviceSelect.value;
     if (!id) { sessionList.innerHTML = '<div class="no-sessions">Select a device to view session history.</div>'; return; }
     try {
@@ -946,15 +945,32 @@
 
         case "init": {
           const sessions = msg.active_sessions || {};
-          Object.entries(sessions).forEach(([device_id, session_id]) => {
-            const opt = [...deviceSelect.options].find(o => o.value === device_id);
-            if (!opt) {
+          const sessionsData = msg.sessions_data || {};
+          Object.entries(sessions).forEach(([device_id]) => {
+            if (![...deviceSelect.options].some(o => o.value === device_id)) {
               const o = document.createElement("option");
               o.value = device_id; o.textContent = device_id;
               deviceSelect.appendChild(o);
             }
           });
-          if (deviceSelect.value) refreshSessions();
+          const currentVal = deviceSelect.value;
+          const activeDevices = Object.keys(sessions);
+          if (!currentVal || !sessions[currentVal]) {
+            if (activeDevices.length === 1) {
+              deviceSelect.value = activeDevices[0];
+            }
+          }
+          const selected = deviceSelect.value;
+          if (selected) {
+            if (sessionsData[selected]) {
+              const s = sessionsData[selected];
+              updateRuntime({ current_file: s.file_name, total_layers: s.total_layers, current_layer: 0 });
+            } else {
+              clearRuntime();
+              rtFile.textContent = "No active session";
+            }
+            refreshSessions();
+          }
           break;
         }
 

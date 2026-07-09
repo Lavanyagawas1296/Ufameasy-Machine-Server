@@ -7,6 +7,12 @@ from pathlib import Path
 DB_PATH = Path(__file__).resolve().parent / "data" / "params.db"
 
 
+def get_conn():
+    conn = sqlite3.connect(DB_PATH)
+    conn.row_factory = sqlite3.Row
+    return conn
+
+
 def init_db():
     with sqlite3.connect(DB_PATH) as conn:
         conn.execute(
@@ -187,8 +193,7 @@ def insert_runtime_log(session_id, runtime_dict):
 
 
 def get_sessions_by_device(device_id):
-    with sqlite3.connect(DB_PATH) as conn:
-        conn.row_factory = sqlite3.Row
+    with get_conn() as conn:
         rows = conn.execute(
             """
             SELECT
@@ -208,9 +213,16 @@ def get_sessions_by_device(device_id):
     return [dict(row) for row in rows]
 
 
+def get_session_by_id(session_id: str) -> dict:
+    with get_conn() as conn:
+        row = conn.execute(
+            "SELECT * FROM sessions WHERE session_id = ?", (session_id,)
+        ).fetchone()
+        return dict(row) if row else {}
+
+
 def get_runtime_latest(session_id):
-    with sqlite3.connect(DB_PATH) as conn:
-        conn.row_factory = sqlite3.Row
+    with get_conn() as conn:
         row = conn.execute(
             """
             SELECT
