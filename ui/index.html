@@ -281,9 +281,13 @@
     </div>
     <!-- Layer progress -->
     <div class="rt-card progress-card">
-      <div class="label">Layer Progress</div>
-      <div class="layer-text"><span id="rtLayer">&mdash;</span> / <span id="rtTotal">&mdash;</span></div>
-      <div class="prog-bar"><div class="prog-fill" id="rtProgFill"></div></div>
+      <div class="label">Print Progress</div>
+      <div style="margin-top:8px;">
+        <div style="background:#333; border-radius:4px; height:8px; width:100%;">
+          <div id="progressBar" style="background:#00c8a0; height:8px; border-radius:4px; width:0%; transition:width 0.4s;"></div>
+        </div>
+        <div id="progressPct" style="font-size:1.1em; margin-top:6px;">&mdash;</div>
+      </div>
     </div>
     <!-- Time remaining -->
     <div class="rt-card">
@@ -406,7 +410,8 @@
   const rtFile     = document.getElementById("rtFile");
   const rtLayer    = document.getElementById("rtLayer");
   const rtTotal    = document.getElementById("rtTotal");
-  const rtProgFill = document.getElementById("rtProgFill");
+  const rtProgFill = document.getElementById("progressBar");
+  const progressPct = document.getElementById("progressPct");
   const rtTime     = document.getElementById("rtTime");
   const rtGas      = document.getElementById("rtGas");
   const rtLaser    = document.getElementById("rtLaser");
@@ -499,7 +504,15 @@
     return Number.isFinite(n) ? n.toFixed(3) : "—";
   }
 
-  function formatLiveRuntimeValue(val) {
+  function formatLiveRuntimeValue(key, val) {
+    if (key === "xma_live") {
+      const axes = ["X", "Y", "Z", "A", "B", "C"];
+      const arr = Array.isArray(val) ? val : Object.values(val || {});
+      return axes
+        .slice(0, arr.length)
+        .map((k, i) => `${k}: ${Number(arr[i]).toFixed(3)}`)
+        .join(" | ");
+    }
     if (val && typeof val === "object") {
       return Object.entries(val)
         .filter(([k]) => !["timestamp", "source"].includes(k))
@@ -513,16 +526,23 @@
     const grid = document.getElementById("rtLiveGrid");
     if (!grid) return;
     grid.innerHTML = "";
+    const HEADER_KEYS = new Set([
+      "laser_enabled", "gas_enabled", "current_file",
+      "connection_state", "laser_power_pct", "machine_connected",
+      "progress_pct"
+    ]);
     Object.entries(data || {}).forEach(([key, val]) => {
+      if (HEADER_KEYS.has(key)) return;
       const box = document.createElement("div");
       box.style.cssText = "background:var(--panel2);border:1px solid var(--border);border-radius:4px;padding:4px 8px;";
 
       const keyEl = document.createElement("span");
       keyEl.style.color = "var(--muted)";
-      keyEl.textContent = key;
+      keyEl.textContent = LABEL_MAP[key] || key;
 
       const valueEl = document.createElement("div");
-      valueEl.textContent = formatLiveRuntimeValue(val);
+      if (key === "xma_live") valueEl.style.whiteSpace = "pre-line";
+      valueEl.textContent = formatLiveRuntimeValue(key, val);
 
       box.appendChild(keyEl);
       box.appendChild(valueEl);
@@ -560,13 +580,13 @@
     if (!data) return;
     if (data.current_file  !== undefined) rtFile.textContent  = data.current_file || "—";
     if (data.current_layer !== undefined) {
-      rtLayer.textContent = data.current_layer;
+      if (rtLayer) rtLayer.textContent = data.current_layer;
       const pct = totalLayers > 0 ? Math.min(100, (data.current_layer / totalLayers) * 100) : 0;
-      rtProgFill.style.width = pct + "%";
+      if (rtProgFill) rtProgFill.style.width = pct + "%";
     }
     if (data.total_layers  !== undefined) {
       totalLayers = data.total_layers || 0;
-      rtTotal.textContent = totalLayers || "—";
+      if (rtTotal) rtTotal.textContent = totalLayers || "—";
     }
     if (data.time_remaining !== undefined) rtTime.textContent = data.time_remaining ?? "—";
     if (data.gas_enabled    !== undefined) rtGas.innerHTML   = pill(data.gas_enabled);
@@ -583,9 +603,12 @@
   }
 
   function clearRuntime() {
-    rtFile.textContent = "—"; rtLayer.textContent = "—"; rtTotal.textContent = "—";
+    rtFile.textContent = "—";
+    if (rtLayer) rtLayer.textContent = "—";
+    if (rtTotal) rtTotal.textContent = "—";
     rtTime.textContent = "—"; rtPower.textContent = "—";
-    rtProgFill.style.width = "0%";
+    if (rtProgFill) rtProgFill.style.width = "0%";
+    if (progressPct) progressPct.textContent = "—";
     rtGas.innerHTML   = pill(false);
     rtLaser.innerHTML = pill(false);
     rtState.innerHTML = stateBadge(false);
@@ -666,6 +689,7 @@
   }
 
   const LABEL_MAP = {
+    "xma_live": "Machine Position",
     "SR001": "Layer Thickness (mm)", "SR002": "First Layer Thickness (mm)",
     "SR003": "First Layer Feedrate (mm/min)", "SR004": "Standoff Distance (mm)",
     "SR005": "Spot Size (mm)", "SR006": "Contour Pass",
@@ -1010,6 +1034,12 @@
             connection_state: d.connection_state ?? d.RT007,
           });
           liveRuntimeData = { ...liveRuntimeData, ...d };
+          const pct = liveRuntimeData.progress_pct;
+          if (pct !== undefined && pct !== null) {
+            const p = Math.min(100, Math.max(0, Number(pct)));
+            document.getElementById("progressBar").style.width = p + "%";
+            document.getElementById("progressPct").textContent = p.toFixed(1) + "%";
+          }
           renderLiveRuntimeGrid(liveRuntimeData);
           logEvent("runtime_update");
           break;
