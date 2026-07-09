@@ -108,6 +108,17 @@ def on_message(client, userdata, msg):
     if len(topic_parts) >= 3 and topic_parts[0] == "ufameasy":
         device_id = topic_parts[1]
 
+        if topic_parts[2:] == ["file", "update"]:
+            data = json.loads(payload)
+            file_name = data.get("file_name")
+
+            _broadcast({
+                "type": "file_update",
+                "device_id": device_id,
+                "file_name": file_name,
+            })
+            return
+
         if topic_parts[2:] == ["estimate", "request"]:
             data = json.loads(payload)
 
