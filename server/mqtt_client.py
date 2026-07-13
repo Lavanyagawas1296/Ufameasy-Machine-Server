@@ -237,7 +237,7 @@ def on_message(client, userdata, msg):
         if topic_parts[2:] == ["log"]:
             import csv as _csv, os as _os
             data = json.loads(payload)
-            log_path = _os.path.join(_os.path.dirname(__file__), "data", "logs.csv")
+            log_path = _os.path.join(_os.path.dirname(__file__), "data", f"logs_{device_id}.csv")
             write_header = not _os.path.exists(log_path)
             with open(log_path, "a", newline="", encoding="utf-8") as f:
                 writer = _csv.writer(f)

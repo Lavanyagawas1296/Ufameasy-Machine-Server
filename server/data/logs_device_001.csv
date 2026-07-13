@@ -1,0 +1,346 @@
+Timestamp,Category,Source,Severity,Event Type,Details
+11/07/2026 02:29:59 PM,workflow,geometry,INFO,ShapeChangedEvent,"Created Box (Label: 'Box') [a=20.0, b=20.0, c=20.0]"
+11/07/2026 02:29:59 PM,workflow,geometry,INFO,ShapeChangedEvent,"Created Box (Label: 'Box') [a=20.0, b=20.0, c=20.0]"
+11/07/2026 02:30:24 PM,session,persistence,INFO,SessionSavedEvent,Saved session 'D:/UFAMeasy_Workspace/UFAMeasy/slice/smsdnewjf/12324.FCStd' with 0 slices
+11/07/2026 02:30:24 PM,session,persistence,INFO,SessionSavedEvent,Saved session 'D:/UFAMeasy_Workspace/UFAMeasy/slice/smsdnewjf/12324.FCStd' with 0 slices
+11/07/2026 02:30:27 PM,workflow,slicing,INFO,SliceStartedEvent,schema_version: 1 | log: True | slice_index: 1 | output_path: D:\UFAMeasy_Workspace\UFAMeasy\slice\smsdnewjf | plane_count: 0
+11/07/2026 02:30:27 PM,workflow,slicing,INFO,SliceStartedEvent,schema_version: 1 | log: True | slice_index: 1 | output_path: D:\UFAMeasy_Workspace\UFAMeasy\slice\smsdnewjf | plane_count: 0
+11/07/2026 02:30:28 PM,workflow,slicing,INFO,SliceCompletedEvent,schema_version: 1 | log: True | slice_index: 1 | filename: slice_1.stl | output_path: D:\UFAMeasy_Workspace\UFAMeasy\slice\smsdnewjf | z_offset: 0.0 | center_x: 10.0 | center_y: 10.0 | duration_ms: 547.0000000004802
+11/07/2026 02:30:28 PM,workflow,slicing,INFO,SliceCompletedEvent,schema_version: 1 | log: True | slice_index: 1 | filename: slice_1.stl | output_path: D:\UFAMeasy_Workspace\UFAMeasy\slice\smsdnewjf | z_offset: 0.0 | center_x: 10.0 | center_y: 10.0 | duration_ms: 547.0000000004802
+11/07/2026 02:30:28 PM,session,session_sidecar,INFO,SessionSavedEvent,Saved session 'D:\UFAMeasy_Workspace\UFAMeasy\slice\smsdnewjf\12324.ufamsession.json' with 1 slices
+11/07/2026 02:30:28 PM,session,session_sidecar,INFO,SessionSavedEvent,Saved session 'D:\UFAMeasy_Workspace\UFAMeasy\slice\smsdnewjf\12324.ufamsession.json' with 1 slices
+11/07/2026 02:36:12 PM,workflow,slicing,INFO,SliceStartedEvent,schema_version: 1 | log: True | slice_index: 1 | output_path: D:\UFAMeasy_Workspace\UFAMeasy\slice\smsdnewjf | plane_count: 1
+11/07/2026 02:36:12 PM,workflow,slicing,INFO,SliceStartedEvent,schema_version: 1 | log: True | slice_index: 1 | output_path: D:\UFAMeasy_Workspace\UFAMeasy\slice\smsdnewjf | plane_count: 1
+11/07/2026 02:36:12 PM,workflow,slicing,INFO,SliceCompletedEvent,schema_version: 1 | log: True | slice_index: 1 | filename: slice_1.stl | output_path: D:\UFAMeasy_Workspace\UFAMeasy\slice\smsdnewjf | z_offset: 0.0 | center_x: 10.0 | center_y: 10.0 | duration_ms: 16.00000000144064
+11/07/2026 02:36:12 PM,workflow,slicing,INFO,SliceCompletedEvent,schema_version: 1 | log: True | slice_index: 1 | filename: slice_1.stl | output_path: D:\UFAMeasy_Workspace\UFAMeasy\slice\smsdnewjf | z_offset: 0.0 | center_x: 10.0 | center_y: 10.0 | duration_ms: 16.00000000144064
+11/07/2026 02:36:12 PM,workflow,slicing,INFO,SliceStartedEvent,schema_version: 1 | log: True | slice_index: 2 | output_path: D:\UFAMeasy_Workspace\UFAMeasy\slice\smsdnewjf | plane_count: 1
+11/07/2026 02:36:12 PM,workflow,slicing,INFO,SliceStartedEvent,schema_version: 1 | log: True | slice_index: 2 | output_path: D:\UFAMeasy_Workspace\UFAMeasy\slice\smsdnewjf | plane_count: 1
+11/07/2026 02:36:12 PM,workflow,slicing,INFO,SliceCompletedEvent,schema_version: 1 | log: True | slice_index: 2 | filename: slice_2.stl | output_path: D:\UFAMeasy_Workspace\UFAMeasy\slice\smsdnewjf | z_offset: 15.0 | center_x: 10.0 | center_y: 10.0 | duration_ms: 15.99999999962165
+11/07/2026 02:36:12 PM,workflow,slicing,INFO,SliceCompletedEvent,schema_version: 1 | log: True | slice_index: 2 | filename: slice_2.stl | output_path: D:\UFAMeasy_Workspace\UFAMeasy\slice\smsdnewjf | z_offset: 15.0 | center_x: 10.0 | center_y: 10.0 | duration_ms: 15.99999999962165
+11/07/2026 02:36:12 PM,session,session_sidecar,INFO,SessionSavedEvent,Saved session 'D:\UFAMeasy_Workspace\UFAMeasy\slice\smsdnewjf\12324.ufamsession.json' with 2 slices
+11/07/2026 02:36:12 PM,session,session_sidecar,INFO,SessionSavedEvent,Saved session 'D:\UFAMeasy_Workspace\UFAMeasy\slice\smsdnewjf\12324.ufamsession.json' with 2 slices
+11/07/2026 03:02:04 PM,workflow,geometry,INFO,ShapeChangedEvent,"Created Box (Label: 'Box') [a=20.0, b=20.0, c=20.0]"
+11/07/2026 03:02:04 PM,workflow,geometry,INFO,ShapeChangedEvent,"Created Box (Label: 'Box') [a=20.0, b=20.0, c=20.0]"
+11/07/2026 03:02:28 PM,session,persistence,INFO,SessionSavedEvent,Saved session 'D:/UFAMeasy_Workspace/UFAMeasy/slice/demoo11/cube.FCStd' with 0 slices
+11/07/2026 03:02:28 PM,session,persistence,INFO,SessionSavedEvent,Saved session 'D:/UFAMeasy_Workspace/UFAMeasy/slice/demoo11/cube.FCStd' with 0 slices
+11/07/2026 03:02:41 PM,workflow,slicing,INFO,SliceStartedEvent,schema_version: 1 | log: True | slice_index: 1 | output_path: D:\UFAMeasy_Workspace\UFAMeasy\slice\demoo11 | plane_count: 0
+11/07/2026 03:02:41 PM,workflow,slicing,INFO,SliceStartedEvent,schema_version: 1 | log: True | slice_index: 1 | output_path: D:\UFAMeasy_Workspace\UFAMeasy\slice\demoo11 | plane_count: 0
+11/07/2026 03:02:41 PM,workflow,slicing,INFO,SliceCompletedEvent,schema_version: 1 | log: True | slice_index: 1 | filename: slice_1.stl | output_path: D:\UFAMeasy_Workspace\UFAMeasy\slice\demoo11 | z_offset: 0.0 | center_x: 10.0 | center_y: 10.0 | duration_ms: 62.999999998282874
+11/07/2026 03:02:41 PM,workflow,slicing,INFO,SliceCompletedEvent,schema_version: 1 | log: True | slice_index: 1 | filename: slice_1.stl | output_path: D:\UFAMeasy_Workspace\UFAMeasy\slice\demoo11 | z_offset: 0.0 | center_x: 10.0 | center_y: 10.0 | duration_ms: 62.999999998282874
+11/07/2026 03:02:41 PM,session,session_sidecar,INFO,SessionSavedEvent,Saved session 'D:\UFAMeasy_Workspace\UFAMeasy\slice\demoo11\cube.ufamsession.json' with 1 slices
+11/07/2026 03:02:41 PM,session,session_sidecar,INFO,SessionSavedEvent,Saved session 'D:\UFAMeasy_Workspace\UFAMeasy\slice\demoo11\cube.ufamsession.json' with 1 slices
+11/07/2026 03:02:48 PM,gcode,gcode_generation,INFO,GCodeGeneratedEvent,schema_version: 1 | log: True | stl_path: D:\UFAMeasy_Workspace\UFAMeasy\slice\demoo11\slice_1.stl | gcode_path: D:\UFAMeasy_Workspace\UFAMeasy\slice\demoo11\slice_1.gcode | config_path: D:\UFAMeasy_Workspace\UFAMeasy\slice\demoo11\slice_1.ini | z_offset: 0.0 | duration_ms: 3844.0000000009604
+11/07/2026 03:02:48 PM,gcode,gcode_generation,INFO,GCodeGeneratedEvent,schema_version: 1 | log: True | stl_path: D:\UFAMeasy_Workspace\UFAMeasy\slice\demoo11\slice_1.stl | gcode_path: D:\UFAMeasy_Workspace\UFAMeasy\slice\demoo11\slice_1.gcode | config_path: D:\UFAMeasy_Workspace\UFAMeasy\slice\demoo11\slice_1.ini | z_offset: 0.0 | duration_ms: 3844.0000000009604
+11/07/2026 03:02:48 PM,telemetry,ui,INFO,UserInteractionEvent,User Clicked QPushButton '🛠 Generate Motion Program' on '' (Value: )
+11/07/2026 03:02:48 PM,telemetry,ui,INFO,UserInteractionEvent,User Clicked QPushButton '🛠 Generate Motion Program' on '' (Value: )
+11/07/2026 03:02:50 PM,workflow,job_estimator,INFO,JobEstimationEvent,Started estimation for 'D:\UFAMeasy_Workspace\UFAMeasy\slice\demoo11\slice_1.gcode' (0ms)
+11/07/2026 03:02:50 PM,workflow,job_estimator,INFO,JobEstimationEvent,Started estimation for 'D:\UFAMeasy_Workspace\UFAMeasy\slice\demoo11\slice_1.gcode' (0ms)
+11/07/2026 03:02:50 PM,workflow,job_estimator,INFO,JobEstimationEvent,Completed estimation for 'D:\UFAMeasy_Workspace\UFAMeasy\slice\demoo11\slice_1.gcode' (47.865600001387065ms)
+11/07/2026 03:02:50 PM,workflow,job_estimator,INFO,JobEstimationEvent,Completed estimation for 'D:\UFAMeasy_Workspace\UFAMeasy\slice\demoo11\slice_1.gcode' (47.865600001387065ms)
+11/07/2026 03:02:50 PM,workflow,job_estimator,INFO,JobEstimationEvent,Started estimation for 'D:\UFAMeasy_Workspace\UFAMeasy\slice\demoo11\combined_print.gcode' (0ms)
+11/07/2026 03:02:50 PM,workflow,job_estimator,INFO,JobEstimationEvent,Started estimation for 'D:\UFAMeasy_Workspace\UFAMeasy\slice\demoo11\combined_print.gcode' (0ms)
+11/07/2026 03:02:50 PM,workflow,job_estimator,INFO,JobEstimationEvent,Completed estimation for 'D:\UFAMeasy_Workspace\UFAMeasy\slice\demoo11\combined_print.gcode' (47.57900000186055ms)
+11/07/2026 03:02:50 PM,workflow,job_estimator,INFO,JobEstimationEvent,Completed estimation for 'D:\UFAMeasy_Workspace\UFAMeasy\slice\demoo11\combined_print.gcode' (47.57900000186055ms)
+11/07/2026 03:02:50 PM,session,session_sidecar,INFO,SessionSavedEvent,Saved session 'D:\UFAMeasy_Workspace\UFAMeasy\slice\demoo11\cube.ufamsession.json' with 1 slices
+11/07/2026 03:02:50 PM,session,session_sidecar,INFO,SessionSavedEvent,Saved session 'D:\UFAMeasy_Workspace\UFAMeasy\slice\demoo11\cube.ufamsession.json' with 1 slices
+11/07/2026 03:02:50 PM,telemetry,ui,INFO,UserInteractionEvent,User Clicked QPushButton '🗜 Merge Motion Programs' on '' (Value: )
+11/07/2026 03:02:50 PM,telemetry,ui,INFO,UserInteractionEvent,User Clicked QPushButton '🗜 Merge Motion Programs' on '' (Value: )
+11/07/2026 03:03:56 PM,workflow,job_estimator,INFO,JobEstimationEvent,Started estimation for 'D:\UFAMeasy_Workspace\UFAMeasy\slice\demoo11\slice_1.gcode' (0ms)
+11/07/2026 03:03:56 PM,workflow,job_estimator,INFO,JobEstimationEvent,Started estimation for 'D:\UFAMeasy_Workspace\UFAMeasy\slice\demoo11\slice_1.gcode' (0ms)
+11/07/2026 03:03:56 PM,workflow,job_estimator,INFO,JobEstimationEvent,Completed estimation for 'D:\UFAMeasy_Workspace\UFAMeasy\slice\demoo11\slice_1.gcode' (59.11969999942812ms)
+11/07/2026 03:03:56 PM,workflow,job_estimator,INFO,JobEstimationEvent,Completed estimation for 'D:\UFAMeasy_Workspace\UFAMeasy\slice\demoo11\slice_1.gcode' (59.11969999942812ms)
+11/07/2026 03:03:56 PM,workflow,job_estimator,INFO,JobEstimationEvent,Started estimation for 'D:\UFAMeasy_Workspace\UFAMeasy\slice\demoo11\combined_print.gcode' (0ms)
+11/07/2026 03:03:56 PM,workflow,job_estimator,INFO,JobEstimationEvent,Started estimation for 'D:\UFAMeasy_Workspace\UFAMeasy\slice\demoo11\combined_print.gcode' (0ms)
+11/07/2026 03:03:56 PM,workflow,job_estimator,INFO,JobEstimationEvent,Completed estimation for 'D:\UFAMeasy_Workspace\UFAMeasy\slice\demoo11\combined_print.gcode' (54.84530000103405ms)
+11/07/2026 03:03:56 PM,workflow,job_estimator,INFO,JobEstimationEvent,Completed estimation for 'D:\UFAMeasy_Workspace\UFAMeasy\slice\demoo11\combined_print.gcode' (54.84530000103405ms)
+11/07/2026 03:03:58 PM,workflow,job_estimator,INFO,JobEstimationEvent,Started estimation for 'D:\UFAMeasy_Workspace\UFAMeasy\slice\demoo11\slice_1.gcode' (0ms)
+11/07/2026 03:03:58 PM,workflow,job_estimator,INFO,JobEstimationEvent,Started estimation for 'D:\UFAMeasy_Workspace\UFAMeasy\slice\demoo11\slice_1.gcode' (0ms)
+11/07/2026 03:03:59 PM,workflow,job_estimator,INFO,JobEstimationEvent,Completed estimation for 'D:\UFAMeasy_Workspace\UFAMeasy\slice\demoo11\slice_1.gcode' (46.59460000038962ms)
+11/07/2026 03:03:59 PM,workflow,job_estimator,INFO,JobEstimationEvent,Completed estimation for 'D:\UFAMeasy_Workspace\UFAMeasy\slice\demoo11\slice_1.gcode' (46.59460000038962ms)
+11/07/2026 03:03:59 PM,workflow,job_estimator,INFO,JobEstimationEvent,Started estimation for 'D:\UFAMeasy_Workspace\UFAMeasy\slice\demoo11\combined_print.gcode' (0ms)
+11/07/2026 03:03:59 PM,workflow,job_estimator,INFO,JobEstimationEvent,Started estimation for 'D:\UFAMeasy_Workspace\UFAMeasy\slice\demoo11\combined_print.gcode' (0ms)
+11/07/2026 03:03:59 PM,workflow,job_estimator,INFO,JobEstimationEvent,Completed estimation for 'D:\UFAMeasy_Workspace\UFAMeasy\slice\demoo11\combined_print.gcode' (47.86220000096364ms)
+11/07/2026 03:03:59 PM,workflow,job_estimator,INFO,JobEstimationEvent,Completed estimation for 'D:\UFAMeasy_Workspace\UFAMeasy\slice\demoo11\combined_print.gcode' (47.86220000096364ms)
+11/07/2026 03:04:00 PM,telemetry,ui,INFO,UserInteractionEvent,User Clicked QPushButton '⏱ Estimate Time and Powder' on '' (Value: )
+11/07/2026 03:04:00 PM,telemetry,ui,INFO,UserInteractionEvent,User Clicked QPushButton '⏱ Estimate Time and Powder' on '' (Value: )
+11/07/2026 03:05:00 PM,workflow,job_estimator,INFO,JobEstimationEvent,Started estimation for 'D:\UFAMeasy_Workspace\UFAMeasy\slice\demoo11\slice_1.gcode' (0ms)
+11/07/2026 03:05:00 PM,workflow,job_estimator,INFO,JobEstimationEvent,Started estimation for 'D:\UFAMeasy_Workspace\UFAMeasy\slice\demoo11\slice_1.gcode' (0ms)
+11/07/2026 03:05:00 PM,workflow,job_estimator,INFO,JobEstimationEvent,Completed estimation for 'D:\UFAMeasy_Workspace\UFAMeasy\slice\demoo11\slice_1.gcode' (57.94590000004973ms)
+11/07/2026 03:05:00 PM,workflow,job_estimator,INFO,JobEstimationEvent,Completed estimation for 'D:\UFAMeasy_Workspace\UFAMeasy\slice\demoo11\slice_1.gcode' (57.94590000004973ms)
+11/07/2026 03:05:00 PM,workflow,job_estimator,INFO,JobEstimationEvent,Started estimation for 'D:\UFAMeasy_Workspace\UFAMeasy\slice\demoo11\combined_print.gcode' (0ms)
+11/07/2026 03:05:00 PM,workflow,job_estimator,INFO,JobEstimationEvent,Started estimation for 'D:\UFAMeasy_Workspace\UFAMeasy\slice\demoo11\combined_print.gcode' (0ms)
+11/07/2026 03:05:01 PM,workflow,job_estimator,INFO,JobEstimationEvent,Completed estimation for 'D:\UFAMeasy_Workspace\UFAMeasy\slice\demoo11\combined_print.gcode' (68.40740000188816ms)
+11/07/2026 03:05:01 PM,workflow,job_estimator,INFO,JobEstimationEvent,Completed estimation for 'D:\UFAMeasy_Workspace\UFAMeasy\slice\demoo11\combined_print.gcode' (68.40740000188816ms)
+11/07/2026 03:07:58 PM,workflow,job_estimator,INFO,JobEstimationEvent,Started estimation for 'D:\UFAMeasy_Workspace\UFAMeasy\slice\demoo11\slice_1.gcode' (0ms)
+11/07/2026 03:07:58 PM,workflow,job_estimator,INFO,JobEstimationEvent,Started estimation for 'D:\UFAMeasy_Workspace\UFAMeasy\slice\demoo11\slice_1.gcode' (0ms)
+11/07/2026 03:07:58 PM,workflow,job_estimator,INFO,JobEstimationEvent,Completed estimation for 'D:\UFAMeasy_Workspace\UFAMeasy\slice\demoo11\slice_1.gcode' (60.34449999788194ms)
+11/07/2026 03:07:58 PM,workflow,job_estimator,INFO,JobEstimationEvent,Completed estimation for 'D:\UFAMeasy_Workspace\UFAMeasy\slice\demoo11\slice_1.gcode' (60.34449999788194ms)
+11/07/2026 03:07:58 PM,workflow,job_estimator,INFO,JobEstimationEvent,Started estimation for 'D:\UFAMeasy_Workspace\UFAMeasy\slice\demoo11\combined_print.gcode' (0ms)
+11/07/2026 03:07:58 PM,workflow,job_estimator,INFO,JobEstimationEvent,Started estimation for 'D:\UFAMeasy_Workspace\UFAMeasy\slice\demoo11\combined_print.gcode' (0ms)
+11/07/2026 03:07:58 PM,workflow,job_estimator,INFO,JobEstimationEvent,Completed estimation for 'D:\UFAMeasy_Workspace\UFAMeasy\slice\demoo11\combined_print.gcode' (64.05570000060834ms)
+11/07/2026 03:07:58 PM,workflow,job_estimator,INFO,JobEstimationEvent,Completed estimation for 'D:\UFAMeasy_Workspace\UFAMeasy\slice\demoo11\combined_print.gcode' (64.05570000060834ms)
+11/07/2026 03:08:00 PM,telemetry,ui,INFO,UserInteractionEvent,User Clicked QPushButton '⏱ Estimate Time and Powder' on '' (Value: )
+11/07/2026 03:08:00 PM,telemetry,ui,INFO,UserInteractionEvent,User Clicked QPushButton '⏱ Estimate Time and Powder' on '' (Value: )
+11/07/2026 04:15:30 PM,workflow,geometry,INFO,ShapeChangedEvent,"Created Box (Label: 'Box') [a=20.0, b=20.0, c=20.0]"
+11/07/2026 04:15:30 PM,workflow,geometry,INFO,ShapeChangedEvent,"Created Box (Label: 'Box') [a=20.0, b=20.0, c=20.0]"
+11/07/2026 04:15:59 PM,session,persistence,INFO,SessionSavedEvent,Saved session 'D:/UFAMeasy_Workspace/UFAMeasy/slice/dfsf/demo.FCStd' with 0 slices
+11/07/2026 04:15:59 PM,session,persistence,INFO,SessionSavedEvent,Saved session 'D:/UFAMeasy_Workspace/UFAMeasy/slice/dfsf/demo.FCStd' with 0 slices
+11/07/2026 04:16:03 PM,workflow,slicing,INFO,SliceStartedEvent,schema_version: 1 | log: True | slice_index: 1 | output_path: D:\UFAMeasy_Workspace\UFAMeasy\slice\dfsf | plane_count: 0
+11/07/2026 04:16:03 PM,workflow,slicing,INFO,SliceStartedEvent,schema_version: 1 | log: True | slice_index: 1 | output_path: D:\UFAMeasy_Workspace\UFAMeasy\slice\dfsf | plane_count: 0
+11/07/2026 04:16:03 PM,workflow,slicing,INFO,SliceCompletedEvent,schema_version: 1 | log: True | slice_index: 1 | filename: slice_1.stl | output_path: D:\UFAMeasy_Workspace\UFAMeasy\slice\dfsf | z_offset: 0.0 | center_x: 10.0 | center_y: 10.0 | duration_ms: 172.0000000022992
+11/07/2026 04:16:03 PM,workflow,slicing,INFO,SliceCompletedEvent,schema_version: 1 | log: True | slice_index: 1 | filename: slice_1.stl | output_path: D:\UFAMeasy_Workspace\UFAMeasy\slice\dfsf | z_offset: 0.0 | center_x: 10.0 | center_y: 10.0 | duration_ms: 172.0000000022992
+11/07/2026 04:16:03 PM,session,session_sidecar,INFO,SessionSavedEvent,Saved session 'D:\UFAMeasy_Workspace\UFAMeasy\slice\dfsf\demo.ufamsession.json' with 1 slices
+11/07/2026 04:16:03 PM,session,session_sidecar,INFO,SessionSavedEvent,Saved session 'D:\UFAMeasy_Workspace\UFAMeasy\slice\dfsf\demo.ufamsession.json' with 1 slices
+11/07/2026 04:16:17 PM,gcode,gcode_generation,INFO,GCodeGeneratedEvent,schema_version: 1 | log: True | stl_path: D:\UFAMeasy_Workspace\UFAMeasy\slice\dfsf\slice_1.stl | gcode_path: D:\UFAMeasy_Workspace\UFAMeasy\slice\dfsf\slice_1.gcode | config_path: D:\UFAMeasy_Workspace\UFAMeasy\slice\dfsf\slice_1.ini | z_offset: 0.0 | duration_ms: 672.0000000022992
+11/07/2026 04:16:17 PM,gcode,gcode_generation,INFO,GCodeGeneratedEvent,schema_version: 1 | log: True | stl_path: D:\UFAMeasy_Workspace\UFAMeasy\slice\dfsf\slice_1.stl | gcode_path: D:\UFAMeasy_Workspace\UFAMeasy\slice\dfsf\slice_1.gcode | config_path: D:\UFAMeasy_Workspace\UFAMeasy\slice\dfsf\slice_1.ini | z_offset: 0.0 | duration_ms: 672.0000000022992
+11/07/2026 04:16:17 PM,telemetry,ui,INFO,UserInteractionEvent,User Clicked QPushButton '🛠 Generate Motion Program' on '' (Value: )
+11/07/2026 04:16:17 PM,telemetry,ui,INFO,UserInteractionEvent,User Clicked QPushButton '🛠 Generate Motion Program' on '' (Value: )
+11/07/2026 04:16:19 PM,workflow,job_estimator,INFO,JobEstimationEvent,Started estimation for 'D:\UFAMeasy_Workspace\UFAMeasy\slice\dfsf\slice_1.gcode' (0ms)
+11/07/2026 04:16:19 PM,workflow,job_estimator,INFO,JobEstimationEvent,Started estimation for 'D:\UFAMeasy_Workspace\UFAMeasy\slice\dfsf\slice_1.gcode' (0ms)
+11/07/2026 04:16:19 PM,workflow,job_estimator,INFO,JobEstimationEvent,Completed estimation for 'D:\UFAMeasy_Workspace\UFAMeasy\slice\dfsf\slice_1.gcode' (62.269099998957245ms)
+11/07/2026 04:16:19 PM,workflow,job_estimator,INFO,JobEstimationEvent,Completed estimation for 'D:\UFAMeasy_Workspace\UFAMeasy\slice\dfsf\slice_1.gcode' (62.269099998957245ms)
+11/07/2026 04:16:19 PM,workflow,job_estimator,INFO,JobEstimationEvent,Started estimation for 'D:\UFAMeasy_Workspace\UFAMeasy\slice\dfsf\combined_print.gcode' (0ms)
+11/07/2026 04:16:19 PM,workflow,job_estimator,INFO,JobEstimationEvent,Started estimation for 'D:\UFAMeasy_Workspace\UFAMeasy\slice\dfsf\combined_print.gcode' (0ms)
+11/07/2026 04:16:19 PM,workflow,job_estimator,INFO,JobEstimationEvent,Completed estimation for 'D:\UFAMeasy_Workspace\UFAMeasy\slice\dfsf\combined_print.gcode' (60.25740000040969ms)
+11/07/2026 04:16:19 PM,workflow,job_estimator,INFO,JobEstimationEvent,Completed estimation for 'D:\UFAMeasy_Workspace\UFAMeasy\slice\dfsf\combined_print.gcode' (60.25740000040969ms)
+11/07/2026 04:16:19 PM,session,session_sidecar,INFO,SessionSavedEvent,Saved session 'D:\UFAMeasy_Workspace\UFAMeasy\slice\dfsf\demo.ufamsession.json' with 1 slices
+11/07/2026 04:16:19 PM,session,session_sidecar,INFO,SessionSavedEvent,Saved session 'D:\UFAMeasy_Workspace\UFAMeasy\slice\dfsf\demo.ufamsession.json' with 1 slices
+11/07/2026 04:16:19 PM,telemetry,ui,INFO,UserInteractionEvent,User Clicked QPushButton '🗜 Merge Motion Programs' on '' (Value: )
+11/07/2026 04:16:19 PM,telemetry,ui,INFO,UserInteractionEvent,User Clicked QPushButton '🗜 Merge Motion Programs' on '' (Value: )
+11/07/2026 04:17:25 PM,telemetry,ui,INFO,UserInteractionEvent,User Clicked QPushButton 'OK' on '' (Value: )
+11/07/2026 04:17:25 PM,telemetry,ui,INFO,UserInteractionEvent,User Clicked QPushButton 'OK' on '' (Value: )
+11/07/2026 04:17:25 PM,workflow,slicer_ui,INFO,ParameterChangedEvent,"Changed 5 parameters in Slice 1 (PF1, --post-process, --layer-height, COOLING_PASS)"
+11/07/2026 04:17:25 PM,workflow,slicer_ui,INFO,ParameterChangedEvent,"Changed 5 parameters in Slice 1 (PF1, --post-process, --layer-height, COOLING_PASS)"
+11/07/2026 04:17:25 PM,session,session_sidecar,INFO,SessionSavedEvent,Saved session 'D:\UFAMeasy_Workspace\UFAMeasy\slice\dfsf\demo.ufamsession.json' with 1 slices
+11/07/2026 04:17:25 PM,session,session_sidecar,INFO,SessionSavedEvent,Saved session 'D:\UFAMeasy_Workspace\UFAMeasy\slice\dfsf\demo.ufamsession.json' with 1 slices
+11/07/2026 04:17:49 PM,telemetry,ui,INFO,UserInteractionEvent,User Clicked QPushButton 'OK' on '' (Value: )
+11/07/2026 04:17:49 PM,telemetry,ui,INFO,UserInteractionEvent,User Clicked QPushButton 'OK' on '' (Value: )
+11/07/2026 04:17:49 PM,workflow,slicer_ui,INFO,ParameterChangedEvent,Changed 1 parameters in Slice 1 (--layer-height)
+11/07/2026 04:17:49 PM,workflow,slicer_ui,INFO,ParameterChangedEvent,Changed 1 parameters in Slice 1 (--layer-height)
+11/07/2026 04:17:49 PM,session,session_sidecar,INFO,SessionSavedEvent,Saved session 'D:\UFAMeasy_Workspace\UFAMeasy\slice\dfsf\demo.ufamsession.json' with 1 slices
+11/07/2026 04:17:49 PM,session,session_sidecar,INFO,SessionSavedEvent,Saved session 'D:\UFAMeasy_Workspace\UFAMeasy\slice\dfsf\demo.ufamsession.json' with 1 slices
+13/07/2026 12:21:06 PM,workflow,geometry,INFO,ShapeChangedEvent,"Created Box (Label: 'Box') [a=20.0, b=20.0, c=20.0]"
+13/07/2026 12:21:06 PM,workflow,geometry,INFO,ShapeChangedEvent,"Created Box (Label: 'Box') [a=20.0, b=20.0, c=20.0]"
+13/07/2026 12:21:29 PM,session,persistence,INFO,SessionSavedEvent,Saved session 'D:/UFAMeasy_Workspace/UFAMeasy/slice/cube/cube.FCStd' with 0 slices
+13/07/2026 12:21:29 PM,session,persistence,INFO,SessionSavedEvent,Saved session 'D:/UFAMeasy_Workspace/UFAMeasy/slice/cube/cube.FCStd' with 0 slices
+13/07/2026 12:21:53 PM,workflow,slicing,INFO,SliceStartedEvent,schema_version: 1 | log: True | slice_index: 1 | output_path: D:\UFAMeasy_Workspace\UFAMeasy\slice\cube | plane_count: 2
+13/07/2026 12:21:53 PM,workflow,slicing,INFO,SliceStartedEvent,schema_version: 1 | log: True | slice_index: 1 | output_path: D:\UFAMeasy_Workspace\UFAMeasy\slice\cube | plane_count: 2
+13/07/2026 12:21:54 PM,workflow,slicing,INFO,SliceCompletedEvent,schema_version: 1 | log: True | slice_index: 1 | filename: slice_1.stl | output_path: D:\UFAMeasy_Workspace\UFAMeasy\slice\cube | z_offset: 0.0 | center_x: 10.0 | center_y: 10.0 | duration_ms: 625.0
+13/07/2026 12:21:54 PM,workflow,slicing,INFO,SliceCompletedEvent,schema_version: 1 | log: True | slice_index: 1 | filename: slice_1.stl | output_path: D:\UFAMeasy_Workspace\UFAMeasy\slice\cube | z_offset: 0.0 | center_x: 10.0 | center_y: 10.0 | duration_ms: 625.0
+13/07/2026 12:21:54 PM,workflow,slicing,INFO,SliceStartedEvent,schema_version: 1 | log: True | slice_index: 2 | output_path: D:\UFAMeasy_Workspace\UFAMeasy\slice\cube | plane_count: 2
+13/07/2026 12:21:54 PM,workflow,slicing,INFO,SliceStartedEvent,schema_version: 1 | log: True | slice_index: 2 | output_path: D:\UFAMeasy_Workspace\UFAMeasy\slice\cube | plane_count: 2
+13/07/2026 12:21:54 PM,workflow,slicing,INFO,SliceCompletedEvent,schema_version: 1 | log: True | slice_index: 2 | filename: slice_2.stl | output_path: D:\UFAMeasy_Workspace\UFAMeasy\slice\cube | z_offset: 8.0 | center_x: 10.0 | center_y: 10.0 | duration_ms: 14.999999984866008
+13/07/2026 12:21:54 PM,workflow,slicing,INFO,SliceCompletedEvent,schema_version: 1 | log: True | slice_index: 2 | filename: slice_2.stl | output_path: D:\UFAMeasy_Workspace\UFAMeasy\slice\cube | z_offset: 8.0 | center_x: 10.0 | center_y: 10.0 | duration_ms: 14.999999984866008
+13/07/2026 12:21:54 PM,workflow,slicing,INFO,SliceStartedEvent,schema_version: 1 | log: True | slice_index: 3 | output_path: D:\UFAMeasy_Workspace\UFAMeasy\slice\cube | plane_count: 2
+13/07/2026 12:21:54 PM,workflow,slicing,INFO,SliceStartedEvent,schema_version: 1 | log: True | slice_index: 3 | output_path: D:\UFAMeasy_Workspace\UFAMeasy\slice\cube | plane_count: 2
+13/07/2026 12:21:54 PM,workflow,slicing,INFO,SliceCompletedEvent,schema_version: 1 | log: True | slice_index: 3 | filename: slice_3.stl | output_path: D:\UFAMeasy_Workspace\UFAMeasy\slice\cube | z_offset: 14.0 | center_x: 10.0 | center_y: 10.0 | duration_ms: 16.00000000325963
+13/07/2026 12:21:54 PM,workflow,slicing,INFO,SliceCompletedEvent,schema_version: 1 | log: True | slice_index: 3 | filename: slice_3.stl | output_path: D:\UFAMeasy_Workspace\UFAMeasy\slice\cube | z_offset: 14.0 | center_x: 10.0 | center_y: 10.0 | duration_ms: 16.00000000325963
+13/07/2026 12:21:54 PM,session,session_sidecar,INFO,SessionSavedEvent,Saved session 'D:\UFAMeasy_Workspace\UFAMeasy\slice\cube\cube.ufamsession.json' with 3 slices
+13/07/2026 12:21:54 PM,session,session_sidecar,INFO,SessionSavedEvent,Saved session 'D:\UFAMeasy_Workspace\UFAMeasy\slice\cube\cube.ufamsession.json' with 3 slices
+13/07/2026 12:22:27 PM,workflow,slicing,INFO,SliceStartedEvent,schema_version: 1 | log: True | slice_index: 1 | output_path: D:\UFAMeasy_Workspace\UFAMeasy\slice\cube | plane_count: 2
+13/07/2026 12:22:27 PM,workflow,slicing,INFO,SliceStartedEvent,schema_version: 1 | log: True | slice_index: 1 | output_path: D:\UFAMeasy_Workspace\UFAMeasy\slice\cube | plane_count: 2
+13/07/2026 12:22:27 PM,workflow,slicing,INFO,SliceCompletedEvent,schema_version: 1 | log: True | slice_index: 1 | filename: slice_1.stl | output_path: D:\UFAMeasy_Workspace\UFAMeasy\slice\cube | z_offset: 0.0 | center_x: 10.0 | center_y: 10.0 | duration_ms: 16.00000000325963
+13/07/2026 12:22:27 PM,workflow,slicing,INFO,SliceCompletedEvent,schema_version: 1 | log: True | slice_index: 1 | filename: slice_1.stl | output_path: D:\UFAMeasy_Workspace\UFAMeasy\slice\cube | z_offset: 0.0 | center_x: 10.0 | center_y: 10.0 | duration_ms: 16.00000000325963
+13/07/2026 12:22:27 PM,workflow,slicing,INFO,SliceStartedEvent,schema_version: 1 | log: True | slice_index: 2 | output_path: D:\UFAMeasy_Workspace\UFAMeasy\slice\cube | plane_count: 2
+13/07/2026 12:22:27 PM,workflow,slicing,INFO,SliceStartedEvent,schema_version: 1 | log: True | slice_index: 2 | output_path: D:\UFAMeasy_Workspace\UFAMeasy\slice\cube | plane_count: 2
+13/07/2026 12:22:27 PM,workflow,slicing,INFO,SliceCompletedEvent,schema_version: 1 | log: True | slice_index: 2 | filename: slice_2.stl | output_path: D:\UFAMeasy_Workspace\UFAMeasy\slice\cube | z_offset: 8.0 | center_x: 10.0 | center_y: 10.0 | duration_ms: 0.0
+13/07/2026 12:22:27 PM,workflow,slicing,INFO,SliceCompletedEvent,schema_version: 1 | log: True | slice_index: 2 | filename: slice_2.stl | output_path: D:\UFAMeasy_Workspace\UFAMeasy\slice\cube | z_offset: 8.0 | center_x: 10.0 | center_y: 10.0 | duration_ms: 0.0
+13/07/2026 12:22:27 PM,workflow,slicing,INFO,SliceStartedEvent,schema_version: 1 | log: True | slice_index: 3 | output_path: D:\UFAMeasy_Workspace\UFAMeasy\slice\cube | plane_count: 2
+13/07/2026 12:22:27 PM,workflow,slicing,INFO,SliceStartedEvent,schema_version: 1 | log: True | slice_index: 3 | output_path: D:\UFAMeasy_Workspace\UFAMeasy\slice\cube | plane_count: 2
+13/07/2026 12:22:27 PM,workflow,slicing,INFO,SliceCompletedEvent,schema_version: 1 | log: True | slice_index: 3 | filename: slice_3.stl | output_path: D:\UFAMeasy_Workspace\UFAMeasy\slice\cube | z_offset: 14.0 | center_x: 10.0 | center_y: 10.0 | duration_ms: 15.999999974155799
+13/07/2026 12:22:27 PM,workflow,slicing,INFO,SliceCompletedEvent,schema_version: 1 | log: True | slice_index: 3 | filename: slice_3.stl | output_path: D:\UFAMeasy_Workspace\UFAMeasy\slice\cube | z_offset: 14.0 | center_x: 10.0 | center_y: 10.0 | duration_ms: 15.999999974155799
+13/07/2026 12:22:27 PM,session,session_sidecar,INFO,SessionSavedEvent,Saved session 'D:\UFAMeasy_Workspace\UFAMeasy\slice\cube\cube.ufamsession.json' with 3 slices
+13/07/2026 12:22:27 PM,session,session_sidecar,INFO,SessionSavedEvent,Saved session 'D:\UFAMeasy_Workspace\UFAMeasy\slice\cube\cube.ufamsession.json' with 3 slices
+13/07/2026 12:22:41 PM,gcode,gcode_generation,INFO,GCodeGeneratedEvent,schema_version: 1 | log: True | stl_path: D:\UFAMeasy_Workspace\UFAMeasy\slice\cube\slice_1.stl | gcode_path: D:\UFAMeasy_Workspace\UFAMeasy\slice\cube\slice_1.gcode | config_path: D:\UFAMeasy_Workspace\UFAMeasy\slice\cube\slice_1.ini | z_offset: 0.0 | duration_ms: 6062.999999994645
+13/07/2026 12:22:41 PM,gcode,gcode_generation,INFO,GCodeGeneratedEvent,schema_version: 1 | log: True | stl_path: D:\UFAMeasy_Workspace\UFAMeasy\slice\cube\slice_1.stl | gcode_path: D:\UFAMeasy_Workspace\UFAMeasy\slice\cube\slice_1.gcode | config_path: D:\UFAMeasy_Workspace\UFAMeasy\slice\cube\slice_1.ini | z_offset: 0.0 | duration_ms: 6062.999999994645
+13/07/2026 12:22:41 PM,gcode,gcode_generation,INFO,GCodeGeneratedEvent,schema_version: 1 | log: True | stl_path: D:\UFAMeasy_Workspace\UFAMeasy\slice\cube\slice_2.stl | gcode_path: D:\UFAMeasy_Workspace\UFAMeasy\slice\cube\slice_2.gcode | config_path: D:\UFAMeasy_Workspace\UFAMeasy\slice\cube\slice_2.ini | z_offset: 8.0 | duration_ms: 467.99999999348074
+13/07/2026 12:22:41 PM,gcode,gcode_generation,INFO,GCodeGeneratedEvent,schema_version: 1 | log: True | stl_path: D:\UFAMeasy_Workspace\UFAMeasy\slice\cube\slice_2.stl | gcode_path: D:\UFAMeasy_Workspace\UFAMeasy\slice\cube\slice_2.gcode | config_path: D:\UFAMeasy_Workspace\UFAMeasy\slice\cube\slice_2.ini | z_offset: 8.0 | duration_ms: 467.99999999348074
+13/07/2026 12:22:42 PM,gcode,gcode_generation,INFO,GCodeGeneratedEvent,schema_version: 1 | log: True | stl_path: D:\UFAMeasy_Workspace\UFAMeasy\slice\cube\slice_3.stl | gcode_path: D:\UFAMeasy_Workspace\UFAMeasy\slice\cube\slice_3.gcode | config_path: D:\UFAMeasy_Workspace\UFAMeasy\slice\cube\slice_3.ini | z_offset: 14.0 | duration_ms: 391.00000000325963
+13/07/2026 12:22:42 PM,gcode,gcode_generation,INFO,GCodeGeneratedEvent,schema_version: 1 | log: True | stl_path: D:\UFAMeasy_Workspace\UFAMeasy\slice\cube\slice_3.stl | gcode_path: D:\UFAMeasy_Workspace\UFAMeasy\slice\cube\slice_3.gcode | config_path: D:\UFAMeasy_Workspace\UFAMeasy\slice\cube\slice_3.ini | z_offset: 14.0 | duration_ms: 391.00000000325963
+13/07/2026 12:22:42 PM,telemetry,ui,INFO,UserInteractionEvent,User Clicked QPushButton '🛠 Generate Motion Program' on '' (Value: )
+13/07/2026 12:22:42 PM,telemetry,ui,INFO,UserInteractionEvent,User Clicked QPushButton '🛠 Generate Motion Program' on '' (Value: )
+13/07/2026 12:22:43 PM,workflow,job_estimator,INFO,JobEstimationEvent,Started estimation for 'D:\UFAMeasy_Workspace\UFAMeasy\slice\cube\slice_1.gcode' (0ms)
+13/07/2026 12:22:43 PM,workflow,job_estimator,INFO,JobEstimationEvent,Started estimation for 'D:\UFAMeasy_Workspace\UFAMeasy\slice\cube\slice_1.gcode' (0ms)
+13/07/2026 12:22:43 PM,workflow,job_estimator,INFO,JobEstimationEvent,Completed estimation for 'D:\UFAMeasy_Workspace\UFAMeasy\slice\cube\slice_1.gcode' (38.18790000514127ms)
+13/07/2026 12:22:43 PM,workflow,job_estimator,INFO,JobEstimationEvent,Completed estimation for 'D:\UFAMeasy_Workspace\UFAMeasy\slice\cube\slice_1.gcode' (38.18790000514127ms)
+13/07/2026 12:22:43 PM,workflow,job_estimator,INFO,JobEstimationEvent,Started estimation for 'D:\UFAMeasy_Workspace\UFAMeasy\slice\cube\slice_2.gcode' (0ms)
+13/07/2026 12:22:43 PM,workflow,job_estimator,INFO,JobEstimationEvent,Started estimation for 'D:\UFAMeasy_Workspace\UFAMeasy\slice\cube\slice_2.gcode' (0ms)
+13/07/2026 12:22:43 PM,workflow,job_estimator,INFO,JobEstimationEvent,Completed estimation for 'D:\UFAMeasy_Workspace\UFAMeasy\slice\cube\slice_2.gcode' (24.265399988507852ms)
+13/07/2026 12:22:43 PM,workflow,job_estimator,INFO,JobEstimationEvent,Completed estimation for 'D:\UFAMeasy_Workspace\UFAMeasy\slice\cube\slice_2.gcode' (24.265399988507852ms)
+13/07/2026 12:22:43 PM,workflow,job_estimator,INFO,JobEstimationEvent,Started estimation for 'D:\UFAMeasy_Workspace\UFAMeasy\slice\cube\slice_3.gcode' (0ms)
+13/07/2026 12:22:43 PM,workflow,job_estimator,INFO,JobEstimationEvent,Started estimation for 'D:\UFAMeasy_Workspace\UFAMeasy\slice\cube\slice_3.gcode' (0ms)
+13/07/2026 12:22:43 PM,workflow,job_estimator,INFO,JobEstimationEvent,Completed estimation for 'D:\UFAMeasy_Workspace\UFAMeasy\slice\cube\slice_3.gcode' (24.274900002637878ms)
+13/07/2026 12:22:43 PM,workflow,job_estimator,INFO,JobEstimationEvent,Completed estimation for 'D:\UFAMeasy_Workspace\UFAMeasy\slice\cube\slice_3.gcode' (24.274900002637878ms)
+13/07/2026 12:22:43 PM,workflow,job_estimator,INFO,JobEstimationEvent,Started estimation for 'D:\UFAMeasy_Workspace\UFAMeasy\slice\cube\combined_print.gcode' (0ms)
+13/07/2026 12:22:43 PM,workflow,job_estimator,INFO,JobEstimationEvent,Started estimation for 'D:\UFAMeasy_Workspace\UFAMeasy\slice\cube\combined_print.gcode' (0ms)
+13/07/2026 12:22:43 PM,workflow,job_estimator,INFO,JobEstimationEvent,Completed estimation for 'D:\UFAMeasy_Workspace\UFAMeasy\slice\cube\combined_print.gcode' (84.55500000854954ms)
+13/07/2026 12:22:43 PM,workflow,job_estimator,INFO,JobEstimationEvent,Completed estimation for 'D:\UFAMeasy_Workspace\UFAMeasy\slice\cube\combined_print.gcode' (84.55500000854954ms)
+13/07/2026 12:22:43 PM,session,session_sidecar,INFO,SessionSavedEvent,Saved session 'D:\UFAMeasy_Workspace\UFAMeasy\slice\cube\cube.ufamsession.json' with 3 slices
+13/07/2026 12:22:43 PM,session,session_sidecar,INFO,SessionSavedEvent,Saved session 'D:\UFAMeasy_Workspace\UFAMeasy\slice\cube\cube.ufamsession.json' with 3 slices
+13/07/2026 12:22:43 PM,telemetry,ui,INFO,UserInteractionEvent,User Clicked QPushButton '🗜 Merge Motion Programs' on '' (Value: )
+13/07/2026 12:22:43 PM,telemetry,ui,INFO,UserInteractionEvent,User Clicked QPushButton '🗜 Merge Motion Programs' on '' (Value: )
+13/07/2026 12:23:02 PM,session,3mf_export,INFO,SessionSavedEvent,Saved session 'D:/UFAMeasy_Workspace/UFAMeasy/slice/cube/cube.3mf' with 3 slices
+13/07/2026 12:23:02 PM,session,3mf_export,INFO,SessionSavedEvent,Saved session 'D:/UFAMeasy_Workspace/UFAMeasy/slice/cube/cube.3mf' with 3 slices
+13/07/2026 12:23:40 PM,session,3mf_import,INFO,SessionLoadedEvent,Loaded session 'D:/UFAMeasy_Workspace/UFAMeasy/slice/cube/cube.3mf' with 3 slices
+13/07/2026 12:23:40 PM,session,3mf_import,INFO,SessionLoadedEvent,Loaded session 'D:/UFAMeasy_Workspace/UFAMeasy/slice/cube/cube.3mf' with 3 slices
+13/07/2026 12:24:32 PM,session,3mf_import,INFO,SessionLoadedEvent,Loaded session 'D:/UFAMeasy_Workspace/UFAMeasy/slice/cube/cube.3mf' with 3 slices
+13/07/2026 12:24:32 PM,session,3mf_import,INFO,SessionLoadedEvent,Loaded session 'D:/UFAMeasy_Workspace/UFAMeasy/slice/cube/cube.3mf' with 3 slices
+13/07/2026 12:24:52 PM,workflow,slicing,INFO,SliceStartedEvent,schema_version: 1 | log: True | slice_index: 1 | output_path: D:\UFAMeasy_Workspace\UFAMeasy\slice\cube | plane_count: 2
+13/07/2026 12:24:52 PM,workflow,slicing,INFO,SliceStartedEvent,schema_version: 1 | log: True | slice_index: 1 | output_path: D:\UFAMeasy_Workspace\UFAMeasy\slice\cube | plane_count: 2
+13/07/2026 12:24:52 PM,workflow,slicing,INFO,SliceCompletedEvent,schema_version: 1 | log: True | slice_index: 1 | filename: slice_1.stl | output_path: D:\UFAMeasy_Workspace\UFAMeasy\slice\cube | z_offset: 0.0 | center_x: 10.0 | center_y: 10.0 | duration_ms: 46.999999991385266
+13/07/2026 12:24:52 PM,workflow,slicing,INFO,SliceCompletedEvent,schema_version: 1 | log: True | slice_index: 1 | filename: slice_1.stl | output_path: D:\UFAMeasy_Workspace\UFAMeasy\slice\cube | z_offset: 0.0 | center_x: 10.0 | center_y: 10.0 | duration_ms: 46.999999991385266
+13/07/2026 12:24:52 PM,workflow,slicing,INFO,SliceStartedEvent,schema_version: 1 | log: True | slice_index: 2 | output_path: D:\UFAMeasy_Workspace\UFAMeasy\slice\cube | plane_count: 2
+13/07/2026 12:24:52 PM,workflow,slicing,INFO,SliceStartedEvent,schema_version: 1 | log: True | slice_index: 2 | output_path: D:\UFAMeasy_Workspace\UFAMeasy\slice\cube | plane_count: 2
+13/07/2026 12:24:52 PM,workflow,slicing,INFO,SliceCompletedEvent,schema_version: 1 | log: True | slice_index: 2 | filename: slice_2.stl | output_path: D:\UFAMeasy_Workspace\UFAMeasy\slice\cube | z_offset: 8.0 | center_x: 10.0 | center_y: 10.0 | duration_ms: 16.00000000325963
+13/07/2026 12:24:52 PM,workflow,slicing,INFO,SliceCompletedEvent,schema_version: 1 | log: True | slice_index: 2 | filename: slice_2.stl | output_path: D:\UFAMeasy_Workspace\UFAMeasy\slice\cube | z_offset: 8.0 | center_x: 10.0 | center_y: 10.0 | duration_ms: 16.00000000325963
+13/07/2026 12:24:52 PM,workflow,slicing,INFO,SliceStartedEvent,schema_version: 1 | log: True | slice_index: 3 | output_path: D:\UFAMeasy_Workspace\UFAMeasy\slice\cube | plane_count: 2
+13/07/2026 12:24:52 PM,workflow,slicing,INFO,SliceStartedEvent,schema_version: 1 | log: True | slice_index: 3 | output_path: D:\UFAMeasy_Workspace\UFAMeasy\slice\cube | plane_count: 2
+13/07/2026 12:24:52 PM,workflow,slicing,INFO,SliceCompletedEvent,schema_version: 1 | log: True | slice_index: 3 | filename: slice_3.stl | output_path: D:\UFAMeasy_Workspace\UFAMeasy\slice\cube | z_offset: 14.0 | center_x: 10.0 | center_y: 10.0 | duration_ms: 16.00000000325963
+13/07/2026 12:24:52 PM,workflow,slicing,INFO,SliceCompletedEvent,schema_version: 1 | log: True | slice_index: 3 | filename: slice_3.stl | output_path: D:\UFAMeasy_Workspace\UFAMeasy\slice\cube | z_offset: 14.0 | center_x: 10.0 | center_y: 10.0 | duration_ms: 16.00000000325963
+13/07/2026 12:24:52 PM,session,session_sidecar,INFO,SessionSavedEvent,Saved session 'D:\UFAMeasy_Workspace\UFAMeasy\slice\cube\cube.ufamsession.json' with 3 slices
+13/07/2026 12:24:52 PM,session,session_sidecar,INFO,SessionSavedEvent,Saved session 'D:\UFAMeasy_Workspace\UFAMeasy\slice\cube\cube.ufamsession.json' with 3 slices
+13/07/2026 12:25:06 PM,workflow,slicing,INFO,SliceStartedEvent,schema_version: 1 | log: True | slice_index: 1 | output_path: D:\UFAMeasy_Workspace\UFAMeasy\slice\cube | plane_count: 2
+13/07/2026 12:25:06 PM,workflow,slicing,INFO,SliceStartedEvent,schema_version: 1 | log: True | slice_index: 1 | output_path: D:\UFAMeasy_Workspace\UFAMeasy\slice\cube | plane_count: 2
+13/07/2026 12:25:06 PM,workflow,slicing,INFO,SliceCompletedEvent,schema_version: 1 | log: True | slice_index: 1 | filename: slice_1.stl | output_path: D:\UFAMeasy_Workspace\UFAMeasy\slice\cube | z_offset: 0.0 | center_x: 10.0 | center_y: 10.0 | duration_ms: 30.999999988125637
+13/07/2026 12:25:06 PM,workflow,slicing,INFO,SliceCompletedEvent,schema_version: 1 | log: True | slice_index: 1 | filename: slice_1.stl | output_path: D:\UFAMeasy_Workspace\UFAMeasy\slice\cube | z_offset: 0.0 | center_x: 10.0 | center_y: 10.0 | duration_ms: 30.999999988125637
+13/07/2026 12:25:06 PM,workflow,slicing,INFO,SliceStartedEvent,schema_version: 1 | log: True | slice_index: 2 | output_path: D:\UFAMeasy_Workspace\UFAMeasy\slice\cube | plane_count: 2
+13/07/2026 12:25:06 PM,workflow,slicing,INFO,SliceStartedEvent,schema_version: 1 | log: True | slice_index: 2 | output_path: D:\UFAMeasy_Workspace\UFAMeasy\slice\cube | plane_count: 2
+13/07/2026 12:25:06 PM,workflow,slicing,INFO,SliceCompletedEvent,schema_version: 1 | log: True | slice_index: 2 | filename: slice_2.stl | output_path: D:\UFAMeasy_Workspace\UFAMeasy\slice\cube | z_offset: 8.0 | center_x: 10.0 | center_y: 10.0 | duration_ms: 0.0
+13/07/2026 12:25:06 PM,workflow,slicing,INFO,SliceCompletedEvent,schema_version: 1 | log: True | slice_index: 2 | filename: slice_2.stl | output_path: D:\UFAMeasy_Workspace\UFAMeasy\slice\cube | z_offset: 8.0 | center_x: 10.0 | center_y: 10.0 | duration_ms: 0.0
+13/07/2026 12:25:06 PM,workflow,slicing,INFO,SliceStartedEvent,schema_version: 1 | log: True | slice_index: 3 | output_path: D:\UFAMeasy_Workspace\UFAMeasy\slice\cube | plane_count: 2
+13/07/2026 12:25:06 PM,workflow,slicing,INFO,SliceStartedEvent,schema_version: 1 | log: True | slice_index: 3 | output_path: D:\UFAMeasy_Workspace\UFAMeasy\slice\cube | plane_count: 2
+13/07/2026 12:25:06 PM,workflow,slicing,INFO,SliceCompletedEvent,schema_version: 1 | log: True | slice_index: 3 | filename: slice_3.stl | output_path: D:\UFAMeasy_Workspace\UFAMeasy\slice\cube | z_offset: 14.0 | center_x: 10.0 | center_y: 10.0 | duration_ms: 16.00000000325963
+13/07/2026 12:25:06 PM,workflow,slicing,INFO,SliceCompletedEvent,schema_version: 1 | log: True | slice_index: 3 | filename: slice_3.stl | output_path: D:\UFAMeasy_Workspace\UFAMeasy\slice\cube | z_offset: 14.0 | center_x: 10.0 | center_y: 10.0 | duration_ms: 16.00000000325963
+13/07/2026 12:25:06 PM,session,session_sidecar,INFO,SessionSavedEvent,Saved session 'D:\UFAMeasy_Workspace\UFAMeasy\slice\cube\cube.ufamsession.json' with 3 slices
+13/07/2026 12:25:06 PM,session,session_sidecar,INFO,SessionSavedEvent,Saved session 'D:\UFAMeasy_Workspace\UFAMeasy\slice\cube\cube.ufamsession.json' with 3 slices
+13/07/2026 12:25:10 PM,gcode,gcode_generation,INFO,GCodeGeneratedEvent,schema_version: 1 | log: True | stl_path: D:\UFAMeasy_Workspace\UFAMeasy\slice\cube\slice_1.stl | gcode_path: D:\UFAMeasy_Workspace\UFAMeasy\slice\cube\slice_1.gcode | config_path: D:\UFAMeasy_Workspace\UFAMeasy\slice\cube\slice_1.ini | z_offset: 0.0 | duration_ms: 390.00000001396984
+13/07/2026 12:25:10 PM,gcode,gcode_generation,INFO,GCodeGeneratedEvent,schema_version: 1 | log: True | stl_path: D:\UFAMeasy_Workspace\UFAMeasy\slice\cube\slice_1.stl | gcode_path: D:\UFAMeasy_Workspace\UFAMeasy\slice\cube\slice_1.gcode | config_path: D:\UFAMeasy_Workspace\UFAMeasy\slice\cube\slice_1.ini | z_offset: 0.0 | duration_ms: 390.00000001396984
+13/07/2026 12:25:10 PM,gcode,gcode_generation,INFO,GCodeGeneratedEvent,schema_version: 1 | log: True | stl_path: D:\UFAMeasy_Workspace\UFAMeasy\slice\cube\slice_2.stl | gcode_path: D:\UFAMeasy_Workspace\UFAMeasy\slice\cube\slice_2.gcode | config_path: D:\UFAMeasy_Workspace\UFAMeasy\slice\cube\slice_2.ini | z_offset: 8.0 | duration_ms: 390.9999999741558
+13/07/2026 12:25:10 PM,gcode,gcode_generation,INFO,GCodeGeneratedEvent,schema_version: 1 | log: True | stl_path: D:\UFAMeasy_Workspace\UFAMeasy\slice\cube\slice_2.stl | gcode_path: D:\UFAMeasy_Workspace\UFAMeasy\slice\cube\slice_2.gcode | config_path: D:\UFAMeasy_Workspace\UFAMeasy\slice\cube\slice_2.ini | z_offset: 8.0 | duration_ms: 390.9999999741558
+13/07/2026 12:25:10 PM,gcode,gcode_generation,INFO,GCodeGeneratedEvent,schema_version: 1 | log: True | stl_path: D:\UFAMeasy_Workspace\UFAMeasy\slice\cube\slice_3.stl | gcode_path: D:\UFAMeasy_Workspace\UFAMeasy\slice\cube\slice_3.gcode | config_path: D:\UFAMeasy_Workspace\UFAMeasy\slice\cube\slice_3.ini | z_offset: 14.0 | duration_ms: 407.00000000651926
+13/07/2026 12:25:10 PM,gcode,gcode_generation,INFO,GCodeGeneratedEvent,schema_version: 1 | log: True | stl_path: D:\UFAMeasy_Workspace\UFAMeasy\slice\cube\slice_3.stl | gcode_path: D:\UFAMeasy_Workspace\UFAMeasy\slice\cube\slice_3.gcode | config_path: D:\UFAMeasy_Workspace\UFAMeasy\slice\cube\slice_3.ini | z_offset: 14.0 | duration_ms: 407.00000000651926
+13/07/2026 12:25:10 PM,telemetry,ui,INFO,UserInteractionEvent,User Clicked QPushButton '🛠 Generate Motion Program' on '' (Value: )
+13/07/2026 12:25:10 PM,telemetry,ui,INFO,UserInteractionEvent,User Clicked QPushButton '🛠 Generate Motion Program' on '' (Value: )
+13/07/2026 12:25:11 PM,workflow,job_estimator,INFO,JobEstimationEvent,Started estimation for 'D:\UFAMeasy_Workspace\UFAMeasy\slice\cube\slice_1.gcode' (0ms)
+13/07/2026 12:25:11 PM,workflow,job_estimator,INFO,JobEstimationEvent,Started estimation for 'D:\UFAMeasy_Workspace\UFAMeasy\slice\cube\slice_1.gcode' (0ms)
+13/07/2026 12:25:11 PM,workflow,job_estimator,INFO,JobEstimationEvent,Completed estimation for 'D:\UFAMeasy_Workspace\UFAMeasy\slice\cube\slice_1.gcode' (30.374699999811128ms)
+13/07/2026 12:25:11 PM,workflow,job_estimator,INFO,JobEstimationEvent,Completed estimation for 'D:\UFAMeasy_Workspace\UFAMeasy\slice\cube\slice_1.gcode' (30.374699999811128ms)
+13/07/2026 12:25:11 PM,workflow,job_estimator,INFO,JobEstimationEvent,Started estimation for 'D:\UFAMeasy_Workspace\UFAMeasy\slice\cube\slice_2.gcode' (0ms)
+13/07/2026 12:25:11 PM,workflow,job_estimator,INFO,JobEstimationEvent,Started estimation for 'D:\UFAMeasy_Workspace\UFAMeasy\slice\cube\slice_2.gcode' (0ms)
+13/07/2026 12:25:11 PM,workflow,job_estimator,INFO,JobEstimationEvent,Completed estimation for 'D:\UFAMeasy_Workspace\UFAMeasy\slice\cube\slice_2.gcode' (21.647500019753352ms)
+13/07/2026 12:25:11 PM,workflow,job_estimator,INFO,JobEstimationEvent,Completed estimation for 'D:\UFAMeasy_Workspace\UFAMeasy\slice\cube\slice_2.gcode' (21.647500019753352ms)
+13/07/2026 12:25:11 PM,workflow,job_estimator,INFO,JobEstimationEvent,Started estimation for 'D:\UFAMeasy_Workspace\UFAMeasy\slice\cube\slice_3.gcode' (0ms)
+13/07/2026 12:25:11 PM,workflow,job_estimator,INFO,JobEstimationEvent,Started estimation for 'D:\UFAMeasy_Workspace\UFAMeasy\slice\cube\slice_3.gcode' (0ms)
+13/07/2026 12:25:11 PM,workflow,job_estimator,INFO,JobEstimationEvent,Completed estimation for 'D:\UFAMeasy_Workspace\UFAMeasy\slice\cube\slice_3.gcode' (21.752100001322106ms)
+13/07/2026 12:25:11 PM,workflow,job_estimator,INFO,JobEstimationEvent,Completed estimation for 'D:\UFAMeasy_Workspace\UFAMeasy\slice\cube\slice_3.gcode' (21.752100001322106ms)
+13/07/2026 12:25:11 PM,workflow,job_estimator,INFO,JobEstimationEvent,Started estimation for 'D:\UFAMeasy_Workspace\UFAMeasy\slice\cube\combined_print.gcode' (0ms)
+13/07/2026 12:25:11 PM,workflow,job_estimator,INFO,JobEstimationEvent,Started estimation for 'D:\UFAMeasy_Workspace\UFAMeasy\slice\cube\combined_print.gcode' (0ms)
+13/07/2026 12:25:12 PM,workflow,job_estimator,INFO,JobEstimationEvent,Completed estimation for 'D:\UFAMeasy_Workspace\UFAMeasy\slice\cube\combined_print.gcode' (80.62259998405352ms)
+13/07/2026 12:25:12 PM,workflow,job_estimator,INFO,JobEstimationEvent,Completed estimation for 'D:\UFAMeasy_Workspace\UFAMeasy\slice\cube\combined_print.gcode' (80.62259998405352ms)
+13/07/2026 12:25:12 PM,session,session_sidecar,INFO,SessionSavedEvent,Saved session 'D:\UFAMeasy_Workspace\UFAMeasy\slice\cube\cube.ufamsession.json' with 3 slices
+13/07/2026 12:25:12 PM,session,session_sidecar,INFO,SessionSavedEvent,Saved session 'D:\UFAMeasy_Workspace\UFAMeasy\slice\cube\cube.ufamsession.json' with 3 slices
+13/07/2026 12:25:12 PM,telemetry,ui,INFO,UserInteractionEvent,User Clicked QPushButton '🗜 Merge Motion Programs' on '' (Value: )
+13/07/2026 12:25:12 PM,telemetry,ui,INFO,UserInteractionEvent,User Clicked QPushButton '🗜 Merge Motion Programs' on '' (Value: )
+13/07/2026 03:33:43 PM,workflow,geometry,INFO,ShapeChangedEvent,"Created Box (Label: 'Box') [a=20.0, b=20.0, c=20.0]"
+13/07/2026 03:33:43 PM,workflow,geometry,INFO,ShapeChangedEvent,"Created Box (Label: 'Box') [a=20.0, b=20.0, c=20.0]"
+13/07/2026 03:33:43 PM,workflow,geometry,INFO,ShapeChangedEvent,"Created Box (Label: 'Box') [a=20.0, b=20.0, c=20.0]"
+13/07/2026 03:33:43 PM,workflow,geometry,INFO,ShapeChangedEvent,"Created Box (Label: 'Box') [a=20.0, b=20.0, c=20.0]"
+13/07/2026 03:33:43 PM,workflow,geometry,INFO,ShapeChangedEvent,"Created Box (Label: 'Box') [a=20.0, b=20.0, c=20.0]"
+13/07/2026 03:33:43 PM,workflow,geometry,INFO,ShapeChangedEvent,"Created Box (Label: 'Box') [a=20.0, b=20.0, c=20.0]"
+13/07/2026 03:33:53 PM,workflow,slicing,INFO,SliceStartedEvent,schema_version: 1 | log: True | slice_index: 1 | output_path: D:\UFAMeasy_Workspace\UFAMeasy\slice\fdvgfbgfgnhgnhnghmhjhjnhbg | plane_count: 0
+13/07/2026 03:33:53 PM,workflow,slicing,INFO,SliceStartedEvent,schema_version: 1 | log: True | slice_index: 1 | output_path: D:\UFAMeasy_Workspace\UFAMeasy\slice\fdvgfbgfgnhgnhnghmhjhjnhbg | plane_count: 0
+13/07/2026 03:33:53 PM,workflow,slicing,INFO,SliceStartedEvent,schema_version: 1 | log: True | slice_index: 1 | output_path: D:\UFAMeasy_Workspace\UFAMeasy\slice\fdvgfbgfgnhgnhnghmhjhjnhbg | plane_count: 0
+13/07/2026 03:33:53 PM,workflow,slicing,INFO,SliceStartedEvent,schema_version: 1 | log: True | slice_index: 1 | output_path: D:\UFAMeasy_Workspace\UFAMeasy\slice\fdvgfbgfgnhgnhnghmhjhjnhbg | plane_count: 0
+13/07/2026 03:33:53 PM,workflow,slicing,INFO,SliceCompletedEvent,schema_version: 1 | log: True | slice_index: 1 | filename: slice_1.stl | output_path: D:\UFAMeasy_Workspace\UFAMeasy\slice\fdvgfbgfgnhgnhnghmhjhjnhbg | z_offset: 0.0 | center_x: 10.0 | center_y: 10.0 | duration_ms: 171.99999999138527
+13/07/2026 03:33:53 PM,workflow,slicing,INFO,SliceCompletedEvent,schema_version: 1 | log: True | slice_index: 1 | filename: slice_1.stl | output_path: D:\UFAMeasy_Workspace\UFAMeasy\slice\fdvgfbgfgnhgnhnghmhjhjnhbg | z_offset: 0.0 | center_x: 10.0 | center_y: 10.0 | duration_ms: 171.99999999138527
+13/07/2026 03:33:53 PM,workflow,slicing,INFO,SliceCompletedEvent,schema_version: 1 | log: True | slice_index: 1 | filename: slice_1.stl | output_path: D:\UFAMeasy_Workspace\UFAMeasy\slice\fdvgfbgfgnhgnhnghmhjhjnhbg | z_offset: 0.0 | center_x: 10.0 | center_y: 10.0 | duration_ms: 171.99999999138527
+13/07/2026 03:33:53 PM,workflow,slicing,INFO,SliceCompletedEvent,schema_version: 1 | log: True | slice_index: 1 | filename: slice_1.stl | output_path: D:\UFAMeasy_Workspace\UFAMeasy\slice\fdvgfbgfgnhgnhnghmhjhjnhbg | z_offset: 0.0 | center_x: 10.0 | center_y: 10.0 | duration_ms: 171.99999999138527
+13/07/2026 03:33:53 PM,workflow,slicing,INFO,SliceCompletedEvent,schema_version: 1 | log: True | slice_index: 1 | filename: slice_1.stl | output_path: D:\UFAMeasy_Workspace\UFAMeasy\slice\fdvgfbgfgnhgnhnghmhjhjnhbg | z_offset: 0.0 | center_x: 10.0 | center_y: 10.0 | duration_ms: 171.99999999138527
+13/07/2026 03:33:53 PM,workflow,slicing,INFO,SliceCompletedEvent,schema_version: 1 | log: True | slice_index: 1 | filename: slice_1.stl | output_path: D:\UFAMeasy_Workspace\UFAMeasy\slice\fdvgfbgfgnhgnhnghmhjhjnhbg | z_offset: 0.0 | center_x: 10.0 | center_y: 10.0 | duration_ms: 171.99999999138527
+13/07/2026 03:34:13 PM,session,persistence,INFO,SessionSavedEvent,Saved session 'D:/UFAMeasy_Workspace/UFAMeasy/slice/fdvgfbgfgnhgnhnghmhjhjnhbg/bx.FCStd' with 1 slices
+13/07/2026 03:34:13 PM,session,persistence,INFO,SessionSavedEvent,Saved session 'D:/UFAMeasy_Workspace/UFAMeasy/slice/fdvgfbgfgnhgnhnghmhjhjnhbg/bx.FCStd' with 1 slices
+13/07/2026 03:34:13 PM,session,persistence,INFO,SessionSavedEvent,Saved session 'D:/UFAMeasy_Workspace/UFAMeasy/slice/fdvgfbgfgnhgnhnghmhjhjnhbg/bx.FCStd' with 1 slices
+13/07/2026 03:34:13 PM,session,persistence,INFO,SessionSavedEvent,Saved session 'D:/UFAMeasy_Workspace/UFAMeasy/slice/fdvgfbgfgnhgnhnghmhjhjnhbg/bx.FCStd' with 1 slices
+13/07/2026 03:34:13 PM,session,persistence,INFO,SessionSavedEvent,Saved session 'D:/UFAMeasy_Workspace/UFAMeasy/slice/fdvgfbgfgnhgnhnghmhjhjnhbg/bx.FCStd' with 1 slices
+13/07/2026 03:34:13 PM,session,persistence,INFO,SessionSavedEvent,Saved session 'D:/UFAMeasy_Workspace/UFAMeasy/slice/fdvgfbgfgnhgnhnghmhjhjnhbg/bx.FCStd' with 1 slices
+13/07/2026 03:34:17 PM,workflow,slicing,INFO,SliceStartedEvent,schema_version: 1 | log: True | slice_index: 1 | output_path: D:\UFAMeasy_Workspace\UFAMeasy\slice\fdvgfbgfgnhgnhnghmhjhjnhbg | plane_count: 0
+13/07/2026 03:34:17 PM,workflow,slicing,INFO,SliceStartedEvent,schema_version: 1 | log: True | slice_index: 1 | output_path: D:\UFAMeasy_Workspace\UFAMeasy\slice\fdvgfbgfgnhgnhnghmhjhjnhbg | plane_count: 0
+13/07/2026 03:34:17 PM,workflow,slicing,INFO,SliceStartedEvent,schema_version: 1 | log: True | slice_index: 1 | output_path: D:\UFAMeasy_Workspace\UFAMeasy\slice\fdvgfbgfgnhgnhnghmhjhjnhbg | plane_count: 0
+13/07/2026 03:34:17 PM,workflow,slicing,INFO,SliceStartedEvent,schema_version: 1 | log: True | slice_index: 1 | output_path: D:\UFAMeasy_Workspace\UFAMeasy\slice\fdvgfbgfgnhgnhnghmhjhjnhbg | plane_count: 0
+13/07/2026 03:34:17 PM,workflow,slicing,INFO,SliceStartedEvent,schema_version: 1 | log: True | slice_index: 1 | output_path: D:\UFAMeasy_Workspace\UFAMeasy\slice\fdvgfbgfgnhgnhnghmhjhjnhbg | plane_count: 0
+13/07/2026 03:34:17 PM,workflow,slicing,INFO,SliceCompletedEvent,schema_version: 1 | log: True | slice_index: 1 | filename: slice_1.stl | output_path: D:\UFAMeasy_Workspace\UFAMeasy\slice\fdvgfbgfgnhgnhnghmhjhjnhbg | z_offset: 0.0 | center_x: 10.0 | center_y: 10.0 | duration_ms: 93.99999998277053
+13/07/2026 03:34:17 PM,workflow,slicing,INFO,SliceCompletedEvent,schema_version: 1 | log: True | slice_index: 1 | filename: slice_1.stl | output_path: D:\UFAMeasy_Workspace\UFAMeasy\slice\fdvgfbgfgnhgnhnghmhjhjnhbg | z_offset: 0.0 | center_x: 10.0 | center_y: 10.0 | duration_ms: 93.99999998277053
+13/07/2026 03:34:17 PM,workflow,slicing,INFO,SliceCompletedEvent,schema_version: 1 | log: True | slice_index: 1 | filename: slice_1.stl | output_path: D:\UFAMeasy_Workspace\UFAMeasy\slice\fdvgfbgfgnhgnhnghmhjhjnhbg | z_offset: 0.0 | center_x: 10.0 | center_y: 10.0 | duration_ms: 93.99999998277053
+13/07/2026 03:34:17 PM,workflow,slicing,INFO,SliceCompletedEvent,schema_version: 1 | log: True | slice_index: 1 | filename: slice_1.stl | output_path: D:\UFAMeasy_Workspace\UFAMeasy\slice\fdvgfbgfgnhgnhnghmhjhjnhbg | z_offset: 0.0 | center_x: 10.0 | center_y: 10.0 | duration_ms: 93.99999998277053
+13/07/2026 03:34:17 PM,session,session_sidecar,INFO,SessionSavedEvent,Saved session 'D:\UFAMeasy_Workspace\UFAMeasy\slice\fdvgfbgfgnhgnhnghmhjhjnhbg\bx.ufamsession.json' with 1 slices
+13/07/2026 03:34:17 PM,session,session_sidecar,INFO,SessionSavedEvent,Saved session 'D:\UFAMeasy_Workspace\UFAMeasy\slice\fdvgfbgfgnhgnhnghmhjhjnhbg\bx.ufamsession.json' with 1 slices
+13/07/2026 03:34:17 PM,session,session_sidecar,INFO,SessionSavedEvent,Saved session 'D:\UFAMeasy_Workspace\UFAMeasy\slice\fdvgfbgfgnhgnhnghmhjhjnhbg\bx.ufamsession.json' with 1 slices
+13/07/2026 03:34:17 PM,session,session_sidecar,INFO,SessionSavedEvent,Saved session 'D:\UFAMeasy_Workspace\UFAMeasy\slice\fdvgfbgfgnhgnhnghmhjhjnhbg\bx.ufamsession.json' with 1 slices
+13/07/2026 03:34:17 PM,session,session_sidecar,INFO,SessionSavedEvent,Saved session 'D:\UFAMeasy_Workspace\UFAMeasy\slice\fdvgfbgfgnhgnhnghmhjhjnhbg\bx.ufamsession.json' with 1 slices
+13/07/2026 03:34:17 PM,session,session_sidecar,INFO,SessionSavedEvent,Saved session 'D:\UFAMeasy_Workspace\UFAMeasy\slice\fdvgfbgfgnhgnhnghmhjhjnhbg\bx.ufamsession.json' with 1 slices
+13/07/2026 03:34:26 PM,gcode,gcode_generation,INFO,GCodeGeneratedEvent,schema_version: 1 | log: True | stl_path: D:\UFAMeasy_Workspace\UFAMeasy\slice\fdvgfbgfgnhgnhnghmhjhjnhbg\slice_1.stl | gcode_path: D:\UFAMeasy_Workspace\UFAMeasy\slice\fdvgfbgfgnhgnhnghmhjhjnhbg\slice_1.gcode | config_path: D:\UFAMeasy_Workspace\UFAMeasy\slice\fdvgfbgfgnhgnhnghmhjhjnhbg\slice_1.ini | z_offset: 0.0 | duration_ms: 641.0000000032596
+13/07/2026 03:34:26 PM,gcode,gcode_generation,INFO,GCodeGeneratedEvent,schema_version: 1 | log: True | stl_path: D:\UFAMeasy_Workspace\UFAMeasy\slice\fdvgfbgfgnhgnhnghmhjhjnhbg\slice_1.stl | gcode_path: D:\UFAMeasy_Workspace\UFAMeasy\slice\fdvgfbgfgnhgnhnghmhjhjnhbg\slice_1.gcode | config_path: D:\UFAMeasy_Workspace\UFAMeasy\slice\fdvgfbgfgnhgnhnghmhjhjnhbg\slice_1.ini | z_offset: 0.0 | duration_ms: 641.0000000032596
+13/07/2026 03:34:26 PM,gcode,gcode_generation,INFO,GCodeGeneratedEvent,schema_version: 1 | log: True | stl_path: D:\UFAMeasy_Workspace\UFAMeasy\slice\fdvgfbgfgnhgnhnghmhjhjnhbg\slice_1.stl | gcode_path: D:\UFAMeasy_Workspace\UFAMeasy\slice\fdvgfbgfgnhgnhnghmhjhjnhbg\slice_1.gcode | config_path: D:\UFAMeasy_Workspace\UFAMeasy\slice\fdvgfbgfgnhgnhnghmhjhjnhbg\slice_1.ini | z_offset: 0.0 | duration_ms: 641.0000000032596
+13/07/2026 03:34:26 PM,gcode,gcode_generation,INFO,GCodeGeneratedEvent,schema_version: 1 | log: True | stl_path: D:\UFAMeasy_Workspace\UFAMeasy\slice\fdvgfbgfgnhgnhnghmhjhjnhbg\slice_1.stl | gcode_path: D:\UFAMeasy_Workspace\UFAMeasy\slice\fdvgfbgfgnhgnhnghmhjhjnhbg\slice_1.gcode | config_path: D:\UFAMeasy_Workspace\UFAMeasy\slice\fdvgfbgfgnhgnhnghmhjhjnhbg\slice_1.ini | z_offset: 0.0 | duration_ms: 641.0000000032596
+13/07/2026 03:34:26 PM,gcode,gcode_generation,INFO,GCodeGeneratedEvent,schema_version: 1 | log: True | stl_path: D:\UFAMeasy_Workspace\UFAMeasy\slice\fdvgfbgfgnhgnhnghmhjhjnhbg\slice_1.stl | gcode_path: D:\UFAMeasy_Workspace\UFAMeasy\slice\fdvgfbgfgnhgnhnghmhjhjnhbg\slice_1.gcode | config_path: D:\UFAMeasy_Workspace\UFAMeasy\slice\fdvgfbgfgnhgnhnghmhjhjnhbg\slice_1.ini | z_offset: 0.0 | duration_ms: 641.0000000032596
+13/07/2026 03:34:26 PM,gcode,gcode_generation,INFO,GCodeGeneratedEvent,schema_version: 1 | log: True | stl_path: D:\UFAMeasy_Workspace\UFAMeasy\slice\fdvgfbgfgnhgnhnghmhjhjnhbg\slice_1.stl | gcode_path: D:\UFAMeasy_Workspace\UFAMeasy\slice\fdvgfbgfgnhgnhnghmhjhjnhbg\slice_1.gcode | config_path: D:\UFAMeasy_Workspace\UFAMeasy\slice\fdvgfbgfgnhgnhnghmhjhjnhbg\slice_1.ini | z_offset: 0.0 | duration_ms: 641.0000000032596
+13/07/2026 03:34:26 PM,telemetry,ui,INFO,UserInteractionEvent,User Clicked QPushButton '🛠 Generate Motion Program' on '' (Value: )
+13/07/2026 03:34:26 PM,telemetry,ui,INFO,UserInteractionEvent,User Clicked QPushButton '🛠 Generate Motion Program' on '' (Value: )
+13/07/2026 03:34:26 PM,telemetry,ui,INFO,UserInteractionEvent,User Clicked QPushButton '🛠 Generate Motion Program' on '' (Value: )
+13/07/2026 03:34:26 PM,telemetry,ui,INFO,UserInteractionEvent,User Clicked QPushButton '🛠 Generate Motion Program' on '' (Value: )
+13/07/2026 03:34:26 PM,telemetry,ui,INFO,UserInteractionEvent,User Clicked QPushButton '🛠 Generate Motion Program' on '' (Value: )
+13/07/2026 03:34:26 PM,telemetry,ui,INFO,UserInteractionEvent,User Clicked QPushButton '🛠 Generate Motion Program' on '' (Value: )
+13/07/2026 03:34:28 PM,workflow,job_estimator,INFO,JobEstimationEvent,Started estimation for 'D:\UFAMeasy_Workspace\UFAMeasy\slice\fdvgfbgfgnhgnhnghmhjhjnhbg\slice_1.gcode' (0ms)
+13/07/2026 03:34:28 PM,workflow,job_estimator,INFO,JobEstimationEvent,Started estimation for 'D:\UFAMeasy_Workspace\UFAMeasy\slice\fdvgfbgfgnhgnhnghmhjhjnhbg\slice_1.gcode' (0ms)
+13/07/2026 03:34:28 PM,workflow,job_estimator,INFO,JobEstimationEvent,Started estimation for 'D:\UFAMeasy_Workspace\UFAMeasy\slice\fdvgfbgfgnhgnhnghmhjhjnhbg\slice_1.gcode' (0ms)
+13/07/2026 03:34:28 PM,workflow,job_estimator,INFO,JobEstimationEvent,Started estimation for 'D:\UFAMeasy_Workspace\UFAMeasy\slice\fdvgfbgfgnhgnhnghmhjhjnhbg\slice_1.gcode' (0ms)
+13/07/2026 03:34:28 PM,workflow,job_estimator,INFO,JobEstimationEvent,Completed estimation for 'D:\UFAMeasy_Workspace\UFAMeasy\slice\fdvgfbgfgnhgnhnghmhjhjnhbg\slice_1.gcode' (68.37299998733215ms)
+13/07/2026 03:34:28 PM,workflow,job_estimator,INFO,JobEstimationEvent,Completed estimation for 'D:\UFAMeasy_Workspace\UFAMeasy\slice\fdvgfbgfgnhgnhnghmhjhjnhbg\slice_1.gcode' (68.37299998733215ms)
+13/07/2026 03:34:28 PM,workflow,job_estimator,INFO,JobEstimationEvent,Completed estimation for 'D:\UFAMeasy_Workspace\UFAMeasy\slice\fdvgfbgfgnhgnhnghmhjhjnhbg\slice_1.gcode' (68.37299998733215ms)
+13/07/2026 03:34:28 PM,workflow,job_estimator,INFO,JobEstimationEvent,Completed estimation for 'D:\UFAMeasy_Workspace\UFAMeasy\slice\fdvgfbgfgnhgnhnghmhjhjnhbg\slice_1.gcode' (68.37299998733215ms)
+13/07/2026 03:34:28 PM,workflow,job_estimator,INFO,JobEstimationEvent,Completed estimation for 'D:\UFAMeasy_Workspace\UFAMeasy\slice\fdvgfbgfgnhgnhnghmhjhjnhbg\slice_1.gcode' (68.37299998733215ms)
+13/07/2026 03:34:28 PM,workflow,job_estimator,INFO,JobEstimationEvent,Completed estimation for 'D:\UFAMeasy_Workspace\UFAMeasy\slice\fdvgfbgfgnhgnhnghmhjhjnhbg\slice_1.gcode' (68.37299998733215ms)
+13/07/2026 03:34:28 PM,workflow,job_estimator,INFO,JobEstimationEvent,Started estimation for 'D:\UFAMeasy_Workspace\UFAMeasy\slice\fdvgfbgfgnhgnhnghmhjhjnhbg\combined_print.gcode' (0ms)
+13/07/2026 03:34:28 PM,workflow,job_estimator,INFO,JobEstimationEvent,Started estimation for 'D:\UFAMeasy_Workspace\UFAMeasy\slice\fdvgfbgfgnhgnhnghmhjhjnhbg\combined_print.gcode' (0ms)
+13/07/2026 03:34:28 PM,workflow,job_estimator,INFO,JobEstimationEvent,Started estimation for 'D:\UFAMeasy_Workspace\UFAMeasy\slice\fdvgfbgfgnhgnhnghmhjhjnhbg\combined_print.gcode' (0ms)
+13/07/2026 03:34:28 PM,workflow,job_estimator,INFO,JobEstimationEvent,Started estimation for 'D:\UFAMeasy_Workspace\UFAMeasy\slice\fdvgfbgfgnhgnhnghmhjhjnhbg\combined_print.gcode' (0ms)
+13/07/2026 03:34:28 PM,workflow,job_estimator,INFO,JobEstimationEvent,Started estimation for 'D:\UFAMeasy_Workspace\UFAMeasy\slice\fdvgfbgfgnhgnhnghmhjhjnhbg\combined_print.gcode' (0ms)
+13/07/2026 03:34:28 PM,workflow,job_estimator,INFO,JobEstimationEvent,Completed estimation for 'D:\UFAMeasy_Workspace\UFAMeasy\slice\fdvgfbgfgnhgnhnghmhjhjnhbg\combined_print.gcode' (68.95839999197051ms)
+13/07/2026 03:34:28 PM,workflow,job_estimator,INFO,JobEstimationEvent,Started estimation for 'D:\UFAMeasy_Workspace\UFAMeasy\slice\fdvgfbgfgnhgnhnghmhjhjnhbg\combined_print.gcode' (0ms)
+13/07/2026 03:34:28 PM,workflow,job_estimator,INFO,JobEstimationEvent,Completed estimation for 'D:\UFAMeasy_Workspace\UFAMeasy\slice\fdvgfbgfgnhgnhnghmhjhjnhbg\combined_print.gcode' (68.95839999197051ms)
+13/07/2026 03:34:28 PM,workflow,job_estimator,INFO,JobEstimationEvent,Completed estimation for 'D:\UFAMeasy_Workspace\UFAMeasy\slice\fdvgfbgfgnhgnhnghmhjhjnhbg\combined_print.gcode' (68.95839999197051ms)
+13/07/2026 03:34:28 PM,workflow,job_estimator,INFO,JobEstimationEvent,Completed estimation for 'D:\UFAMeasy_Workspace\UFAMeasy\slice\fdvgfbgfgnhgnhnghmhjhjnhbg\combined_print.gcode' (68.95839999197051ms)
+13/07/2026 03:34:28 PM,workflow,job_estimator,INFO,JobEstimationEvent,Completed estimation for 'D:\UFAMeasy_Workspace\UFAMeasy\slice\fdvgfbgfgnhgnhnghmhjhjnhbg\combined_print.gcode' (68.95839999197051ms)
+13/07/2026 03:34:28 PM,workflow,job_estimator,INFO,JobEstimationEvent,Completed estimation for 'D:\UFAMeasy_Workspace\UFAMeasy\slice\fdvgfbgfgnhgnhnghmhjhjnhbg\combined_print.gcode' (68.95839999197051ms)
+13/07/2026 03:34:28 PM,session,session_sidecar,INFO,SessionSavedEvent,Saved session 'D:\UFAMeasy_Workspace\UFAMeasy\slice\fdvgfbgfgnhgnhnghmhjhjnhbg\bx.ufamsession.json' with 1 slices
+13/07/2026 03:34:28 PM,session,session_sidecar,INFO,SessionSavedEvent,Saved session 'D:\UFAMeasy_Workspace\UFAMeasy\slice\fdvgfbgfgnhgnhnghmhjhjnhbg\bx.ufamsession.json' with 1 slices
+13/07/2026 03:34:28 PM,session,session_sidecar,INFO,SessionSavedEvent,Saved session 'D:\UFAMeasy_Workspace\UFAMeasy\slice\fdvgfbgfgnhgnhnghmhjhjnhbg\bx.ufamsession.json' with 1 slices
+13/07/2026 03:34:28 PM,session,session_sidecar,INFO,SessionSavedEvent,Saved session 'D:\UFAMeasy_Workspace\UFAMeasy\slice\fdvgfbgfgnhgnhnghmhjhjnhbg\bx.ufamsession.json' with 1 slices
+13/07/2026 03:34:28 PM,session,session_sidecar,INFO,SessionSavedEvent,Saved session 'D:\UFAMeasy_Workspace\UFAMeasy\slice\fdvgfbgfgnhgnhnghmhjhjnhbg\bx.ufamsession.json' with 1 slices
+13/07/2026 03:34:28 PM,telemetry,ui,INFO,UserInteractionEvent,User Clicked QPushButton '🗜 Merge Motion Programs' on '' (Value: )
+13/07/2026 03:34:28 PM,telemetry,ui,INFO,UserInteractionEvent,User Clicked QPushButton '🗜 Merge Motion Programs' on '' (Value: )
+13/07/2026 03:34:28 PM,session,session_sidecar,INFO,SessionSavedEvent,Saved session 'D:\UFAMeasy_Workspace\UFAMeasy\slice\fdvgfbgfgnhgnhnghmhjhjnhbg\bx.ufamsession.json' with 1 slices
+13/07/2026 03:34:28 PM,telemetry,ui,INFO,UserInteractionEvent,User Clicked QPushButton '🗜 Merge Motion Programs' on '' (Value: )
+13/07/2026 03:34:28 PM,telemetry,ui,INFO,UserInteractionEvent,User Clicked QPushButton '🗜 Merge Motion Programs' on '' (Value: )
+13/07/2026 03:34:28 PM,telemetry,ui,INFO,UserInteractionEvent,User Clicked QPushButton '🗜 Merge Motion Programs' on '' (Value: )
+13/07/2026 03:34:28 PM,telemetry,ui,INFO,UserInteractionEvent,User Clicked QPushButton '🗜 Merge Motion Programs' on '' (Value: )
+13/07/2026 03:53:46 PM,workflow,geometry,INFO,ShapeChangedEvent,"Created Box (Label: 'Box') [a=20.0, b=20.0, c=20.0]"
+13/07/2026 03:53:46 PM,workflow,geometry,INFO,ShapeChangedEvent,"Created Box (Label: 'Box') [a=20.0, b=20.0, c=20.0]"
+13/07/2026 03:54:02 PM,session,persistence,INFO,SessionSavedEvent,Saved session 'D:/UFAMeasy_Workspace/UFAMeasy/slice/hjadbj/box.FCStd' with 0 slices
+13/07/2026 03:54:02 PM,session,persistence,INFO,SessionSavedEvent,Saved session 'D:/UFAMeasy_Workspace/UFAMeasy/slice/hjadbj/box.FCStd' with 0 slices
+13/07/2026 03:54:13 PM,workflow,slicing,INFO,SliceStartedEvent,schema_version: 1 | log: True | slice_index: 1 | output_path: D:\UFAMeasy_Workspace\UFAMeasy\slice\hjadbj | plane_count: 0
+13/07/2026 03:54:13 PM,workflow,slicing,INFO,SliceStartedEvent,schema_version: 1 | log: True | slice_index: 1 | output_path: D:\UFAMeasy_Workspace\UFAMeasy\slice\hjadbj | plane_count: 0
+13/07/2026 03:54:13 PM,workflow,slicing,INFO,SliceCompletedEvent,schema_version: 1 | log: True | slice_index: 1 | filename: slice_1.stl | output_path: D:\UFAMeasy_Workspace\UFAMeasy\slice\hjadbj | z_offset: 0.0 | center_x: 10.0 | center_y: 10.0 | duration_ms: 125.0
+13/07/2026 03:54:13 PM,workflow,slicing,INFO,SliceCompletedEvent,schema_version: 1 | log: True | slice_index: 1 | filename: slice_1.stl | output_path: D:\UFAMeasy_Workspace\UFAMeasy\slice\hjadbj | z_offset: 0.0 | center_x: 10.0 | center_y: 10.0 | duration_ms: 125.0
+13/07/2026 03:54:13 PM,session,session_sidecar,INFO,SessionSavedEvent,Saved session 'D:\UFAMeasy_Workspace\UFAMeasy\slice\hjadbj\box.ufamsession.json' with 1 slices
+13/07/2026 03:54:13 PM,session,session_sidecar,INFO,SessionSavedEvent,Saved session 'D:\UFAMeasy_Workspace\UFAMeasy\slice\hjadbj\box.ufamsession.json' with 1 slices
+13/07/2026 04:51:01 PM,workflow,geometry,INFO,ShapeChangedEvent,"Created Box (Label: 'Box') [a=20.0, b=20.0, c=20.0]"
+13/07/2026 04:51:01 PM,workflow,geometry,INFO,ShapeChangedEvent,"Created Box (Label: 'Box') [a=20.0, b=20.0, c=20.0]"
+13/07/2026 04:51:19 PM,session,persistence,INFO,SessionSavedEvent,Saved session 'D:/UFAMeasy_Workspace/UFAMeasy/slice/56yh/234.FCStd' with 0 slices
+13/07/2026 04:51:19 PM,session,persistence,INFO,SessionSavedEvent,Saved session 'D:/UFAMeasy_Workspace/UFAMeasy/slice/56yh/234.FCStd' with 0 slices
+13/07/2026 04:51:23 PM,workflow,slicing,INFO,SliceStartedEvent,schema_version: 1 | log: True | slice_index: 1 | output_path: D:\UFAMeasy_Workspace\UFAMeasy\slice\56yh | plane_count: 0
+13/07/2026 04:51:23 PM,workflow,slicing,INFO,SliceStartedEvent,schema_version: 1 | log: True | slice_index: 1 | output_path: D:\UFAMeasy_Workspace\UFAMeasy\slice\56yh | plane_count: 0
+13/07/2026 04:51:23 PM,workflow,slicing,INFO,SliceCompletedEvent,schema_version: 1 | log: True | slice_index: 1 | filename: slice_1.stl | output_path: D:\UFAMeasy_Workspace\UFAMeasy\slice\56yh | z_offset: 0.0 | center_x: 10.0 | center_y: 10.0 | duration_ms: 94.00000001187436
+13/07/2026 04:51:23 PM,workflow,slicing,INFO,SliceCompletedEvent,schema_version: 1 | log: True | slice_index: 1 | filename: slice_1.stl | output_path: D:\UFAMeasy_Workspace\UFAMeasy\slice\56yh | z_offset: 0.0 | center_x: 10.0 | center_y: 10.0 | duration_ms: 94.00000001187436
+13/07/2026 04:51:23 PM,session,session_sidecar,INFO,SessionSavedEvent,Saved session 'D:\UFAMeasy_Workspace\UFAMeasy\slice\56yh\234.ufamsession.json' with 1 slices
+13/07/2026 04:51:23 PM,session,session_sidecar,INFO,SessionSavedEvent,Saved session 'D:\UFAMeasy_Workspace\UFAMeasy\slice\56yh\234.ufamsession.json' with 1 slices

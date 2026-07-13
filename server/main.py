@@ -78,12 +78,12 @@ def get_snapshots():
     return state.get_all_snapshots()
 
 @app.get("/logs/download")
-def download_logs():
-    log_path = os.path.join(os.path.dirname(__file__), "data", "logs.csv")
+def download_logs(device_id: str = "device_001"):
+    log_path = os.path.join(os.path.dirname(__file__), "data", f"logs_{device_id}.csv")
     if not os.path.exists(log_path):
         from fastapi.responses import JSONResponse
         return JSONResponse({"error": "No logs yet"}, status_code=404)
-    return FileResponse(log_path, media_type="text/csv", filename="ufameasy_logs.csv")
+    return FileResponse(log_path, media_type="text/csv", filename=f"ufameasy_logs_{device_id}.csv")
 
 @app.get("/events")
 def get_events():

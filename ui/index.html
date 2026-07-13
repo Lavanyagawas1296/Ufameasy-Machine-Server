@@ -313,7 +313,7 @@
     <!-- Connection -->
     <div class="rt-card">
       <div class="label">Connection</div>
-      <div id="rtState"><span class="state-badge disconnected">DISCONNECTED</span></div>
+      <div id="rtState"><span class="state-badge">&mdash;</span></div>
     </div>
     <!-- Estimated Time -->
     <div class="rt-card">
@@ -343,9 +343,7 @@
     <div class="rt-card wide">
       <div class="label">System Logs</div>
       <div style="margin-top:8px;">
-        <a href="/logs/download" download="ufameasy_logs.csv">
-          <button class="toggle-btn" style="font-size:12px;padding:5px 12px;">⬇ Download Logs CSV</button>
-        </a>
+        <button class="toggle-btn" style="font-size:12px;padding:5px 12px;" onclick="if(!deviceSelect.value){alert('Please select a device first');return;} window.location='/logs/download?device_id=' + deviceSelect.value">⬇ Download Logs CSV</button>
       </div>
     </div>
   </div>
@@ -580,7 +578,12 @@
       deposition_efficiency: d.deposition_efficiency,
       energy:          d.energy          ?? d.total_energy_wh,
     });
-    liveRuntimeData = { ...d };
+    liveRuntimeData = {
+        ...d,
+        xma_live: (() => { try { return JSON.parse(d.xma); } catch(e) { return null; } })(),
+        laser_enabled: d.laser_on,
+        laser_power_pct: d.laser_power,
+    };
     renderLiveRuntimeGrid(liveRuntimeData);
   }
 
@@ -590,10 +593,10 @@
     if (data.current_file !== undefined) {
       const assignedValue = data.current_file || "—";
       rtFile.textContent = assignedValue;
-      console.log("DEBUG updateRuntime current_file", data.current_file);
-      console.log("DEBUG updateRuntime assignedValue", assignedValue);
-      console.log("DEBUG updateRuntime rtFile exists", !!rtFile);
-      console.log("DEBUG updateRuntime rtFile.textContent", rtFile ? rtFile.textContent : null);
+      // console.log("DEBUG updateRuntime current_file", data.current_file);
+      // console.log("DEBUG updateRuntime assignedValue", assignedValue);
+      // console.log("DEBUG updateRuntime rtFile exists", !!rtFile);
+      // console.log("DEBUG updateRuntime rtFile.textContent", rtFile ? rtFile.textContent : null);
     }
     if (data.current_layer !== undefined) {
       if (rtLayer) rtLayer.textContent = data.current_layer;
@@ -627,7 +630,7 @@
     if (progressPct) progressPct.textContent = "—";
     rtGas.innerHTML   = pill(false);
     rtLaser.innerHTML = pill(false);
-    rtState.innerHTML = stateBadge(false);
+
     estTime.textContent = "—";
     estPowder.textContent = "—";
     estEfficiency.textContent = "—";
@@ -662,6 +665,7 @@
   deviceSelect.addEventListener("change", async () => {
     clearRuntime();
     const id = deviceSelect.value;
+    if (id) localStorage.setItem("ufameasy_selected_device", id)
     if (!id) { sessionList.innerHTML = '<div class="no-sessions">Select a device to view session history.</div>'; return; }
     try {
       const res  = await fetch(`/devices/${id}/sessions`);
@@ -691,6 +695,8 @@
         div.onclick = () => fetchSessionDetails(s.session_id, s);
         sessionList.appendChild(div);
       });
+      const activeSession = rows.find(s => s.status === "running" || s.status === "active");
+      if (activeSession) fetchSessionDetails(activeSession.session_id, activeSession);
     } catch(e) { console.error("sessions fetch", e); }
   });
 
@@ -973,13 +979,16 @@
     socket = new WebSocket(`${location.protocol === "https:" ? "wss" : "ws"}://${location.host}/ws`);
     socket.onopen = async () => {
       setConn(true);
-      await fetchSnapshots();
       logEvent("WebSocket connected");
     };
 
     socket.onmessage = (ev) => {
       let msg;
       try { msg = JSON.parse(ev.data); } catch { return; }
+      console.log("WS MSG", JSON.stringify(msg).slice(0, 120));
+      const selected = deviceSelect.value;
+      if (msg.type !== "init" && (!selected || (msg.device_id && msg.device_id !== selected))) return;
+      
 
       switch (msg.type) {
 
@@ -996,9 +1005,9 @@
           const currentVal = deviceSelect.value;
           const activeDevices = Object.keys(sessions);
           if (!currentVal || !sessions[currentVal]) {
-            if (activeDevices.length === 1) {
-              deviceSelect.value = activeDevices[0];
-            }
+            const saved = localStorage.getItem("ufameasy_selected_device");
+            const preferred = (saved && sessions[saved]) ? saved : activeDevices[0];
+              if (preferred) deviceSelect.value = preferred;
           }
           const selected = deviceSelect.value;
           if (selected) {
@@ -1016,7 +1025,8 @@
             // -> updateRuntime pipeline and preserves manual click behavior.
             try {
               const sessionId = sessions[selected];
-              if (sessionId && sessionsData[selected]) {
+              const wasUserSelected = !!localStorage.getItem("ufameasy_selected_device");
+              if (sessionId && sessionsData[selected] && wasUserSelected) {
                 // Call the same function used by session list clicks.
                 fetchSessionDetails(sessionId, sessionsData[selected]);
               }
@@ -1078,7 +1088,7 @@
 
         case "position_update": {
           if (!loggedPositionPayload) {
-            console.debug("position_update payload", msg.data);
+            // console.debug("position_update payload", msg.data);
             loggedPositionPayload = true;
           }
           const d = (msg.data && msg.data.xma) ? msg.data.xma : (msg.data || {});
