@@ -234,6 +234,25 @@ def on_message(client, userdata, msg):
             })
             return
 
+        if topic_parts[2:] == ["log"]:
+            import csv as _csv, os as _os
+            data = json.loads(payload)
+            log_path = _os.path.join(_os.path.dirname(__file__), "data", "logs.csv")
+            write_header = not _os.path.exists(log_path)
+            with open(log_path, "a", newline="", encoding="utf-8") as f:
+                writer = _csv.writer(f)
+                if write_header:
+                    writer.writerow(["Timestamp", "Category", "Source", "Severity", "Event Type", "Details"])
+                writer.writerow([
+                    data.get("timestamp", ""),
+                    data.get("category", ""),
+                    data.get("source", ""),
+                    data.get("severity", ""),
+                    data.get("event_type", ""),
+                    data.get("details", ""),
+                ])
+            return
+
         if len(topic_parts) == 4 and topic_parts[2] == "slice":
             data = json.loads(payload)
             slice_idx = topic_parts[3]
