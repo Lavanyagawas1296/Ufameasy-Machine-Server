@@ -70,7 +70,6 @@ def health():
 
 @router.get("/snapshots")
 def get_snapshots():
-    print(f"GET snapshots "f"id(state)={id(state)} "f"id(snapshot_store)={id(state.slice_snapshots)} "f"keys={list(state.slice_snapshots.keys())}")
     return state.get_all_snapshots()
 
 DB_PATH = os.path.join(os.path.dirname(__file__), "data", "params.db")

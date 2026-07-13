@@ -87,7 +87,6 @@ def on_message(client, userdata, msg):
     Raises:
         UnicodeDecodeError: If the payload cannot be decoded as UTF-8.
     """
-    print(f"Received topic={msg.topic}")
     payload = msg.payload.decode()
 
     if msg.topic == "ufameasy/session/reset":
@@ -295,9 +294,7 @@ def on_message(client, userdata, msg):
         snapshot = json.loads(payload)
 
         slice_idx = msg.topic.split("/")[-1]
-        
-        print(f"slice_idx={slice_idx} "f"id(state)={id(state)} "f"id(snapshot_store)={id(state.slice_snapshots)}")
-        
+
         state.update_snapshot(slice_idx, snapshot)
         state.add_event("snapshot_received", {"slice_idx": slice_idx, "param_count": len(snapshot)})
 
@@ -311,9 +308,8 @@ def on_message(client, userdata, msg):
                 mqtt_event_loop,
             )
             future.add_done_callback(_log_broadcast_error)
-            print(f"[WS] Active connections: {len(manager.active)}")
 
-        print(f"[SNAPSHOT] Loaded "f"{len(snapshot)} parameters")
+
 
     # Single parameter message
     elif msg.topic.startswith("ufameasy/parameters/"):
@@ -326,7 +322,6 @@ def on_message(client, userdata, msg):
 
         state.update_parameter(param_name,value)
 
-        print(f"[PARAM] "f"{param_name} = {value}")
 
 client = mqtt.Client(mqtt.CallbackAPIVersion.VERSION2)
 

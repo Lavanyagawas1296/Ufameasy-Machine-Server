@@ -402,6 +402,8 @@
 
 <script>
   // ── DOM refs ──
+  document.getElementById("btnParams").style.display = "none";
+  document.getElementById("btnSessions").style.display = "none";
   const tableBody     = document.getElementById("tableBody");
   const tableWrap     = document.getElementById("tableWrap");
   const emptyState    = document.getElementById("emptyState");
@@ -434,10 +436,10 @@
   let socket = null;
   let reconnectTimer = null;
   let totalLayers = 0;
-  let loggedPositionPayload = false;
   let liveRuntimeData = {};
 
   async function fetchSessionDetails(sessionId, sessionSummary = {}) {
+    if (!deviceSelect.value) return;
     try {
       const res = await fetch(`/sessions/${sessionId}/replay`);
       const data = await res.json();
@@ -447,14 +449,10 @@
       data.slices.forEach(slice => {
         snapshots[String(slice.slice_index)] = slice.params_json;
       });
-      console.log("snapshots object:", snapshots);
       const flattened = flattenSnapshots(snapshots);
-      console.log("flattened rows:", flattened);
-      console.log("rowsByKey size before render:", rowsByKey.size);
       renderTable(flattened);
       openSection("params");
       updateReplayRuntime(data.runtime, sessionSummary);
-      console.log("rowsByKey size after render:", rowsByKey.size);
       logEvent("session_loaded", sessionId.slice(-8));
     } catch(e) { console.error("fetchSessionDetails", e); }
   }
@@ -588,15 +586,10 @@
   }
 
   function updateRuntime(data) {
-    console.log("DEBUG updateRuntime data", data);
     if (!data) return;
     if (data.current_file !== undefined) {
       const assignedValue = data.current_file || "—";
       rtFile.textContent = assignedValue;
-      // console.log("DEBUG updateRuntime current_file", data.current_file);
-      // console.log("DEBUG updateRuntime assignedValue", assignedValue);
-      // console.log("DEBUG updateRuntime rtFile exists", !!rtFile);
-      // console.log("DEBUG updateRuntime rtFile.textContent", rtFile ? rtFile.textContent : null);
     }
     if (data.current_layer !== undefined) {
       if (rtLayer) rtLayer.textContent = data.current_layer;
@@ -659,10 +652,11 @@
   function refreshSessions() {
     const id = deviceSelect.value;
     if (!id) return;
-    deviceSelect.dispatchEvent(new Event("change"));
+    deviceSelect.dispatchEvent(new CustomEvent("change", { detail: { auto: true } }));
   }
 
-  deviceSelect.addEventListener("change", async () => {
+  deviceSelect.addEventListener("change", async (e) => {
+    const isAuto = e && e.detail && e.detail.auto;
     clearRuntime();
     const id = deviceSelect.value;
     if (id) localStorage.setItem("ufameasy_selected_device", id)
@@ -695,8 +689,10 @@
         div.onclick = () => fetchSessionDetails(s.session_id, s);
         sessionList.appendChild(div);
       });
-      const activeSession = rows.find(s => s.status === "running" || s.status === "active");
-      if (activeSession) fetchSessionDetails(activeSession.session_id, activeSession);
+      if (!isAuto) {
+        const activeSession = rows.find(s => s.status === "running" || s.status === "active");
+        if (activeSession) fetchSessionDetails(activeSession.session_id, activeSession);
+      }
     } catch(e) { console.error("sessions fetch", e); }
   });
 
@@ -961,13 +957,6 @@
     statusText.textContent = on ? "Connected" : "Disconnected";
   }
 
-  async function fetchSnapshots() {
-    try {
-      const res = await fetch("/snapshots", { cache: "no-store" });
-      if (!res.ok) return;
-      renderTable(flattenSnapshots(await res.json()));
-    } catch(e) { console.error("fetchSnapshots", e); }
-  }
 
   function scheduleReconnect() {
     if (reconnectTimer) return;
@@ -985,9 +974,9 @@
     socket.onmessage = (ev) => {
       let msg;
       try { msg = JSON.parse(ev.data); } catch { return; }
-      console.log("WS MSG", JSON.stringify(msg).slice(0, 120));
+
       const selected = deviceSelect.value;
-      if (msg.type !== "init" && (!selected || (msg.device_id && msg.device_id !== selected))) return;
+      if (msg.type !== "init" && (!selected || (msg.device_id && msg.device_id !== selected) || (!msg.device_id && !["estimate_result"].includes(msg.type)))) return;
       
 
       switch (msg.type) {
@@ -1004,9 +993,9 @@
           });
           const currentVal = deviceSelect.value;
           const activeDevices = Object.keys(sessions);
+          const saved = localStorage.getItem("ufameasy_selected_device");
           if (!currentVal || !sessions[currentVal]) {
-            const saved = localStorage.getItem("ufameasy_selected_device");
-            const preferred = (saved && sessions[saved]) ? saved : activeDevices[0];
+            const preferred = (saved && sessions[saved]) ? saved : null;
               if (preferred) deviceSelect.value = preferred;
           }
           const selected = deviceSelect.value;
@@ -1018,15 +1007,14 @@
               clearRuntime();
               rtFile.textContent = "No active session";
             }
-            refreshSessions();
+            if (saved) refreshSessions();
             // If the init payload indicates an active session for the selected
             // device, restore the dashboard by loading the session replay.
             // This reuses the existing fetchSessionDetails -> updateReplayRuntime
             // -> updateRuntime pipeline and preserves manual click behavior.
             try {
               const sessionId = sessions[selected];
-              const wasUserSelected = !!localStorage.getItem("ufameasy_selected_device");
-              if (sessionId && sessionsData[selected] && wasUserSelected) {
+              if (sessionId && sessionsData[selected] && saved) {
                 // Call the same function used by session list clicks.
                 fetchSessionDetails(sessionId, sessionsData[selected]);
               }
@@ -1045,8 +1033,7 @@
           break;
 
         case "session_start":
-          console.log("DEBUG session_start msg", msg);
-          console.log("DEBUG session_start msg.file_name", msg.file_name);
+
           updateRuntime({
             current_file: msg.file_name,
             total_layers: msg.total_layers,
@@ -1087,10 +1074,6 @@
         }
 
         case "position_update": {
-          if (!loggedPositionPayload) {
-            // console.debug("position_update payload", msg.data);
-            loggedPositionPayload = true;
-          }
           const d = (msg.data && msg.data.xma) ? msg.data.xma : (msg.data || {});
           liveRuntimeData = { ...liveRuntimeData, xma_live: d };
           renderLiveRuntimeGrid(liveRuntimeData);
@@ -1137,11 +1120,17 @@
     socket.onclose = () => { setConn(false); scheduleReconnect(); };
   }
 
+  deviceSelect.addEventListener("change", () => {
+    const id = deviceSelect.value;
+    document.getElementById("btnParams").style.display = id ? "" : "none";
+    document.getElementById("btnSessions").style.display = id ? "" : "none";
+    document.querySelector(".params-area") && document.getElementById("secParams").classList.remove("open");
+  });
+
   searchInput.addEventListener("input", updateVisibility);
 
   // ── Init ──
   loadDevices();
-  fetchSnapshots();
   connectWS();
 </script>
 </body>

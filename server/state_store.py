@@ -48,11 +48,7 @@ class StateStore:
     
     def update_snapshot(self, slice_idx, snapshot):
         with self.lock:
-            print(f"STORE BEFORE: {list(self.slice_snapshots.keys())}")
-
             self.slice_snapshots[str(slice_idx)] = snapshot
-
-            print(f"STORE AFTER : {list(self.slice_snapshots.keys())}")
         
     def get_all_snapshots(self):
         with self.lock:
