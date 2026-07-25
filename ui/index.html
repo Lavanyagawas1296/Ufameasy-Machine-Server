@@ -6,17 +6,22 @@
   <title>UFAMeasy Machine Server</title>
   <style>
     :root {
-      --bg: #f1f5f9;
-      --panel: #ffffff;
-      --panel2: #f8fafc;
-      --border: #e2e8f0;
-      --text: #0f172a;
-      --muted: #64748b;
-      --green: #16a34a;
-      --red: #dc2626;
-      --yellow: #d97706;
-      --blue: #2563eb;
-      --accent: #00c8a0;
+      --bg: #F5F4F0;
+      --panel: #FFFFFF;
+      --panel2: #FAFAF7;
+      --border: #E8E7E3;
+      --text: #1A1A1A;
+      --muted: #6B6B6B;
+      --green: #00E5B0;
+      --red: #C83212;
+      --yellow: #B86B00;
+      --blue: #E8450A;
+      --accent: #E8450A;
+      --success: #00E5B0;
+      --focus-ring: rgba(232, 69, 10, 0.16);
+      --success-soft: rgba(0, 229, 176, 0.14);
+      --danger-soft: rgba(200, 50, 18, 0.10);
+      --warning-soft: rgba(184, 107, 0, 0.12);
       --font-mono: "JetBrains Mono", "Consolas", monospace;
       --font-ui: "Inter", "Segoe UI", Arial, sans-serif;
     }
@@ -33,7 +38,7 @@
     .topbar {
       display: flex; align-items: center; gap: 16px;
       padding: 0 20px; height: 52px;
-      background: #ffffff;
+      background: var(--panel);
       border-bottom: 1px solid var(--border);
       position: sticky; top: 0; z-index: 100;
     }
@@ -58,10 +63,10 @@
     .dot {
       width: 9px; height: 9px; border-radius: 50%;
       background: var(--red);
-      box-shadow: 0 0 8px rgba(240,78,78,0.5);
+      box-shadow: none;
       flex-shrink: 0;
     }
-    .dot.on { background: var(--green); box-shadow: 0 0 8px rgba(34,211,110,0.5); }
+    .dot.on { background: var(--green); box-shadow: none; }
 
     /* ── RUNTIME PANEL ── */
     .runtime-panel {
@@ -79,7 +84,7 @@
       border-radius: 7px;
       padding: 10px 14px;
       min-width: 140px; flex: 1;
-      box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+      box-shadow: none;
     }
     .rt-card .label {
       font-size: 10px; text-transform: uppercase;
@@ -173,7 +178,15 @@
       border-radius: 5px; color: var(--text);
       font-size: 13px; font-family: var(--font-ui); outline: none;
     }
+    select#sliceFilter {
+      max-width: 180px;
+      padding: 8px 12px;
+      background: var(--panel2); border: 1px solid var(--border);
+      border-radius: 5px; color: var(--text);
+      font-size: 13px; font-family: var(--font-ui); outline: none;
+    }
     .search:focus { border-color: var(--accent); }
+    select#sliceFilter:focus { border-color: var(--accent); }
     .summary { color: var(--muted); font-size: 13px; }
 
     .table-wrap {
@@ -187,7 +200,7 @@
     th, td { padding: 9px 11px; border-bottom: 1px solid var(--border); text-align: left; }
     th {
       position: sticky; top: 0; z-index: 5;
-      background: #f1f5f9; color: var(--muted);
+      background: var(--panel2); color: var(--muted);
       font-size: 11px; letter-spacing: 0.07em; text-transform: uppercase;
     }
     td { font-size: 13px; color: #1e293b; }
@@ -254,6 +267,244 @@
       .runtime-row { flex-direction: column; }
       .topbar { flex-wrap: wrap; height: auto; padding: 10px; }
     }
+
+    /* Production dashboard theme */
+    body {
+      line-height: 1.45;
+    }
+    .topbar {
+      height: 58px;
+      padding: 0 24px;
+      background: var(--panel);
+    }
+    .brand {
+      color: var(--accent);
+      letter-spacing: 0;
+    }
+    .brand span {
+      color: var(--text);
+      font-weight: 500;
+    }
+    select#deviceSelect,
+    select#sliceFilter,
+    .search {
+      background: var(--panel);
+      border-radius: 6px;
+      padding: 8px 12px;
+    }
+    select#deviceSelect:focus,
+    select#sliceFilter:focus,
+    .search:focus {
+      border-color: var(--accent);
+      box-shadow: 0 0 0 3px var(--focus-ring);
+    }
+    .dot {
+      background: var(--red);
+      box-shadow: none;
+    }
+    .dot.on {
+      background: var(--success);
+      box-shadow: none;
+    }
+    .runtime-panel {
+      padding: 20px 24px 18px;
+      background: var(--bg);
+    }
+    .runtime-row {
+      gap: 12px;
+    }
+    .rt-card {
+      background: var(--panel);
+      border-radius: 8px;
+      padding: 12px 14px;
+      box-shadow: none;
+    }
+    .rt-card .label {
+      letter-spacing: 0.06em;
+    }
+    .rt-card .val {
+      overflow-wrap: anywhere;
+    }
+    .full-width {
+      flex-basis: 100%;
+    }
+    .stack-sm {
+      margin-top: 8px;
+    }
+    .prog-bar {
+      height: 8px;
+      border-radius: 999px;
+      background: var(--border);
+    }
+    .prog-fill {
+      border-radius: 999px;
+      background: var(--success);
+    }
+    .progress-text {
+      color: var(--text);
+      font-family: var(--font-mono);
+      font-size: 16px;
+      font-weight: 600;
+      margin-top: 6px;
+    }
+    .live-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+      gap: 8px;
+      font-family: var(--font-mono);
+      font-size: 12px;
+    }
+    .pill {
+      padding: 3px 10px;
+      letter-spacing: 0.04em;
+    }
+    .pill.on,
+    .state-badge.connected,
+    .session-status.active {
+      background: var(--success-soft);
+      color: #007F62;
+      border: 1px solid var(--success);
+    }
+    .pill.off,
+    .state-badge.disconnected {
+      background: var(--danger-soft);
+      color: var(--red);
+      border: 1px solid rgba(200, 50, 18, 0.28);
+    }
+    .state-badge {
+      background: var(--panel2);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+    }
+    .section-bar {
+      padding: 12px 24px;
+      background: var(--panel);
+    }
+    .toggle-btn {
+      background: var(--panel);
+      border-radius: 6px;
+      padding: 7px 13px;
+      transition: border-color 0.15s, color 0.15s, background 0.15s;
+    }
+    .toggle-btn:hover {
+      border-color: var(--accent);
+      color: var(--accent);
+    }
+    .toggle-btn.open {
+      background: var(--accent);
+      border-color: var(--accent);
+      color: var(--panel);
+    }
+    .download-btn {
+      background: var(--accent);
+      border-color: var(--accent);
+      color: var(--panel);
+      font-size: 12px;
+      padding: 6px 12px;
+    }
+    button[onclick*="/logs/download"] {
+      background: var(--accent);
+      border-color: var(--accent);
+      color: var(--panel);
+      font-size: 12px;
+      padding: 6px 12px;
+    }
+    .download-btn:hover {
+      background: #D63D08;
+      border-color: #D63D08;
+      color: var(--panel);
+    }
+    button[onclick*="/logs/download"]:hover {
+      background: #D63D08;
+      border-color: #D63D08;
+      color: var(--panel);
+    }
+    .params-area,
+    .sessions-area {
+      padding: 18px 24px;
+    }
+    .toolbar {
+      margin-bottom: 14px;
+    }
+    .table-wrap,
+    .empty,
+    .events-wrap,
+    .session-item {
+      border-radius: 8px;
+    }
+    th {
+      background: var(--panel2);
+      letter-spacing: 0.06em;
+    }
+    td {
+      color: var(--text);
+    }
+    tbody tr[data-key]:hover {
+      background: var(--panel2);
+    }
+    .domain-row th {
+      background: var(--panel);
+      border-top-color: var(--border);
+    }
+    .slice-header td {
+      background: var(--panel2);
+      color: var(--muted);
+      font-size: 12px;
+      font-weight: 600;
+    }
+    .value.flash {
+      background: var(--warning-soft);
+      color: var(--yellow);
+    }
+    .session-list {
+      gap: 8px;
+    }
+    .session-item {
+      background: var(--panel);
+      cursor: pointer;
+      padding: 12px 14px;
+      transition: border-color 0.15s, background 0.15s;
+    }
+    .session-item:hover {
+      border-color: var(--accent);
+      background: var(--panel2);
+    }
+    .session-status.ended {
+      background: var(--panel2);
+      border: 1px solid var(--border);
+    }
+    .events-wrap {
+      margin: 0 24px 24px;
+      background: var(--panel);
+    }
+    .events-head {
+      padding: 10px 14px;
+      background: var(--panel2);
+      letter-spacing: 0.06em;
+    }
+    .events-list li span {
+      color: var(--accent);
+    }
+    @media (max-width: 700px) {
+      .topbar {
+        padding: 12px;
+      }
+      .runtime-panel,
+      .params-area,
+      .sessions-area {
+        padding-left: 12px;
+        padding-right: 12px;
+      }
+      .section-bar {
+        flex-wrap: wrap;
+        padding-left: 12px;
+        padding-right: 12px;
+      }
+      .events-wrap {
+        margin-left: 12px;
+        margin-right: 12px;
+      }
+    }
   </style>
 </head>
 <body>
@@ -262,7 +513,7 @@
 <header class="topbar">
   <div class="brand">UFAMeasy <span>Machine Server</span></div>
   <div class="topbar-mid">
-    <select id="deviceSelect"><option value="">— select device —</option></select>
+    <select id="deviceSelect"><option value="">-- select device --</option></select>
   </div>
   <div class="topbar-right">
     <div class="conn-badge">
@@ -283,11 +534,11 @@
     <!-- Layer progress -->
     <div class="rt-card progress-card">
       <div class="label">Print Progress</div>
-      <div style="margin-top:8px;">
-        <div style="background:#333; border-radius:4px; height:8px; width:100%;">
-          <div id="progressBar" style="background:#00c8a0; height:8px; border-radius:4px; width:0%; transition:width 0.4s;"></div>
+      <div class="stack-sm">
+        <div class="prog-bar">
+          <div id="progressBar" class="prog-fill"></div>
         </div>
-        <div id="progressPct" style="font-size:1.1em; margin-top:6px;">&mdash;</div>
+        <div id="progressPct" class="progress-text">&mdash;</div>
       </div>
     </div>
     <!-- Time remaining -->
@@ -336,14 +587,15 @@
       <div class="val" id="est-energy">&mdash;</div>
     </div>
     <!-- Live Runtime Parameters -->
-    <div class="rt-card wide" style="flex-basis:100%;">
+    <div class="rt-card wide full-width">
       <div class="label">Live Runtime Parameters</div>
-      <div id="rtLiveGrid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:6px;font-family:var(--font-mono);font-size:12px;"></div>
+      <div id="rtLiveGrid" class="live-grid"></div>
     </div>
     <div class="rt-card wide">
       <div class="label">System Logs</div>
-      <div style="margin-top:8px;">
-        <button class="toggle-btn" style="font-size:12px;padding:5px 12px;" onclick="if(!deviceSelect.value){alert('Please select a device first');return;} window.location='/logs/download?device_id=' + deviceSelect.value">⬇ Download Logs CSV</button>
+      <div class="stack-sm">
+        <button class="toggle-btn download-btn" onclick="if(!deviceSelect.value){alert('Please select a device first');return;} window.location='/logs/download?device_id=' + deviceSelect.value">Download Logs CSV</button>
+        <button class="toggle-btn download-btn" id="estimateBtn" onclick="triggerEstimate()">⏱ Run Estimate</button>
       </div>
     </div>
   </div>
@@ -364,7 +616,10 @@
   <div class="collapse" id="secParams">
     <div class="params-area">
       <div class="toolbar">
-        <input id="searchInput" class="search" type="search" placeholder="Search Param ID or Field…" autocomplete="off">
+        <input id="searchInput" class="search" type="search" placeholder="Search Param ID or Field..." autocomplete="off">
+        <select id="sliceFilter">
+          <option value="">All Slices</option>
+        </select>
         <span id="summary" class="summary">0 parameters</span>
       </div>
       <div id="emptyState" class="empty">No snapshot data yet</div>
@@ -408,6 +663,7 @@
   const tableWrap     = document.getElementById("tableWrap");
   const emptyState    = document.getElementById("emptyState");
   const searchInput   = document.getElementById("searchInput");
+  const sliceFilter   = document.getElementById("sliceFilter");
   const summary       = document.getElementById("summary");
   const statusDot     = document.getElementById("statusDot");
   const statusText    = document.getElementById("statusText");
@@ -539,7 +795,7 @@
     Object.entries(data || {}).forEach(([key, val]) => {
       if (HEADER_KEYS.has(key)) return;
       const box = document.createElement("div");
-      box.style.cssText = "background:var(--panel2);border:1px solid var(--border);border-radius:4px;padding:4px 8px;";
+      box.style.cssText = "background:var(--panel2);border:1px solid var(--border);border-radius:6px;padding:6px 8px;";
 
       const keyEl = document.createElement("span");
       keyEl.style.color = "var(--muted)";
@@ -672,12 +928,15 @@
       rows.forEach(s => {
         const div = document.createElement("div");
         div.className = "session-item";
-        const status = s.status || "ended";
-        const statusCls = (status === "active" || status === "running") ? "active" : "ended";
+        const rawStatus = s.status || "ended";
+        const hasEnded = Boolean(s.ended_at);
+        const status = hasEnded && (rawStatus === "active" || rawStatus === "running") ? "ended" : rawStatus;
+        const statusCls = (!hasEnded && (status === "active" || status === "running")) ? "active" : "ended";
         div.innerHTML = `
           <div class="session-header">
             <span class="sfile">${s.file_name || "&mdash;"}</span>
             <span class="session-status ${statusCls}">${status}</span>
+            <button class="del-session-btn" data-sid="${s.session_id}" style="float:right; margin-left:8px; padding:2px 7px; border:1px solid var(--accent); border-radius:4px; background:var(--accent); color:var(--panel); font-size:12px; line-height:1.4; cursor:pointer;">🗑</button>
           </div>
           <div class="session-meta">
             <span>Start: ${s.started_at || "&mdash;"}</span>
@@ -687,10 +946,16 @@
           </div>
         `;
         div.onclick = () => fetchSessionDetails(s.session_id, s);
+        div.querySelector('.del-session-btn').addEventListener('click', async (e) => {
+          e.stopPropagation();
+          if (!confirm('Delete this session and all its data?')) return;
+          await fetch(`/sessions/${s.session_id}`, {method: 'DELETE'});
+          refreshSessions();
+        });
         sessionList.appendChild(div);
       });
       if (!isAuto) {
-        const activeSession = rows.find(s => s.status === "running" || s.status === "active");
+        const activeSession = rows.find(s => !s.ended_at && (s.status === "running" || s.status === "active"));
         if (activeSession) fetchSessionDetails(activeSession.session_id, activeSession);
       }
     } catch(e) { console.error("sessions fetch", e); }
@@ -778,6 +1043,7 @@
     tr.dataset.paramId = row.param_id.toLowerCase();
     tr.dataset.field = row.field.toLowerCase();
     tr.dataset.domain = row.domain;
+    tr.dataset.slice = row.slice_idx;
     tr.appendChild(createCell(row.param_id, "param-id"));
     tr.appendChild(createCell(row.field, "field"));
     tr.appendChild(createCell(row.value, "value"));
@@ -800,6 +1066,7 @@
   function createSliceHeaderRow(sliceIdx) {
     const tr = document.createElement("tr");
     tr.className = "slice-header";
+    tr.dataset.sliceHeader = sliceIdx;
     const td = document.createElement("td");
     td.colSpan = 6; td.textContent = `Slice ${sliceIdx}`;
     tr.appendChild(td);
@@ -809,6 +1076,7 @@
   function renderTable(rows) {
     tableBody.textContent = "";
     rowsByKey.clear();
+    populateSliceFilter(rows);
     const sorted = sortRows(rows);
     let currentDomain = null;
     let currentSlice = null;
@@ -850,12 +1118,46 @@
     });
   }
 
+  function populateSliceFilter(rows) {
+    const selected = sliceFilter.value;
+    const slices = [...new Set(rows.map(row => row.slice_idx).filter(Boolean))]
+      .sort((a, b) => a.localeCompare(b, undefined, { numeric: true }));
+    sliceFilter.innerHTML = '<option value="">All Slices</option>';
+    slices.forEach(slice => {
+      const opt = document.createElement("option");
+      opt.value = slice;
+      opt.textContent = `Slice ${slice}`;
+      sliceFilter.appendChild(opt);
+    });
+    sliceFilter.value = slices.includes(selected) ? selected : "";
+  }
+
+  function ensureSliceOption(sliceIdx) {
+    if (!sliceIdx || [...sliceFilter.options].some(o => o.value === sliceIdx)) return;
+    const opt = document.createElement("option");
+    opt.value = sliceIdx;
+    opt.textContent = `Slice ${sliceIdx}`;
+    sliceFilter.appendChild(opt);
+  }
+
+  function updateSliceHeaders() {
+    tableBody.querySelectorAll("tr[data-slice-header]").forEach(h => {
+      const slice = h.dataset.sliceHeader;
+      const vis = Array.from(rowsByKey.values()).filter(r => r.dataset.slice === slice).some(r => r.style.display !== "none");
+      h.style.display = vis ? "" : "none";
+    });
+  }
+
   function updateVisibility() {
     const q = searchInput.value.trim().toLowerCase();
+    const selectedSlice = sliceFilter.value;
     rowsByKey.forEach(row => {
-      const match = !q || row.dataset.paramId.startsWith(q) || row.dataset.field.includes(q);
+      const matchSearch = !q || row.dataset.paramId.startsWith(q) || row.dataset.field.includes(q);
+      const matchSlice = !selectedSlice || row.dataset.slice === selectedSlice;
+      const match = matchSearch && matchSlice;
       row.style.display = match ? "" : "none";
     });
+    updateSliceHeaders();
     updateDomainHeaders();
     updateEmptyState();
     syncSummary();
@@ -896,6 +1198,7 @@
 
   function insertNewRow(row) {
     const tr = createDataRow(row);
+    ensureSliceOption(row.slice_idx);
     const header = ensureDomainHeader(row.domain);
     let cursor = header.nextElementSibling;
     while (cursor && !cursor.dataset.domainHeader) {
@@ -941,10 +1244,20 @@
   // ── Events log ──
   function logEvent(type, detail) {
     const li = document.createElement("li");
-    const ts = new Date().toLocaleTimeString("en-US", { hour12: false });
+    const ts = new Date().toLocaleString("en-GB", {hour12: false});
     li.innerHTML = `<span>${ts}</span>${type}${detail ? " — " + detail : ""}`;
     eventsList.prepend(li);
     while (eventsList.children.length > 20) eventsList.lastElementChild.remove();
+  }
+
+  async function triggerEstimate() {
+    const id = deviceSelect.value;
+    if (!id) { alert('Select a device first'); return; }
+    // The estimate runs server-side via MQTT when FreeCAD publishes estimate/request.
+    // This button just shows the last known estimate values already on screen
+    // and opens the params section.
+    openSection('params');
+    logEvent('estimate_requested', id);
   }
 
   function sessionIdSuffix(sessionId) {
@@ -1128,6 +1441,7 @@
   });
 
   searchInput.addEventListener("input", updateVisibility);
+  sliceFilter.addEventListener("change", updateVisibility);
 
   // ── Init ──
   loadDevices();

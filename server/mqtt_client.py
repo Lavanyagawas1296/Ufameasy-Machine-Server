@@ -190,13 +190,18 @@ def on_message(client, userdata, msg):
 
         if topic_parts[2:] == ["session", "end"]:
             data = json.loads(payload)
-            session_id = data.get("session_id")
-            status = data.get("status")
+            session_id = data.get("session_id") or _active_sessions.get(device_id)
+            status = data.get("status") or "ended"
 
-            try:
-                close_session(session_id, status)
-            except Exception as exc:
-                print(f"[DB] session/end failed: {exc}")
+            if session_id:
+                try:
+                    updated = close_session(session_id, status)
+                    if not updated:
+                        print(f"[DB] session/end updated no rows for session_id={session_id}")
+                except Exception as exc:
+                    print(f"[DB] session/end failed: {exc}")
+            else:
+                print(f"[SESSION] session/end ignored for device_id={device_id}: no session_id")
             _active_sessions.pop(device_id, None)
 
             _broadcast({

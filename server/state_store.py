@@ -58,7 +58,7 @@ class StateStore:
         from datetime import datetime
         self.events.append({
             "type": event_type,
-            "timestamp": datetime.now().strftime("%H:%M:%S"),
+            "timestamp": datetime.now().strftime("%d-%m-%Y %H:%M:%S"),
             "details": details
         })
         if len(self.events) > 50:

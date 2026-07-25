@@ -123,7 +123,7 @@ def create_session(session_id, device_id, file_name, total_layers):
 def close_session(session_id, status):
     now = datetime.now(timezone.utc).isoformat()
     with sqlite3.connect(DB_PATH) as conn:
-        conn.execute(
+        cursor = conn.execute(
             """
             UPDATE sessions
             SET status = ?, ended_at = ?
@@ -131,6 +131,7 @@ def close_session(session_id, status):
             """,
             (status, now, session_id),
         )
+        return cursor.rowcount
 
 
 def update_session_total_layers(session_id: str, total_layers: int):

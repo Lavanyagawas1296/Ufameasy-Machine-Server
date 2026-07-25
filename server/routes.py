@@ -72,7 +72,8 @@ def health():
 def get_snapshots():
     return state.get_all_snapshots()
 
-DB_PATH = os.path.join(os.path.dirname(__file__), "data", "params.db")
+DATA_DIR = os.path.join(os.path.dirname(__file__), "data")
+DB_PATH = os.path.join(DATA_DIR, "params.db")
 
 @router.get("/devices")
 def get_devices():
@@ -91,6 +92,32 @@ def get_session_runtime(session_id: str):
     if not session_id or session_id.strip() == "":
         return {"error": "invalid session_id"}
     return get_runtime_latest(session_id)
+
+@router.delete("/sessions/{session_id}")
+def delete_session(session_id: str):
+    if not session_id or session_id.strip() == "":
+        return {"error": "invalid session_id"}
+    with sqlite3.connect(DB_PATH) as conn:
+        conn.execute("DELETE FROM slice_data WHERE session_id=?", (session_id,))
+        conn.execute("DELETE FROM runtime_log WHERE session_id=?", (session_id,))
+        conn.execute("DELETE FROM sessions WHERE session_id=?", (session_id,))
+    return {"deleted": session_id}
+
+@router.get("/logs/list")
+def list_logs():
+    logs = []
+    for filename in sorted(os.listdir(DATA_DIR)):
+        if not filename.startswith("logs_") or not filename.endswith(".csv"):
+            continue
+        path = os.path.join(DATA_DIR, filename)
+        if not os.path.isfile(path):
+            continue
+        logs.append({
+            "device_id": filename[len("logs_"):-len(".csv")],
+            "filename": filename,
+            "size_bytes": os.path.getsize(path)
+        })
+    return logs
 
 @router.get("/sessions")
 def list_sessions():
