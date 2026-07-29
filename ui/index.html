@@ -595,7 +595,6 @@
       <div class="label">System Logs</div>
       <div class="stack-sm">
         <button class="toggle-btn download-btn" onclick="if(!deviceSelect.value){alert('Please select a device first');return;} window.location='/logs/download?device_id=' + deviceSelect.value">Download Logs CSV</button>
-        <button class="toggle-btn download-btn" id="estimateBtn" onclick="triggerEstimate()">⏱ Run Estimate</button>
       </div>
     </div>
   </div>
@@ -1248,16 +1247,6 @@
     li.innerHTML = `<span>${ts}</span>${type}${detail ? " — " + detail : ""}`;
     eventsList.prepend(li);
     while (eventsList.children.length > 20) eventsList.lastElementChild.remove();
-  }
-
-  async function triggerEstimate() {
-    const id = deviceSelect.value;
-    if (!id) { alert('Select a device first'); return; }
-    // The estimate runs server-side via MQTT when FreeCAD publishes estimate/request.
-    // This button just shows the last known estimate values already on screen
-    // and opens the params section.
-    openSection('params');
-    logEvent('estimate_requested', id);
   }
 
   function sessionIdSuffix(sessionId) {

@@ -195,9 +195,7 @@ def on_message(client, userdata, msg):
 
             if session_id:
                 try:
-                    updated = close_session(session_id, status)
-                    if not updated:
-                        print(f"[DB] session/end updated no rows for session_id={session_id}")
+                    close_session(session_id, status)
                 except Exception as exc:
                     print(f"[DB] session/end failed: {exc}")
             else:
@@ -284,6 +282,8 @@ def on_message(client, userdata, msg):
                 insert_slice_data(session_id, slice_idx, data)
             except Exception as exc:
                 print(f"[DB] slice failed: {exc}")
+
+            state.update_snapshot(slice_idx, data) 
 
             _broadcast({
                 "type": "slice_update",
