@@ -50,25 +50,26 @@ def _download_log_bytes(ip: str, port: int) -> bytes:
 
 def _telemetry_db_bytes_to_csv(db_bytes: bytes) -> bytes:
     temp_path = None
+    conn = None
     try:
         with tempfile.NamedTemporaryFile(suffix=".U5LOG", delete=False) as temp_file:
             temp_file.write(db_bytes)
             temp_path = temp_file.name
 
-        with sqlite3.connect(temp_path) as conn:
-            cursor = conn.execute(
-                """
-                SELECT * FROM telemetry_events
-                WHERE id >= (
-                    SELECT id FROM telemetry_events
-                    WHERE event_type = 'machine_connect'
-                    ORDER BY id DESC LIMIT 1
-                )
-                ORDER BY id
-                """
+        conn = sqlite3.connect(temp_path)
+        cursor = conn.execute(
+            """
+            SELECT * FROM telemetry_events
+            WHERE id >= (
+                SELECT id FROM telemetry_events
+                WHERE event_type = 'machine_connect'
+                ORDER BY id DESC LIMIT 1
             )
-            headers = [column[0] for column in cursor.description or []]
-            rows = cursor.fetchall()
+            ORDER BY id
+            """
+        )
+        headers = [column[0] for column in cursor.description or []]
+        rows = cursor.fetchall()
     except sqlite3.OperationalError as exc:
         detail = "telemetry_events table not found" if "no such table" in str(exc).lower() else str(exc)
         raise LogFetchError(422, detail) from exc
@@ -77,6 +78,8 @@ def _telemetry_db_bytes_to_csv(db_bytes: bytes) -> bytes:
     except OSError as exc:
         raise LogFetchError(500, f"Unable to process fetched log file: {exc}") from exc
     finally:
+        if conn:
+            conn.close()
         if temp_path:
             try:
                 os.remove(temp_path)
