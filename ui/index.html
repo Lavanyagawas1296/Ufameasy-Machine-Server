@@ -402,19 +402,7 @@
       font-size: 12px;
       padding: 6px 12px;
     }
-    button[onclick*="/logs/download"] {
-      background: var(--accent);
-      border-color: var(--accent);
-      color: var(--panel);
-      font-size: 12px;
-      padding: 6px 12px;
-    }
     .download-btn:hover {
-      background: #D63D08;
-      border-color: #D63D08;
-      color: var(--panel);
-    }
-    button[onclick*="/logs/download"]:hover {
       background: #D63D08;
       border-color: #D63D08;
       color: var(--panel);
@@ -594,7 +582,7 @@
     <div class="rt-card wide">
       <div class="label">System Logs</div>
       <div class="stack-sm">
-        <button class="toggle-btn download-btn" onclick="if(!deviceSelect.value){alert('Please select a device first');return;} window.location='/logs/download?device_id=' + deviceSelect.value">Download Logs CSV</button>
+        <button class="toggle-btn download-btn" onclick="const ip=prompt('Enter machine IP address'); if(!ip || !ip.trim()){return;} window.location='/logs/fetch?ip=' + encodeURIComponent(ip.trim())">Download Logs CSV</button>
       </div>
     </div>
   </div>

@@ -6,13 +6,97 @@ MQTT or persistence concerns. These routes form the API-facing side of the
 MQTT -> StateStore -> API data flow.
 """
 
-from fastapi import APIRouter
+import asyncio
+import csv
+import ftplib
+import io
+import json
+import os
+import sqlite3
+import tempfile
+
+from fastapi import APIRouter, HTTPException
+from fastapi.responses import StreamingResponse
 from server.state_store import state
 from server.db import get_sessions_by_device, get_runtime_latest
-import sqlite3, os
-import json
 
 router = APIRouter()
+
+REMOTE_LOG_PATH = "ufameasy_sys.U5LOG"
+
+
+class LogFetchError(Exception):
+    def __init__(self, status_code: int, detail: str):
+        super().__init__(detail)
+        self.status_code = status_code
+        self.detail = detail
+
+
+def _download_log_bytes(ip: str, port: int) -> bytes:
+    buffer = io.BytesIO()
+    try:
+        with ftplib.FTP() as ftp:
+            ftp.connect(ip, port, timeout=10)
+            ftp.login()
+            ftp.retrbinary(f"RETR {REMOTE_LOG_PATH}", buffer.write)
+    except ftplib.all_errors as exc:
+        raise LogFetchError(502, f"Unable to fetch log file from FTP server: {exc}") from exc
+
+    data = buffer.getvalue()
+    if not data:
+        raise LogFetchError(404, "Fetched log file is empty")
+    return data
+
+
+def _telemetry_db_bytes_to_csv(db_bytes: bytes) -> bytes:
+    temp_path = None
+    try:
+        with tempfile.NamedTemporaryFile(suffix=".U5LOG", delete=False) as temp_file:
+            temp_file.write(db_bytes)
+            temp_path = temp_file.name
+
+        with sqlite3.connect(temp_path) as conn:
+            cursor = conn.execute(
+                """
+                SELECT * FROM telemetry_events
+                WHERE id >= (
+                    SELECT id FROM telemetry_events
+                    WHERE event_type = 'machine_connect'
+                    ORDER BY id DESC LIMIT 1
+                )
+                ORDER BY id
+                """
+            )
+            headers = [column[0] for column in cursor.description or []]
+            rows = cursor.fetchall()
+    except sqlite3.OperationalError as exc:
+        detail = "telemetry_events table not found" if "no such table" in str(exc).lower() else str(exc)
+        raise LogFetchError(422, detail) from exc
+    except sqlite3.DatabaseError as exc:
+        raise LogFetchError(422, f"Fetched log file is not a readable SQLite database: {exc}") from exc
+    except OSError as exc:
+        raise LogFetchError(500, f"Unable to process fetched log file: {exc}") from exc
+    finally:
+        if temp_path:
+            try:
+                os.remove(temp_path)
+            except OSError:
+                pass
+
+    output = io.StringIO(newline="")
+    writer = csv.writer(output)
+    writer.writerow(headers)
+    writer.writerows(rows)
+    return output.getvalue().encode("utf-8")
+
+
+def _fetch_telemetry_events_csv(ip: str, port: int) -> bytes:
+    return _telemetry_db_bytes_to_csv(_download_log_bytes(ip, port))
+
+
+def _safe_log_filename(ip: str) -> str:
+    safe_ip = "".join(char if char.isalnum() or char in ".-_" else "_" for char in ip)
+    return f"ufameasy_logs_{safe_ip or 'machine'}.csv"
 
 @router.get("/state")
 def get_state():
@@ -103,21 +187,25 @@ def delete_session(session_id: str):
         conn.execute("DELETE FROM sessions WHERE session_id=?", (session_id,))
     return {"deleted": session_id}
 
-@router.get("/logs/list")
-def list_logs():
-    logs = []
-    for filename in sorted(os.listdir(DATA_DIR)):
-        if not filename.startswith("logs_") or not filename.endswith(".csv"):
-            continue
-        path = os.path.join(DATA_DIR, filename)
-        if not os.path.isfile(path):
-            continue
-        logs.append({
-            "device_id": filename[len("logs_"):-len(".csv")],
-            "filename": filename,
-            "size_bytes": os.path.getsize(path)
-        })
-    return logs
+@router.get("/logs/fetch")
+async def fetch_logs(ip: str, port: int = 2121):
+    ip = ip.strip()
+    if not ip:
+        raise HTTPException(status_code=400, detail="ip is required")
+    if port < 1 or port > 65535:
+        raise HTTPException(status_code=400, detail="port must be between 1 and 65535")
+
+    loop = asyncio.get_running_loop()
+    try:
+        csv_data = await loop.run_in_executor(None, _fetch_telemetry_events_csv, ip, port)
+    except LogFetchError as exc:
+        raise HTTPException(status_code=exc.status_code, detail=exc.detail) from exc
+
+    return StreamingResponse(
+        io.BytesIO(csv_data),
+        media_type="text/csv",
+        headers={"Content-Disposition": f'attachment; filename="{_safe_log_filename(ip)}"'},
+    )
 
 @router.get("/sessions")
 def list_sessions():

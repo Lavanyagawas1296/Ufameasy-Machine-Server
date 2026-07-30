@@ -6,8 +6,6 @@ startup, and exposes lightweight state and health-style endpoints. This
 module connects the HTTP layer to the shared in-memory state store.
 """
 
-import os
-
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect
 from fastapi.responses import FileResponse
 from server.state_store import state
@@ -76,14 +74,6 @@ def get_state():
 @app.get("/snapshots")
 def get_snapshots():
     return state.get_all_snapshots()
-
-@app.get("/logs/download")
-def download_logs(device_id: str = "device_001"):
-    log_path = os.path.join(os.path.dirname(__file__), "data", f"logs_{device_id}.csv")
-    if not os.path.exists(log_path):
-        from fastapi.responses import JSONResponse
-        return JSONResponse({"error": "No logs yet"}, status_code=404)
-    return FileResponse(log_path, media_type="text/csv", filename=f"ufameasy_logs_{device_id}.csv")
 
 @app.get("/events")
 def get_events():
