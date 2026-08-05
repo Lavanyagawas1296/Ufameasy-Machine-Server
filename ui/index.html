@@ -529,11 +529,6 @@
         <div id="progressPct" class="progress-text">&mdash;</div>
       </div>
     </div>
-    <!-- Time remaining -->
-    <div class="rt-card">
-      <div class="label">Time Remaining</div>
-      <div class="val" id="rtTime">&mdash;</div>
-    </div>
     <!-- Gas -->
     <div class="rt-card">
       <div class="label">Gas</div>
@@ -553,11 +548,6 @@
     <div class="rt-card">
       <div class="label">Connection</div>
       <div id="rtState"><span class="state-badge">&mdash;</span></div>
-    </div>
-    <!-- Estimated Time -->
-    <div class="rt-card">
-      <div class="label">Estimated Time</div>
-      <div class="val" id="est-time">&mdash;</div>
     </div>
     <!-- Powder Usage -->
     <div class="rt-card">
@@ -664,12 +654,10 @@
   const rtTotal    = document.getElementById("rtTotal");
   const rtProgFill = document.getElementById("progressBar");
   const progressPct = document.getElementById("progressPct");
-  const rtTime     = document.getElementById("rtTime");
   const rtGas      = document.getElementById("rtGas");
   const rtLaser    = document.getElementById("rtLaser");
   const rtPower    = document.getElementById("rtPower");
   const rtState    = document.getElementById("rtState");
-  const estTime    = document.getElementById("est-time");
   const estPowder  = document.getElementById("est-powder");
   const estEfficiency = document.getElementById("est-efficiency");
   const estEnergy  = document.getElementById("est-energy");
@@ -777,7 +765,8 @@
     const HEADER_KEYS = new Set([
       "laser_enabled", "gas_enabled", "current_file",
       "connection_state", "laser_power_pct", "machine_connected",
-      "progress_pct"
+      "progress_pct", "remaining_time", "time_remaining", "remaining_seconds",
+      "DS028", "xma", "xmr", "laser_on", "session_id", "id"
     ]);
     Object.entries(data || {}).forEach(([key, val]) => {
       if (HEADER_KEYS.has(key)) return;
@@ -808,7 +797,6 @@
       current_layer:   d.current_layer   ?? d.RT005,
       total_layers:    d.total_layers    ?? d.PS011 ?? sessionSummary.total_layers,
       current_file:    d.current_file    ?? d.file_name ?? d.RT013 ?? sessionSummary.file_name,
-      time_remaining:  d.time_remaining  ?? d.DS028,
       gas_enabled:     d.gas_enabled     ?? d.RT029,
       laser_enabled:   d.laser_enabled   ?? d.laser_on ?? d.RT027,
       laser_power_pct: d.laser_power_pct ?? d.laser_power ?? d.DS010,
@@ -843,7 +831,6 @@
       totalLayers = data.total_layers || 0;
       if (rtTotal) rtTotal.textContent = totalLayers || "—";
     }
-    if (data.time_remaining !== undefined) rtTime.textContent = data.time_remaining ?? "—";
     if (data.gas_enabled    !== undefined) rtGas.innerHTML   = pill(data.gas_enabled);
     if (data.laser_enabled  !== undefined) rtLaser.innerHTML  = pill(data.laser_enabled);
     if (data.laser_power_pct !== undefined) rtPower.textContent = (data.laser_power_pct ?? "—") + (data.laser_power_pct != null ? "%" : "");
@@ -851,7 +838,6 @@
     const connectionState = normalizeConnected(data.connection_state);
     const isConnected = connected ?? connectionState;
     if (isConnected !== null) rtState.innerHTML = stateBadge(isConnected);
-    if (data.estimated_time !== undefined) estTime.textContent = data.estimated_time ?? "-";
     if (data.powder_usage !== undefined) estPowder.textContent = data.powder_usage != null ? data.powder_usage + "g" : "-";
     if (data.deposition_efficiency !== undefined) estEfficiency.textContent = data.deposition_efficiency != null ? (data.deposition_efficiency * 100).toFixed(1) + "%" : "-";
     if (data.energy !== undefined) estEnergy.textContent = data.energy ?? "-";
@@ -861,13 +847,12 @@
     rtFile.textContent = "—";
     if (rtLayer) rtLayer.textContent = "—";
     if (rtTotal) rtTotal.textContent = "—";
-    rtTime.textContent = "—"; rtPower.textContent = "—";
+    rtPower.textContent = "—";
     if (rtProgFill) rtProgFill.style.width = "0%";
     if (progressPct) progressPct.textContent = "—";
     rtGas.innerHTML   = pill(false);
     rtLaser.innerHTML = pill(false);
 
-    estTime.textContent = "—";
     estPowder.textContent = "—";
     estEfficiency.textContent = "—";
     estEnergy.textContent = "—";
@@ -1344,7 +1329,6 @@
             current_layer:   d.current_layer   ?? d.RT005,
             total_layers:    d.total_layers     ?? d.PS011,
             current_file:    d.current_file     ?? d.RT013,
-            time_remaining:  d.time_remaining   ?? d.DS028,
             gas_enabled:     d.gas_enabled      ?? d.RT029,
             laser_enabled:   d.laser_enabled    ?? d.RT027,
             laser_power_pct: d.laser_power_pct  ?? d.DS010,
@@ -1372,7 +1356,6 @@
 
         case "estimate_result": {
           const d = msg.data || {};
-          estTime.textContent = d.total_time_fmt ?? "—";
           estPowder.textContent = d.total_powder_g != null ? d.total_powder_g.toFixed(1) + "g" : "—";
           estEfficiency.textContent = d.deposition_efficiency != null ? (d.deposition_efficiency * 100).toFixed(1) + "%" : "—";
           estEnergy.textContent = d.total_energy_wh != null ? d.total_energy_wh.toFixed(2) : "—";

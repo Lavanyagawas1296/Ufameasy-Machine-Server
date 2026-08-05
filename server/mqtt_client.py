@@ -261,10 +261,9 @@ def on_message(client, userdata, msg):
 
             try:
                 insert_slice_data(session_id, slice_idx, data)
+                state.update_snapshot(slice_idx, data)
             except Exception as exc:
                 print(f"[DB] slice failed: {exc}")
-
-            state.update_snapshot(slice_idx, data) 
 
             _broadcast({
                 "type": "slice_update",

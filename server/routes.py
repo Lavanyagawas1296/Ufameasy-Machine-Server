@@ -16,13 +16,13 @@ import sqlite3
 import tempfile
 
 from fastapi import APIRouter, HTTPException
-from fastapi.responses import StreamingResponse
+from fastapi.responses import Response
 from server.state_store import state
 from server.db import get_sessions_by_device, get_runtime_latest
 
 router = APIRouter()
 
-REMOTE_LOG_PATH = "ufameasy_sys.U5LOG"
+REMOTE_LOG_PATH = "ufameasy_sys.csv"
 
 
 class LogFetchError(Exception):
@@ -94,7 +94,7 @@ def _telemetry_db_bytes_to_csv(db_bytes: bytes) -> bytes:
 
 
 def _fetch_telemetry_events_csv(ip: str, port: int) -> bytes:
-    return _telemetry_db_bytes_to_csv(_download_log_bytes(ip, port))
+    return _download_log_bytes(ip, port)
 
 
 def _safe_log_filename(ip: str) -> str:
@@ -200,14 +200,14 @@ async def fetch_logs(ip: str, port: int = 2121):
 
     loop = asyncio.get_running_loop()
     try:
-        csv_data = await loop.run_in_executor(None, _fetch_telemetry_events_csv, ip, port)
+        csv_bytes = await loop.run_in_executor(None, _fetch_telemetry_events_csv, ip, port)
     except LogFetchError as exc:
         raise HTTPException(status_code=exc.status_code, detail=exc.detail) from exc
 
-    return StreamingResponse(
-        io.BytesIO(csv_data),
+    return Response(
+        content=csv_bytes,
         media_type="text/csv",
-        headers={"Content-Disposition": f'attachment; filename="{_safe_log_filename(ip)}"'},
+        headers={"Content-Disposition": f"attachment; filename=ufameasy_logs_{ip}.csv"},
     )
 
 @router.get("/sessions")
