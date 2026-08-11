@@ -90,8 +90,7 @@ def on_message(client, userdata, msg):
     payload = msg.payload.decode()
 
     if msg.topic == "ufameasy/session/reset":
-        with state.lock:
-            state.slice_snapshots.clear()
+        state.clear_snapshots()
         state.events.clear()
         if mqtt_event_loop is not None:
             future = asyncio.run_coroutine_threadsafe(
@@ -219,6 +218,10 @@ def on_message(client, userdata, msg):
             except Exception as exc:
                 print(f"[DB] runtime failed: {exc}")
 
+            for key, value in data.items():
+                state.update_parameter(device_id, key, value)
+            state.update_parameter(device_id, "_session_id", session_id)
+
             _broadcast({
                 "type": "runtime_update",
                 "device_id": device_id,
@@ -233,6 +236,32 @@ def on_message(client, userdata, msg):
                 "type": "position_update",
                 "device_id": device_id,
                 "data": data,
+            })
+            return
+
+        if len(topic_parts) == 4 and topic_parts[2] == "parameters":
+            param_name = topic_parts[3]
+
+            try:
+                value = int(payload)
+            except ValueError:
+                value = payload
+
+            state.update_parameter(device_id, param_name, value)
+            return
+
+        if len(topic_parts) == 5 and topic_parts[2:4] == ["params", "snapshot"]:
+            snapshot = json.loads(payload)
+            slice_idx = topic_parts[4]
+
+            state.update_snapshot(device_id, slice_idx, snapshot)
+            state.add_event("snapshot_received", {"slice_idx": slice_idx, "param_count": len(snapshot)})
+
+            _broadcast({
+                "type": "snapshot",
+                "device_id": device_id,
+                "slice_idx": slice_idx,
+                "data": snapshot,
             })
             return
 
@@ -261,7 +290,7 @@ def on_message(client, userdata, msg):
 
             try:
                 insert_slice_data(session_id, slice_idx, data)
-                state.update_snapshot(slice_idx, data)
+                state.update_snapshot(device_id, slice_idx, data)
             except Exception as exc:
                 print(f"[DB] slice failed: {exc}")
 
@@ -274,38 +303,15 @@ def on_message(client, userdata, msg):
             })
             return
 
-    # Snapshot message
+    # Legacy snapshot message without a device id.
     if msg.topic.startswith("ufameasy/params/snapshot/"):
-        snapshot = json.loads(payload)
-
-        slice_idx = msg.topic.split("/")[-1]
-
-        state.update_snapshot(slice_idx, snapshot)
-        state.add_event("snapshot_received", {"slice_idx": slice_idx, "param_count": len(snapshot)})
-
-        if mqtt_event_loop is not None:
-            future = asyncio.run_coroutine_threadsafe(
-                manager.broadcast({
-                    "type": "snapshot",
-                    "slice_idx": slice_idx,
-                    "data": snapshot,
-                }),
-                mqtt_event_loop,
-            )
-            future.add_done_callback(_log_broadcast_error)
+        print(f"[MQTT] Ignoring unscoped snapshot topic: {msg.topic}")
 
 
 
-    # Single parameter message
+    # Legacy single parameter message without a device id.
     elif msg.topic.startswith("ufameasy/parameters/"):
-        param_name = msg.topic.split("/")[-1]
-
-        try:
-            value = int(payload)
-        except ValueError:
-            value = payload
-
-        state.update_parameter(param_name,value)
+        print(f"[MQTT] Ignoring unscoped parameter topic: {msg.topic}")
 
 
 client = mqtt.Client(mqtt.CallbackAPIVersion.VERSION2)

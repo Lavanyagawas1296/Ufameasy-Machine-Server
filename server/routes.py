@@ -102,17 +102,19 @@ def _safe_log_filename(ip: str) -> str:
     return f"ufameasy_logs_{safe_ip or 'machine'}.csv"
 
 @router.get("/state")
-def get_state():
+def get_state(device_id: str):
     """
     Return all known machine parameters.
 
     Returns:
         Shared dictionary containing the latest parameter values.
     """
-    return state.parameters
+    if not device_id or device_id.strip() == "":
+        return {"error": "invalid device_id"}
+    return state.get_parameters(device_id)
 
 @router.get("/parameter/{name}")
-def get_parameter(name: str):
+def get_parameter(name: str, device_id: str):
     """
     Return the latest value for a single machine parameter.
 
@@ -123,13 +125,16 @@ def get_parameter(name: str):
         Dictionary containing the requested name and its value, or None when
         the parameter has not been observed.
     """
+    if not device_id or device_id.strip() == "":
+        return {"error": "invalid device_id"}
     return {
         "name": name,
-        "value": state.parameters.get(name)
+        "device_id": device_id,
+        "value": state.get_parameter(device_id, name)
     }
 
 @router.get("/ufameasy/parameter/{name}")
-def get_ufameasy_parameter(name: str):
+def get_ufameasy_parameter(name: str, device_id: str):
     """
     Return the latest value for a single ufameasy parameter.
 
@@ -140,9 +145,12 @@ def get_ufameasy_parameter(name: str):
         Dictionary containing the requested name and its value, or None when
         the parameter has not been observed.
     """
+    if not device_id or device_id.strip() == "":
+        return {"error": "invalid device_id"}
     return {
         "name": name,
-        "value": state.parameters.get(name)
+        "device_id": device_id,
+        "value": state.get_parameter(device_id, name)
     }
 
 @router.get("/health")
@@ -156,8 +164,10 @@ def health():
     return {"status": "ok"}
 
 @router.get("/snapshots")
-def get_snapshots():
-    return state.get_all_snapshots()
+def get_snapshots(device_id: str):
+    if not device_id or device_id.strip() == "":
+        return {"error": "invalid device_id"}
+    return state.get_all_snapshots(device_id)
 
 DATA_DIR = os.path.join(os.path.dirname(__file__), "data")
 DB_PATH = os.path.join(DATA_DIR, "params.db")
@@ -235,9 +245,11 @@ def get_session_replay(session_id: str):
     try:
         conn = sqlite3.connect(DB_PATH)
         conn.row_factory = sqlite3.Row
+        session = conn.execute("SELECT device_id FROM sessions WHERE session_id=?", (session_id,)).fetchone()
         runtime = conn.execute("SELECT * FROM runtime_log WHERE session_id=? ORDER BY recorded_at", (session_id,)).fetchall()
         slices = conn.execute("SELECT * FROM slice_data WHERE session_id=? ORDER BY slice_index", (session_id,)).fetchall()
         conn.close()
+        device_id = session["device_id"] if session else None
 
         # Parse params_json from slices
         parsed_slices = []
@@ -250,9 +262,17 @@ def get_session_replay(session_id: str):
                     pass
             parsed_slices.append(row_dict)
 
+        runtime_list = [dict(r) for r in runtime]
+
+        # Fallback: serve in-memory state if runtime_log is empty.
+        live_parameters = state.get_parameters(device_id) if device_id else {}
+        if not runtime_list and live_parameters:
+            runtime_list = [live_parameters]
+        live_snapshots = state.get_all_snapshots(device_id) if device_id else {}
+
         return {
-            "runtime": [dict(r) for r in runtime],
-            "slices": parsed_slices
+            "runtime": runtime_list,
+            "slices": parsed_slices if parsed_slices else list(live_snapshots.values())
         }
     except Exception as e:
         return {"error": str(e)}, 500

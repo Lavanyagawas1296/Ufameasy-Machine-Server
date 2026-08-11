@@ -12,10 +12,8 @@ class StateStore:
     """
     Process-local storage for machine parameters and event history.
 
-    Stores the most recent value for each parameter and a bounded list of
-    recent events. The current implementation is not explicitly thread-safe;
-    it relies on simple CPython dictionary/list operations while MQTT and
-    FastAPI access the same singleton in one process.
+    Stores the most recent value for each device parameter and a bounded list
+    of recent events.
     """
     def __init__(self):
         """
@@ -29,11 +27,12 @@ class StateStore:
         self.events = []
         self.lock = Lock()
 
-    def update_parameter(self, key, value):
+    def update_parameter(self, device_id, key, value):
         """
         Store the latest value for a machine parameter.
 
         Args:
+            device_id: Device identifier that owns the parameter.
             key: Parameter identifier received from MQTT or test code.
             value: Latest value for the parameter.
 
@@ -44,15 +43,27 @@ class StateStore:
             Mutates the in-memory parameter dictionary.
         """
         with self.lock:
-            self.parameters[key] = value
+            self.parameters.setdefault(device_id, {})[key] = value
+
+    def get_parameters(self, device_id):
+        with self.lock:
+            return dict(self.parameters.get(device_id, {}))
+
+    def get_parameter(self, device_id, key):
+        with self.lock:
+            return self.parameters.get(device_id, {}).get(key)
     
-    def update_snapshot(self, slice_idx, snapshot):
+    def update_snapshot(self, device_id, slice_idx, snapshot):
         with self.lock:
-            self.slice_snapshots[str(slice_idx)] = snapshot
+            self.slice_snapshots.setdefault(device_id, {})[str(slice_idx)] = snapshot
         
-    def get_all_snapshots(self):
+    def get_all_snapshots(self, device_id):
         with self.lock:
-            return self.slice_snapshots
+            return dict(self.slice_snapshots.get(device_id, {}))
+
+    def clear_snapshots(self):
+        with self.lock:
+            self.slice_snapshots.clear()
     
     def add_event(self, event_type: str, details: dict):
         from datetime import datetime

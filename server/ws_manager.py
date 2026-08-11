@@ -1,24 +1,35 @@
 from fastapi import WebSocket
-from typing import List
+from typing import Set
 import asyncio, json
 
 class ConnectionManager:
     def __init__(self):
-        self.active: List[WebSocket] = []
+        self.active: Set[WebSocket] = set()
+        self._lock = asyncio.Lock()
 
     async def connect(self, ws: WebSocket):
         await ws.accept()
-        self.active.append(ws)
+        async with self._lock:
+            self.active.add(ws)
 
-    def disconnect(self, ws: WebSocket):
-        self.active.remove(ws)
+    async def disconnect(self, ws: WebSocket):
+        async with self._lock:
+            self.active.discard(ws)
 
     async def broadcast(self, data: dict):
         message = json.dumps(data)
-        for ws in list(self.active):
+        async with self._lock:
+            targets = list(self.active)
+
+        dead = set()
+        for ws in targets:
             try:
                 await ws.send_text(message)
             except Exception:
-                self.active.remove(ws)
+                dead.add(ws)
+
+        if dead:
+            async with self._lock:
+                self.active -= dead
 
 manager = ConnectionManager()

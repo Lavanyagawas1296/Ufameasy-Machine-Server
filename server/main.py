@@ -8,6 +8,7 @@ module connects the HTTP layer to the shared in-memory state store.
 
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect
 from fastapi.responses import FileResponse
+from fastapi.staticfiles import StaticFiles
 from server.state_store import state
 from contextlib import asynccontextmanager
 from server.mqtt_client import start_mqtt
@@ -36,9 +37,9 @@ async def lifespan(app: FastAPI):
     yield
 
 app = FastAPI(lifespan=lifespan)
-
+app.mount("/static", StaticFiles(directory="static"), name="static")
 @app.get("/debug")
-def debug():
+def debug(device_id: str):
     """
     Seed and return a sample state value for manual debugging.
 
@@ -48,8 +49,10 @@ def debug():
     Side Effects:
         Updates the shared state store with a sample LASER_POWER value.
     """
-    state.update_parameter("LASER_POWER", 60)
-    return state.parameters
+    if not device_id or device_id.strip() == "":
+        return {"error": "invalid device_id"}
+    state.update_parameter(device_id, "LASER_POWER", 60)
+    return state.get_parameters(device_id)
 
 @app.get("/")
 def root():
@@ -62,18 +65,22 @@ def root():
     return FileResponse("ui/index.html")
 
 @app.get("/state")
-def get_state():
+def get_state(device_id: str):
     """
     Return the current machine parameter snapshot.
 
     Returns:
         Shared parameter dictionary maintained by the state store.
     """
-    return state.parameters
+    if not device_id or device_id.strip() == "":
+        return {"error": "invalid device_id"}
+    return state.get_parameters(device_id)
 
 @app.get("/snapshots")
-def get_snapshots():
-    return state.get_all_snapshots()
+def get_snapshots(device_id: str):
+    if not device_id or device_id.strip() == "":
+        return {"error": "invalid device_id"}
+    return state.get_all_snapshots(device_id)
 
 @app.get("/events")
 def get_events():
@@ -103,6 +110,6 @@ async def websocket_endpoint(websocket: WebSocket):
     except WebSocketDisconnect:
         pass
     finally:
-        manager.disconnect(websocket)
+        await manager.disconnect(websocket)
 
 app.include_router(router)

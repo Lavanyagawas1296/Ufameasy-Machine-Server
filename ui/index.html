@@ -499,7 +499,7 @@
 
 <!-- TOPBAR -->
 <header class="topbar">
-  <div class="brand">UFAMeasy <span>Machine Server</span></div>
+  <div class="brand" style="display:flex;align-items:center;gap:8px;"><img src="\static\Unnati.svg" height="24" alt="logo">UFAMeasy <span>Machine Server</span></div>
   <div class="topbar-mid">
     <select id="deviceSelect"><option value="">-- select device --</option></select>
   </div>
@@ -533,6 +533,14 @@
     <div class="rt-card">
       <div class="label">Gas</div>
       <div id="rtGas"><span class="pill off">OFF</span></div>
+    </div>
+    <div class="rt-card">
+      <div class="label">Powder</div>
+      <div id="rtPowder"><span class="pill off">OFF</span></div>
+    </div>
+    <div class="rt-card">
+      <div class="label">Light</div>
+      <div id="rtLight"><span class="pill off">OFF</span></div>
     </div>
     <!-- Laser -->
     <div class="rt-card">
@@ -833,6 +841,8 @@
     }
     if (data.gas_enabled    !== undefined) rtGas.innerHTML   = pill(data.gas_enabled);
     if (data.laser_enabled  !== undefined) rtLaser.innerHTML  = pill(data.laser_enabled);
+    if (data.powder_enabled !== undefined) document.getElementById("rtPowder").innerHTML = pill(data.powder_enabled);
+    if (data.light_enabled !== undefined) document.getElementById("rtLight").innerHTML = pill(data.light_enabled);
     if (data.laser_power_pct !== undefined) rtPower.textContent = (data.laser_power_pct ?? "—") + (data.laser_power_pct != null ? "%" : "");
     const connected = normalizeConnected(data.connected);
     const connectionState = normalizeConnected(data.connection_state);
@@ -852,6 +862,8 @@
     if (progressPct) progressPct.textContent = "—";
     rtGas.innerHTML   = pill(false);
     rtLaser.innerHTML = pill(false);
+    document.getElementById("rtPowder").innerHTML = pill(false);
+    document.getElementById("rtLight").innerHTML = pill(false);
 
     estPowder.textContent = "—";
     estEfficiency.textContent = "—";
@@ -1331,6 +1343,8 @@
             current_file:    d.current_file     ?? d.RT013,
             gas_enabled:     d.gas_enabled      ?? d.RT029,
             laser_enabled:   d.laser_enabled    ?? d.RT027,
+            powder_enabled: d.powder_enabled ?? d.RT028,
+            light_enabled:  d.light_enabled  ?? d.RT031,
             laser_power_pct: d.laser_power_pct  ?? d.DS010,
             connected:       d.machine_connected ?? d.RT006,
             connection_state: d.connection_state ?? d.RT007,
