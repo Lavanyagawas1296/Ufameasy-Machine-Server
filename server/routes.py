@@ -11,21 +11,35 @@ import csv
 import ftplib
 import io
 import json
+import mimetypes
 import os
+import posixpath
+import queue
 import sqlite3
 import tempfile
+import threading
+from datetime import datetime
 
 from fastapi import APIRouter, HTTPException
-from fastapi.responses import Response
+from fastapi.responses import Response, StreamingResponse
 from server.state_store import state
 from server.db import get_sessions_by_device, get_runtime_latest
 
 router = APIRouter()
 
 REMOTE_LOG_PATH = "ufameasy_sys.csv"
+FTP_PORT = 2121
+RECORDINGS_ROOT = "recordings"
 
 
 class LogFetchError(Exception):
+    def __init__(self, status_code: int, detail: str):
+        super().__init__(detail)
+        self.status_code = status_code
+        self.detail = detail
+
+
+class RecordingFetchError(Exception):
     def __init__(self, status_code: int, detail: str):
         super().__init__(detail)
         self.status_code = status_code
@@ -100,6 +114,211 @@ def _fetch_telemetry_events_csv(ip: str, port: int) -> bytes:
 def _safe_log_filename(ip: str) -> str:
     safe_ip = "".join(char if char.isalnum() or char in ".-_" else "_" for char in ip)
     return f"ufameasy_logs_{safe_ip or 'machine'}.csv"
+
+
+def _ftp_connect(ip: str, port: int = FTP_PORT) -> ftplib.FTP:
+    ftp = ftplib.FTP()
+    ftp.connect(ip, port, timeout=10)
+    ftp.login()
+    return ftp
+
+
+def _safe_device_folder(device_id: str) -> str:
+    device_id = device_id.strip()
+    if not device_id:
+        raise RecordingFetchError(400, "device_id is required when provided")
+    if device_id in (".", "..") or "/" in device_id or "\\" in device_id:
+        raise RecordingFetchError(400, "device_id must be a single folder name")
+    return device_id
+
+
+def _safe_recording_file_path(file_path: str) -> str:
+    cleaned = file_path.strip().replace("\\", "/")
+    if cleaned.startswith(f"{RECORDINGS_ROOT}/"):
+        cleaned = cleaned[len(RECORDINGS_ROOT) + 1:]
+    normalized = posixpath.normpath(cleaned)
+    if (
+        not normalized
+        or normalized in (".", "..")
+        or normalized.startswith("/")
+        or normalized.startswith("../")
+    ):
+        raise RecordingFetchError(400, "file must be a relative recording path")
+    return posixpath.join(RECORDINGS_ROOT, normalized)
+
+
+def _ftp_timestamp(value: str | None) -> str | None:
+    if not value:
+        return None
+    try:
+        return datetime.strptime(value[:14], "%Y%m%d%H%M%S").isoformat() + "Z"
+    except ValueError:
+        return value
+
+
+def _recording_metadata(ftp: ftplib.FTP, device_id: str, filename: str, facts: dict | None = None) -> dict:
+    facts = facts or {}
+    remote_path = f"{RECORDINGS_ROOT}/{device_id}/{filename}"
+    size = facts.get("size")
+    modified_at = facts.get("modify")
+
+    if size is None:
+        try:
+            size = ftp.size(remote_path)
+        except ftplib.all_errors:
+            size = None
+    if modified_at is None:
+        try:
+            modified_at = ftp.sendcmd(f"MDTM {remote_path}").split(maxsplit=1)[1]
+        except (IndexError, ftplib.all_errors):
+            modified_at = None
+
+    return {
+        "device_id": device_id,
+        "filename": filename,
+        "path": f"{device_id}/{filename}",
+        "size": int(size) if size not in (None, "") else None,
+        "modified_at": _ftp_timestamp(modified_at),
+    }
+
+
+def _list_device_recordings(ftp: ftplib.FTP, device_id: str) -> list[dict]:
+    base_path = f"{RECORDINGS_ROOT}/{device_id}"
+    recordings = []
+    try:
+        for name, facts in ftp.mlsd(base_path):
+            if facts.get("type") != "file":
+                continue
+            recordings.append(_recording_metadata(ftp, device_id, name, facts))
+        return recordings
+    except ftplib.all_errors:
+        pass
+
+    try:
+        names = ftp.nlst(base_path)
+    except ftplib.error_perm as exc:
+        raise RecordingFetchError(404, f"No recordings found for device_id '{device_id}': {exc}") from exc
+    except ftplib.all_errors as exc:
+        raise RecordingFetchError(502, f"Unable to list recordings: {exc}") from exc
+
+    for entry in names:
+        filename = posixpath.basename(entry.rstrip("/"))
+        if filename:
+            recordings.append(_recording_metadata(ftp, device_id, filename))
+    return recordings
+
+
+def _list_recording_device_folders(ftp: ftplib.FTP) -> list[str]:
+    try:
+        return [
+            name
+            for name, facts in ftp.mlsd(RECORDINGS_ROOT)
+            if facts.get("type") == "dir" and name not in (".", "..")
+        ]
+    except ftplib.all_errors:
+        pass
+
+    try:
+        original_dir = ftp.pwd()
+        ftp.cwd(RECORDINGS_ROOT)
+        names = ftp.nlst()
+    except ftplib.error_perm as exc:
+        raise RecordingFetchError(404, f"Recordings folder not found: {exc}") from exc
+    except ftplib.all_errors as exc:
+        raise RecordingFetchError(502, f"Unable to list recording folders: {exc}") from exc
+
+    folders = []
+    try:
+        for entry in names:
+            name = posixpath.basename(entry.rstrip("/"))
+            if not name or name in (".", ".."):
+                continue
+            try:
+                ftp.cwd(name)
+                folders.append(name)
+                ftp.cwd("..")
+            except ftplib.all_errors:
+                continue
+    finally:
+        try:
+            ftp.cwd(original_dir)
+        except ftplib.all_errors:
+            pass
+    return folders
+
+
+def _list_recordings(ip: str, device_id: str | None = None) -> list[dict]:
+    try:
+        with _ftp_connect(ip) as ftp:
+            if device_id:
+                return _list_device_recordings(ftp, _safe_device_folder(device_id))
+
+            recordings = []
+            for folder in _list_recording_device_folders(ftp):
+                recordings.extend(_list_device_recordings(ftp, folder))
+            return recordings
+    except RecordingFetchError:
+        raise
+    except ftplib.all_errors as exc:
+        raise RecordingFetchError(502, f"Unable to connect to recordings FTP server: {exc}") from exc
+
+
+def _assert_recording_exists(ip: str, remote_path: str) -> None:
+    try:
+        with _ftp_connect(ip) as ftp:
+            directory = posixpath.dirname(remote_path)
+            filename = posixpath.basename(remote_path)
+            try:
+                ftp.size(remote_path)
+                return
+            except ftplib.all_errors:
+                pass
+            try:
+                for name, facts in ftp.mlsd(directory):
+                    if name == filename and facts.get("type") == "file":
+                        return
+            except ftplib.all_errors:
+                pass
+            try:
+                names = ftp.nlst(directory)
+            except ftplib.all_errors:
+                names = []
+            if filename in [posixpath.basename(name.rstrip("/")) for name in names]:
+                return
+            raise ftplib.error_perm("550 recording not found")
+    except ftplib.error_perm as exc:
+        raise RecordingFetchError(404, f"Recording not found: {exc}") from exc
+    except ftplib.all_errors as exc:
+        raise RecordingFetchError(502, f"Unable to access recording: {exc}") from exc
+
+
+def _stream_recording(ip: str, remote_path: str):
+    chunks: queue.Queue[bytes | Exception | None] = queue.Queue(maxsize=8)
+
+    def fetch() -> None:
+        try:
+            with _ftp_connect(ip) as ftp:
+                ftp.retrbinary(f"RETR {remote_path}", chunks.put)
+        except Exception as exc:
+            chunks.put(exc)
+        finally:
+            chunks.put(None)
+
+    thread = threading.Thread(target=fetch, daemon=True)
+    thread.start()
+
+    while True:
+        chunk = chunks.get()
+        if chunk is None:
+            break
+        if isinstance(chunk, Exception):
+            raise chunk
+        yield chunk
+
+
+def _safe_download_filename(remote_path: str) -> str:
+    filename = posixpath.basename(remote_path)
+    return "".join(char if char.isalnum() or char in ".-_" else "_" for char in filename) or "recording"
 
 @router.get("/state")
 def get_state(device_id: str):
@@ -218,6 +437,43 @@ async def fetch_logs(ip: str, port: int = 2121):
         content=csv_bytes,
         media_type="text/csv",
         headers={"Content-Disposition": f"attachment; filename=ufameasy_logs_{ip}.csv"},
+    )
+
+@router.get("/recordings")
+async def get_recordings(ip: str, device_id: str | None = None):
+    ip = ip.strip()
+    if not ip:
+        raise HTTPException(status_code=400, detail="ip is required")
+
+    loop = asyncio.get_running_loop()
+    try:
+        return await loop.run_in_executor(None, _list_recordings, ip, device_id)
+    except RecordingFetchError as exc:
+        raise HTTPException(status_code=exc.status_code, detail=exc.detail) from exc
+
+@router.get("/recordings/download")
+async def download_recording(ip: str, file: str):
+    ip = ip.strip()
+    if not ip:
+        raise HTTPException(status_code=400, detail="ip is required")
+
+    try:
+        remote_path = _safe_recording_file_path(file)
+    except RecordingFetchError as exc:
+        raise HTTPException(status_code=exc.status_code, detail=exc.detail) from exc
+
+    loop = asyncio.get_running_loop()
+    try:
+        await loop.run_in_executor(None, _assert_recording_exists, ip, remote_path)
+    except RecordingFetchError as exc:
+        raise HTTPException(status_code=exc.status_code, detail=exc.detail) from exc
+
+    filename = _safe_download_filename(remote_path)
+    media_type = mimetypes.guess_type(filename)[0] or "application/octet-stream"
+    return StreamingResponse(
+        _stream_recording(ip, remote_path),
+        media_type=media_type,
+        headers={"Content-Disposition": f'inline; filename="{filename}"'},
     )
 
 @router.get("/sessions")

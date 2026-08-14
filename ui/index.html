@@ -235,6 +235,60 @@
     .session-status.ended  { background: var(--border); color: var(--muted); }
     .no-sessions { color: var(--muted); font-size: 13px; padding: 8px 0; }
 
+    /* Recordings */
+    .recordings-area { padding: 16px 20px; }
+    .recordings-layout {
+      display: grid;
+      grid-template-columns: minmax(260px, 380px) minmax(0, 1fr);
+      gap: 14px;
+      align-items: start;
+    }
+    .recordings-list {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+    .recording-item {
+      background: var(--panel2);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 10px 12px;
+      cursor: pointer;
+      transition: border-color 0.15s, background 0.15s;
+    }
+    .recording-item:hover,
+    .recording-item.active {
+      border-color: var(--accent);
+      background: var(--panel);
+    }
+    .recording-name {
+      color: var(--text);
+      font-family: var(--font-mono);
+      font-size: 12px;
+      overflow-wrap: anywhere;
+    }
+    .recording-meta {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+      margin-top: 5px;
+      color: var(--muted);
+      font-size: 11px;
+    }
+    .recordings-status {
+      color: var(--muted);
+      font-size: 13px;
+      padding: 8px 0;
+    }
+    .recordings-player {
+      width: 100%;
+      max-height: 520px;
+      background: #111;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      display: block;
+    }
+
     /* ── EMPTY STATE ── */
     .empty {
       display: none; padding: 36px 16px; text-align: center;
@@ -265,6 +319,7 @@
 
     @media (max-width: 700px) {
       .runtime-row { flex-direction: column; }
+      .recordings-layout { grid-template-columns: 1fr; }
       .topbar { flex-wrap: wrap; height: auto; padding: 10px; }
     }
 
@@ -408,7 +463,8 @@
       color: var(--panel);
     }
     .params-area,
-    .sessions-area {
+    .sessions-area,
+    .recordings-area {
       padding: 18px 24px;
     }
     .toolbar {
@@ -479,7 +535,8 @@
       }
       .runtime-panel,
       .params-area,
-      .sessions-area {
+      .sessions-area,
+      .recordings-area {
         padding-left: 12px;
         padding-right: 12px;
       }
@@ -594,6 +651,9 @@
   <button class="toggle-btn" id="btnSessions" onclick="toggleSection('sessions')">
     Session History <span class="arrow">▼</span>
   </button>
+  <button class="toggle-btn" id="btnRecordings" onclick="viewRecordings()">
+    View Recordings <span class="arrow">v</span>
+  </button>
 </div>
 
 <main>
@@ -631,6 +691,19 @@
     </div>
   </div>
 
+  <!-- RECORDINGS SECTION -->
+  <div class="collapse" id="secRecordings">
+    <div class="recordings-area">
+      <div class="recordings-layout">
+        <div>
+          <div id="recordingsStatus" class="recordings-status">Enter a machine IP to view recordings.</div>
+          <div id="recordingsList" class="recordings-list"></div>
+        </div>
+        <video id="recordingsVideo" class="recordings-player" controls preload="metadata"></video>
+      </div>
+    </div>
+  </div>
+
   <!-- EVENTS LOG -->
   <div class="events-wrap">
     <div class="events-head">Activity Log</div>
@@ -655,6 +728,9 @@
   const eventsList    = document.getElementById("eventsList");
   const deviceSelect  = document.getElementById("deviceSelect");
   const sessionList   = document.getElementById("sessionList");
+  const recordingsList = document.getElementById("recordingsList");
+  const recordingsStatus = document.getElementById("recordingsStatus");
+  const recordingsVideo = document.getElementById("recordingsVideo");
 
   // ── Runtime card refs ──
   const rtFile     = document.getElementById("rtFile");
@@ -698,8 +774,8 @@
 
   // ── Section toggle ──
   function openSection(name) {
-    const secs = { params: "secParams", sessions: "secSessions" };
-    const btns = { params: "btnParams", sessions: "btnSessions" };
+    const secs = { params: "secParams", sessions: "secSessions", recordings: "secRecordings" };
+    const btns = { params: "btnParams", sessions: "btnSessions", recordings: "btnRecordings" };
     const sec = document.getElementById(secs[name]);
     const btn = document.getElementById(btns[name]);
     if (!sec || sec.classList.contains("open")) return;
@@ -710,8 +786,8 @@
   }
 
   function toggleSection(name) {
-    const secs = { params: "secParams", sessions: "secSessions" };
-    const btns = { params: "btnParams", sessions: "btnSessions" };
+    const secs = { params: "secParams", sessions: "secSessions", recordings: "secRecordings" };
+    const btns = { params: "btnParams", sessions: "btnSessions", recordings: "btnRecordings" };
     const sec = document.getElementById(secs[name]);
     const btn = document.getElementById(btns[name]);
     const isOpen = sec.classList.contains("open");
@@ -893,6 +969,94 @@
     const id = deviceSelect.value;
     if (!id) return;
     deviceSelect.dispatchEvent(new CustomEvent("change", { detail: { auto: true } }));
+  }
+
+  function formatBytes(bytes) {
+    const n = Number(bytes);
+    if (!Number.isFinite(n)) return "size unknown";
+    if (n < 1024) return `${n} B`;
+    const units = ["KB", "MB", "GB"];
+    let value = n / 1024;
+    let idx = 0;
+    while (value >= 1024 && idx < units.length - 1) {
+      value /= 1024;
+      idx += 1;
+    }
+    return `${value.toFixed(value >= 10 ? 1 : 2)} ${units[idx]}`;
+  }
+
+  function formatRecordingDate(value) {
+    if (!value) return "date unknown";
+    const date = new Date(value);
+    return Number.isNaN(date.getTime()) ? value : date.toLocaleString("en-GB", { hour12: false });
+  }
+
+  function renderRecordings(rows, ip) {
+    recordingsList.textContent = "";
+    recordingsVideo.removeAttribute("src");
+    recordingsVideo.load();
+
+    if (!rows.length) {
+      recordingsStatus.textContent = "No recordings found.";
+      return;
+    }
+
+    recordingsStatus.textContent = `${rows.length} recording${rows.length === 1 ? "" : "s"} found.`;
+    rows.forEach(item => {
+      const div = document.createElement("div");
+      div.className = "recording-item";
+
+      const nameEl = document.createElement("div");
+      nameEl.className = "recording-name";
+      nameEl.textContent = item.filename || item.path || "recording";
+
+      const metaEl = document.createElement("div");
+      metaEl.className = "recording-meta";
+      [item.device_id || "device unknown", formatBytes(item.size), formatRecordingDate(item.modified_at)].forEach(text => {
+        const span = document.createElement("span");
+        span.textContent = text;
+        metaEl.appendChild(span);
+      });
+
+      div.appendChild(nameEl);
+      div.appendChild(metaEl);
+      div.addEventListener("click", () => {
+        document.querySelectorAll(".recording-item").forEach(el => el.classList.remove("active"));
+        div.classList.add("active");
+        recordingsVideo.src = `/recordings/download?ip=${encodeURIComponent(ip)}&file=${encodeURIComponent(item.path || item.filename || "")}`;
+        recordingsVideo.play().catch(() => {});
+      });
+      recordingsList.appendChild(div);
+    });
+  }
+
+  async function viewRecordings() {
+    const ip = prompt("Enter machine IP address");
+    if (!ip || !ip.trim()) return;
+
+    const cleanIp = ip.trim();
+    const selectedDevice = deviceSelect.value;
+    const params = new URLSearchParams({ ip: cleanIp });
+    if (selectedDevice) params.set("device_id", selectedDevice);
+
+    openSection("recordings");
+    recordingsStatus.textContent = "Loading recordings...";
+    recordingsList.textContent = "";
+    recordingsVideo.removeAttribute("src");
+    recordingsVideo.load();
+
+    try {
+      const res = await fetch(`/recordings?${params.toString()}`);
+      const data = await res.json();
+      if (!res.ok) {
+        throw new Error(data.detail || "Unable to list recordings");
+      }
+      renderRecordings(data, cleanIp);
+      logEvent("recordings_loaded", selectedDevice || "all devices");
+    } catch (e) {
+      recordingsStatus.textContent = e.message || "Unable to load recordings.";
+      logEvent("recordings_error", recordingsStatus.textContent);
+    }
   }
 
   deviceSelect.addEventListener("change", async (e) => {
