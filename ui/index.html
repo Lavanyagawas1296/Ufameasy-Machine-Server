@@ -1,562 +1,184 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>UFAMeasy Machine Server</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
   <style>
     :root {
-      --bg: #F5F4F0;
-      --panel: #FFFFFF;
-      --panel2: #FAFAF7;
-      --border: #E8E7E3;
-      --text: #1A1A1A;
-      --muted: #6B6B6B;
-      --green: #00E5B0;
-      --red: #C83212;
-      --yellow: #B86B00;
-      --blue: #E8450A;
-      --accent: #E8450A;
-      --success: #00E5B0;
-      --focus-ring: rgba(232, 69, 10, 0.16);
-      --success-soft: rgba(0, 229, 176, 0.14);
-      --danger-soft: rgba(200, 50, 18, 0.10);
-      --warning-soft: rgba(184, 107, 0, 0.12);
-      --font-mono: "JetBrains Mono", "Consolas", monospace;
-      --font-ui: "Inter", "Segoe UI", Arial, sans-serif;
-    }
-    * { box-sizing: border-box; margin: 0; padding: 0; }
-    body {
-      background: var(--bg);
-      color: var(--text);
-      font-family: var(--font-ui);
-      min-height: 100vh;
-      font-size: 14px;
-    }
-
-    /* ── TOPBAR ── */
-    .topbar {
-      display: flex; align-items: center; gap: 16px;
-      padding: 0 20px; height: 52px;
-      background: var(--panel);
-      border-bottom: 1px solid var(--border);
-      position: sticky; top: 0; z-index: 100;
-    }
-    .brand {
-      font-size: 15px; font-weight: 700; letter-spacing: 0.04em;
-      color: var(--accent); white-space: nowrap;
-    }
-    .brand span { color: var(--muted); font-weight: 400; }
-    .topbar-mid { flex: 1; display: flex; align-items: center; gap: 10px; }
-    select#deviceSelect {
-      background: var(--panel2); color: var(--text);
-      border: 1px solid var(--border); border-radius: 5px;
-      padding: 5px 10px; font-size: 13px; font-family: var(--font-ui);
-      min-width: 180px; cursor: pointer; outline: none;
-    }
-    select#deviceSelect:focus { border-color: var(--accent); }
-    .topbar-right { display: flex; align-items: center; gap: 14px; }
-    .conn-badge {
-      display: flex; align-items: center; gap: 7px;
-      font-size: 13px; color: var(--muted);
-    }
-    .dot {
-      width: 9px; height: 9px; border-radius: 50%;
-      background: var(--red);
-      box-shadow: none;
-      flex-shrink: 0;
-    }
-    .dot.on { background: var(--green); box-shadow: none; }
-
-    /* ── RUNTIME PANEL ── */
-    .runtime-panel {
-      padding: 16px 20px 12px;
-      background: var(--panel);
-      border-bottom: 1px solid var(--border);
-    }
-    .runtime-row {
-      display: flex; gap: 10px; flex-wrap: wrap;
-      align-items: stretch;
-    }
-    .rt-card {
-      background: var(--panel2);
-      border: 1px solid var(--border);
-      border-radius: 7px;
-      padding: 10px 14px;
-      min-width: 140px; flex: 1;
-      box-shadow: none;
-    }
-    .rt-card .label {
-      font-size: 10px; text-transform: uppercase;
-      letter-spacing: 0.08em; color: var(--muted);
-      margin-bottom: 6px;
-    }
-    .rt-card .val {
-      font-family: var(--font-mono);
-      font-size: 18px; font-weight: 600;
-      color: var(--text);
-    }
-    .rt-error {
-      margin-top: 6px;
-      min-height: 16px;
-      font-size: 12px;
-      color: var(--red);
-    }
-    .rt-card.wide { min-width: 220px; }
-    .rt-card.progress-card { min-width: 260px; }
-
-    /* progress bar */
-    .prog-bar {
-      height: 5px; border-radius: 3px;
-      background: var(--border); margin-top: 8px; overflow: hidden;
-    }
-    .prog-fill {
-      height: 100%; border-radius: 3px;
-      background: var(--accent);
-      transition: width 0.4s ease;
-      width: 0%;
-    }
-    .layer-text {
-      font-family: var(--font-mono); font-size: 14px; color: var(--text);
-    }
-
-    /* ON/OFF toggle display */
-    .pill {
-      display: inline-block;
-      padding: 2px 10px; border-radius: 999px;
-      font-size: 12px; font-weight: 700;
-      letter-spacing: 0.05em; font-family: var(--font-mono);
-    }
-    .pill.on  { background: rgba(34,211,110,0.15); color: var(--green); border: 1px solid var(--green); }
-    .pill.off { background: rgba(240,78,78,0.12);  color: var(--red);   border: 1px solid var(--red); }
-
-    /* connection status badge */
-    .state-badge {
-      display: inline-block; padding: 3px 10px;
-      border-radius: 5px; font-size: 13px; font-weight: 600;
-      font-family: var(--font-mono); background: #e2e8f0; color: var(--muted);
-    }
-    .state-badge.connected { background: rgba(34,211,110,0.12); color: var(--green); }
-    .state-badge.disconnected { background: rgba(240,78,78,0.12); color: var(--red); }
-
-    /* ── COLLAPSIBLE SECTIONS ── */
-    .section-bar {
-      display: flex; align-items: center; gap: 10px;
-      padding: 10px 20px;
-      border-bottom: 1px solid var(--border);
-      background: var(--panel);
-    }
-    .toggle-btn {
-      display: flex; align-items: center; gap: 7px;
-      background: #ffffff; border: 1px solid var(--border);
-      color: var(--text); border-radius: 5px;
-      padding: 6px 13px; font-size: 13px; cursor: pointer;
-      font-family: var(--font-ui);
-      transition: border-color 0.15s;
-    }
-    .toggle-btn:hover { border-color: var(--accent); }
-    .toggle-btn .arrow { transition: transform 0.2s; }
-    .toggle-btn.open .arrow { transform: rotate(180deg); }
-
-    /* ── COLLAPSIBLE CONTENT ── */
-    .collapse { display: none; }
-    .collapse.open { display: block; }
-
-    /* ── MAIN CONTENT AREA ── */
-    main { padding: 0; }
-
-    /* ── PARAMS TABLE ── */
-    .params-area { padding: 16px 20px; }
-    .toolbar {
-      display: flex; align-items: center; gap: 12px;
-      margin-bottom: 12px;
-    }
-    .search {
-      flex: 1; max-width: 380px;
-      padding: 8px 12px;
-      background: var(--panel2); border: 1px solid var(--border);
-      border-radius: 5px; color: var(--text);
-      font-size: 13px; font-family: var(--font-ui); outline: none;
-    }
-    select#sliceFilter {
-      max-width: 180px;
-      padding: 8px 12px;
-      background: var(--panel2); border: 1px solid var(--border);
-      border-radius: 5px; color: var(--text);
-      font-size: 13px; font-family: var(--font-ui); outline: none;
-    }
-    .search:focus { border-color: var(--accent); }
-    select#sliceFilter:focus { border-color: var(--accent); }
-    .summary { color: var(--muted); font-size: 13px; }
-
-    .table-wrap {
-      border: 1px solid var(--border); border-radius: 7px;
-      overflow: auto; max-height: 380px;
-      background: var(--panel);
-    }
-    .table-wrap.hidden { display: none; }
-
-    table { width: 100%; border-collapse: collapse; min-width: 680px; }
-    th, td { padding: 9px 11px; border-bottom: 1px solid var(--border); text-align: left; }
-    th {
-      position: sticky; top: 0; z-index: 5;
-      background: var(--panel2); color: var(--muted);
-      font-size: 11px; letter-spacing: 0.07em; text-transform: uppercase;
-    }
-    td { font-size: 13px; color: #1e293b; }
-    .domain-row th {
-      position: static; background: #f8fafc;
-      color: var(--text); font-size: 12px; text-transform: none;
-      border-top: 1px solid #3a3f55; padding: 7px 11px;
-    }
-    .param-id, .value, .slice { font-family: var(--font-mono); }
-    .value { transition: background 0.8s ease; }
-    .value.flash { background: rgba(245,200,66,0.28); color: var(--yellow); transition: background 0s; }
-
-    /* ── SESSION LIST ── */
-    .sessions-area { padding: 16px 20px; }
-    .session-list { display: flex; flex-direction: column; gap: 7px; }
-    .session-item {
-      background: var(--panel2); border: 1px solid var(--border);
-      border-radius: 6px; padding: 10px 14px;
-      font-size: 13px;
-    }
-    .session-header { display:flex; justify-content:space-between; align-items:center; margin-bottom:4px; }
-    .session-meta { display:flex; gap:14px; font-size:11px; color:var(--muted); flex-wrap:wrap; }
-    .sid { font-family:var(--font-mono); font-size:10px; }
-    .session-item .sfile { font-family: var(--font-mono); flex: 1; color: var(--text); }
-    .session-item .stime { color: var(--muted); white-space: nowrap; }
-    .session-item .slayers { color: var(--muted); white-space: nowrap; }
-    .session-status {
-      padding: 2px 8px; border-radius: 999px; font-size: 11px; font-weight: 700;
-      font-family: var(--font-mono);
-    }
-    .session-status.active { background: rgba(34,211,110,0.15); color: var(--green); }
-    .session-status.ended  { background: var(--border); color: var(--muted); }
-    .no-sessions { color: var(--muted); font-size: 13px; padding: 8px 0; }
-
-    /* Recordings */
-    .recordings-area { padding: 16px 20px; }
-    .recordings-layout {
-      display: grid;
-      grid-template-columns: minmax(260px, 380px) minmax(0, 1fr);
-      gap: 14px;
-      align-items: start;
-    }
-    .recordings-list {
-      display: flex;
-      flex-direction: column;
-      gap: 8px;
-    }
-    .recording-item {
-      background: var(--panel2);
-      border: 1px solid var(--border);
-      border-radius: 6px;
-      padding: 10px 12px;
-      cursor: pointer;
-      transition: border-color 0.15s, background 0.15s;
-    }
-    .recording-item:hover,
-    .recording-item.active {
-      border-color: var(--accent);
-      background: var(--panel);
-    }
-    .recording-name {
-      color: var(--text);
-      font-family: var(--font-mono);
-      font-size: 12px;
-      overflow-wrap: anywhere;
-    }
-    .recording-meta {
-      display: flex;
-      gap: 10px;
-      flex-wrap: wrap;
-      margin-top: 5px;
-      color: var(--muted);
-      font-size: 11px;
-    }
-    .recordings-status {
-      color: var(--muted);
-      font-size: 13px;
-      padding: 8px 0;
-    }
-    .recordings-player {
-      width: 100%;
-      max-height: 520px;
-      background: #111;
-      border: 1px solid var(--border);
-      border-radius: 8px;
-      display: block;
-    }
-
-    /* ── EMPTY STATE ── */
-    .empty {
-      display: none; padding: 36px 16px; text-align: center;
-      color: var(--muted); border: 1px solid var(--border);
-      border-radius: 7px; background: var(--panel);
-    }
-    .empty.visible { display: block; }
-
-    /* ── EVENTS ── */
-    .events-wrap {
-      margin: 0 20px 20px;
-      background: #ffffff; border: 1px solid var(--border);
-      border-radius: 7px; overflow: hidden;
-    }
-    .events-head {
-      padding: 8px 14px; font-size: 11px; font-weight: 700;
-      letter-spacing: 0.07em; text-transform: uppercase;
-      color: var(--muted); border-bottom: 1px solid var(--border);
-      background: #ffffff;
-    }
-    .events-body {
-      height: 120px; overflow-y: auto; padding: 8px 14px;
-      font-family: var(--font-mono); font-size: 12px;
-    }
-    .events-list { list-style: none; display: flex; flex-direction: column-reverse; gap: 4px; }
-    .events-list li { color: var(--muted); }
-    .events-list li span { color: var(--accent); margin-right: 6px; }
-
-    @media (max-width: 700px) {
-      .runtime-row { flex-direction: column; }
-      .recordings-layout { grid-template-columns: 1fr; }
-      .topbar { flex-wrap: wrap; height: auto; padding: 10px; }
-    }
-
-    /* Production dashboard theme */
-    body {
-      line-height: 1.45;
-    }
-    .topbar {
-      height: 58px;
-      padding: 0 24px;
-      background: var(--panel);
-    }
-    .brand {
-      color: var(--accent);
-      letter-spacing: 0;
-    }
-    .brand span {
-      color: var(--text);
-      font-weight: 500;
-    }
-    select#deviceSelect,
-    select#sliceFilter,
-    .search {
-      background: var(--panel);
-      border-radius: 6px;
-      padding: 8px 12px;
-    }
-    select#deviceSelect:focus,
-    select#sliceFilter:focus,
-    .search:focus {
-      border-color: var(--accent);
-      box-shadow: 0 0 0 3px var(--focus-ring);
-    }
-    .dot {
-      background: var(--red);
-      box-shadow: none;
-    }
-    .dot.on {
-      background: var(--success);
-      box-shadow: none;
-    }
-    .runtime-panel {
-      padding: 20px 24px 18px;
-      background: var(--bg);
-    }
-    .runtime-row {
-      gap: 12px;
-    }
-    .rt-card {
-      background: var(--panel);
-      border-radius: 8px;
-      padding: 12px 14px;
-      box-shadow: none;
-    }
-    .rt-card .label {
-      letter-spacing: 0.06em;
-    }
-    .rt-card .val {
-      overflow-wrap: anywhere;
-    }
-    .full-width {
-      flex-basis: 100%;
-    }
-    .stack-sm {
-      margin-top: 8px;
-    }
-    .prog-bar {
-      height: 8px;
-      border-radius: 999px;
-      background: var(--border);
-    }
-    .prog-fill {
-      border-radius: 999px;
-      background: var(--success);
-    }
-    .progress-text {
-      color: var(--text);
-      font-family: var(--font-mono);
-      font-size: 16px;
-      font-weight: 600;
-      margin-top: 6px;
-    }
-    .live-grid {
-      display: grid;
-      grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
-      gap: 8px;
-      font-family: var(--font-mono);
-      font-size: 12px;
-    }
-    .pill {
-      padding: 3px 10px;
-      letter-spacing: 0.04em;
-    }
-    .pill.on,
-    .state-badge.connected,
-    .session-status.active {
-      background: var(--success-soft);
-      color: #007F62;
-      border: 1px solid var(--success);
-    }
-    .pill.off,
-    .state-badge.disconnected {
-      background: var(--danger-soft);
-      color: var(--red);
-      border: 1px solid rgba(200, 50, 18, 0.28);
-    }
-    .state-badge {
-      background: var(--panel2);
-      border: 1px solid var(--border);
-      border-radius: 6px;
-    }
-    .section-bar {
-      padding: 12px 24px;
-      background: var(--panel);
-    }
-    .toggle-btn {
-      background: var(--panel);
-      border-radius: 6px;
-      padding: 7px 13px;
-      transition: border-color 0.15s, color 0.15s, background 0.15s;
-    }
-    .toggle-btn:hover {
-      border-color: var(--accent);
-      color: var(--accent);
-    }
-    .toggle-btn.open {
-      background: var(--accent);
-      border-color: var(--accent);
-      color: var(--panel);
-    }
-    .download-btn {
-      background: var(--accent);
-      border-color: var(--accent);
-      color: var(--panel);
-      font-size: 12px;
-      padding: 6px 12px;
-    }
-    .download-btn:hover {
-      background: #D63D08;
-      border-color: #D63D08;
-      color: var(--panel);
-    }
-    .params-area,
-    .sessions-area,
-    .recordings-area {
-      padding: 18px 24px;
-    }
-    .toolbar {
-      margin-bottom: 14px;
-    }
-    .table-wrap,
-    .empty,
-    .events-wrap,
-    .session-item {
-      border-radius: 8px;
-    }
-    th {
-      background: var(--panel2);
-      letter-spacing: 0.06em;
-    }
-    td {
-      color: var(--text);
-    }
-    tbody tr[data-key]:hover {
-      background: var(--panel2);
-    }
-    .domain-row th {
-      background: var(--panel);
-      border-top-color: var(--border);
-    }
-    .slice-header td {
-      background: var(--panel2);
-      color: var(--muted);
-      font-size: 12px;
-      font-weight: 600;
-    }
-    .value.flash {
-      background: var(--warning-soft);
-      color: var(--yellow);
-    }
-    .session-list {
-      gap: 8px;
-    }
-    .session-item {
-      background: var(--panel);
-      cursor: pointer;
-      padding: 12px 14px;
-      transition: border-color 0.15s, background 0.15s;
-    }
-    .session-item:hover {
-      border-color: var(--accent);
-      background: var(--panel2);
-    }
-    .session-status.ended {
-      background: var(--panel2);
-      border: 1px solid var(--border);
-    }
-    .events-wrap {
-      margin: 0 24px 24px;
-      background: var(--panel);
-    }
-    .events-head {
-      padding: 10px 14px;
-      background: var(--panel2);
-      letter-spacing: 0.06em;
-    }
-    .events-list li span {
-      color: var(--accent);
-    }
-    @media (max-width: 700px) {
-      .topbar {
-        padding: 12px;
-      }
-      .runtime-panel,
-      .params-area,
-      .sessions-area,
-      .recordings-area {
-        padding-left: 12px;
-        padding-right: 12px;
-      }
-      .section-bar {
-        flex-wrap: wrap;
-        padding-left: 12px;
-        padding-right: 12px;
-      }
-      .events-wrap {
-        margin-left: 12px;
-        margin-right: 12px;
-      }
+      --bg:#F0F4FF; --panel:#FFFFFF; --panel2:#F5F8FF; --border:#D1DEFA;
+      --text:#0F1629; --muted:#5C6B8A; --green:#16A34A; --red:#DC2626; --yellow:#D97706;
+      --accent:#1B6FE8; --accent-soft:#EBF2FF; --accent-dark:#1558C0;
+      --success:#16A34A; --focus-ring:rgba(27,111,232,0.18);
+      --success-soft:rgba(22,163,74,0.10); --danger-soft:rgba(220,38,38,0.08);
+      --warning-soft:rgba(217,119,6,0.10);
+      --font-mono:"JetBrains Mono","Consolas",monospace;
+      --font-ui:"Inter","Segoe UI",Arial,sans-serif;
+    }
+    *{box-sizing:border-box;margin:0;padding:0;}
+    body{background:var(--bg);color:var(--text);font-family:var(--font-ui);min-height:100vh;font-size:14px;line-height:1.5;}
+    .topbar{display:flex;align-items:center;gap:14px;padding:0 24px;height:56px;background:var(--panel);border-bottom:1px solid var(--border);position:sticky;top:0;z-index:100;box-shadow:0 1px 4px rgba(27,111,232,0.07);}
+    .brand{font-size:15px;font-weight:700;color:var(--accent);white-space:nowrap;display:flex;align-items:center;gap:8px;}
+    .brand span{color:var(--text);font-weight:500;}
+    .topbar-mid{flex:1;display:flex;align-items:center;gap:10px;}
+    select#deviceSelect{background:var(--panel2);color:var(--text);border:1px solid var(--border);border-radius:8px;padding:6px 12px;font-size:13px;font-family:var(--font-ui);min-width:180px;cursor:pointer;outline:none;}
+    select#deviceSelect:focus{border-color:var(--accent);box-shadow:0 0 0 3px var(--focus-ring);}
+    .topbar-right{display:flex;align-items:center;gap:14px;}
+    .conn-badge{display:flex;align-items:center;gap:7px;font-size:13px;color:var(--muted);}
+    .dot{width:9px;height:9px;border-radius:50%;background:var(--red);flex-shrink:0;}
+    .dot.on{background:var(--green);box-shadow:0 0 0 3px rgba(22,163,74,0.15);}
+    .runtime-panel{padding:16px 24px 12px;background:var(--bg);}
+    .runtime-row{display:flex;gap:10px;flex-wrap:wrap;align-items:stretch;}
+    .rt-card{background:var(--panel);border:1px solid var(--border);border-radius:10px;padding:12px 16px;min-width:130px;flex:1;}
+    .rt-card .label{font-size:10px;text-transform:uppercase;letter-spacing:0.08em;color:var(--muted);margin-bottom:6px;font-weight:600;}
+    .rt-card .val{font-family:var(--font-mono);font-size:18px;font-weight:600;color:var(--text);overflow-wrap:anywhere;}
+    .rt-card.wide{min-width:220px;} .rt-card.progress-card{min-width:240px;}
+    .full-width{flex-basis:100%;} .stack-sm{margin-top:8px;}
+    .prog-bar{height:7px;border-radius:999px;background:var(--border);margin-top:8px;overflow:hidden;}
+    .prog-fill{height:100%;border-radius:999px;background:linear-gradient(90deg,var(--accent),#3B82F6);transition:width 0.4s;width:0%;}
+    .progress-text{font-family:var(--font-mono);font-size:15px;font-weight:600;color:var(--text);margin-top:6px;}
+    .pill{display:inline-block;padding:2px 10px;border-radius:999px;font-size:12px;font-weight:700;letter-spacing:0.04em;font-family:var(--font-mono);}
+    .pill.on{background:var(--success-soft);color:var(--green);border:1px solid rgba(22,163,74,0.3);}
+    .pill.off{background:var(--danger-soft);color:var(--red);border:1px solid rgba(220,38,38,0.25);}
+    .state-badge{display:inline-block;padding:3px 10px;border-radius:6px;font-size:12px;font-weight:600;font-family:var(--font-mono);background:var(--panel2);border:1px solid var(--border);color:var(--muted);}
+    .state-badge.connected{background:var(--success-soft);color:var(--green);border-color:rgba(22,163,74,0.3);}
+    .state-badge.disconnected{background:var(--danger-soft);color:var(--red);border-color:rgba(220,38,38,0.25);}
+    .live-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:8px;font-family:var(--font-mono);font-size:12px;}
+    /* TAB BAR */
+    .tab-bar{display:flex;gap:4px;padding:10px 24px;background:var(--panel);border-bottom:1px solid var(--border);overflow-x:auto;}
+    .tab-btn{display:flex;align-items:center;gap:6px;padding:7px 16px;border-radius:8px;border:1px solid transparent;background:transparent;color:var(--muted);font-size:13px;font-weight:500;font-family:var(--font-ui);cursor:pointer;white-space:nowrap;transition:all 0.15s;}
+    .tab-btn:hover{background:var(--accent-soft);color:var(--accent);}
+    .tab-btn.active{background:var(--accent);color:#fff;font-weight:600;}
+    .collapse{display:none;} .collapse.open{display:block;} .hidden{display:none!important;}
+    main{padding:0;}
+    .section-content{padding:20px 24px;}
+    /* PARAMS */
+    .toolbar{display:flex;align-items:center;gap:12px;margin-bottom:14px;}
+    .search{flex:1;max-width:380px;padding:8px 12px;background:var(--panel);border:1px solid var(--border);border-radius:8px;color:var(--text);font-size:13px;font-family:var(--font-ui);outline:none;}
+    select#sliceFilter{max-width:180px;padding:8px 12px;background:var(--panel);border:1px solid var(--border);border-radius:8px;color:var(--text);font-size:13px;font-family:var(--font-ui);outline:none;}
+    .search:focus,select#sliceFilter:focus{border-color:var(--accent);box-shadow:0 0 0 3px var(--focus-ring);}
+    .summary{color:var(--muted);font-size:13px;}
+    .table-wrap{border:1px solid var(--border);border-radius:10px;overflow:auto;max-height:400px;background:var(--panel);}
+    .table-wrap.hidden{display:none;}
+    table{width:100%;border-collapse:collapse;min-width:680px;}
+    th,td{padding:9px 12px;border-bottom:1px solid var(--border);text-align:left;}
+    th{position:sticky;top:0;z-index:5;background:var(--panel2);color:var(--muted);font-size:11px;letter-spacing:0.07em;text-transform:uppercase;font-weight:600;}
+    td{font-size:13px;color:var(--text);}
+    tbody tr[data-key]:hover{background:var(--panel2);}
+    .domain-row th{position:static;background:var(--accent-soft);color:var(--accent);font-size:12px;text-transform:none;border-top:1px solid var(--border);padding:7px 12px;font-weight:600;}
+    .slice-header td{background:var(--panel2);color:var(--muted);font-size:12px;font-weight:600;}
+    .param-id,.value,.slice{font-family:var(--font-mono);}
+    .value{transition:background 0.8s;}
+    .value.flash{background:var(--warning-soft);color:var(--yellow);transition:background 0s;}
+    /* SESSIONS */
+    .sessions-area{padding:20px 24px;}
+    .session-list{display:flex;flex-direction:column;gap:8px;}
+    .session-item{background:var(--panel);border:1px solid var(--border);border-radius:10px;padding:12px 16px;font-size:13px;cursor:pointer;transition:border-color 0.15s,background 0.15s;}
+    .session-item:hover{border-color:var(--accent);background:var(--accent-soft);}
+    .session-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:5px;}
+    .session-meta{display:flex;gap:14px;font-size:11px;color:var(--muted);flex-wrap:wrap;}
+    .sid{font-family:var(--font-mono);font-size:10px;}
+    .session-item .sfile{font-family:var(--font-mono);flex:1;color:var(--text);font-weight:600;}
+    .session-status{padding:2px 8px;border-radius:999px;font-size:11px;font-weight:700;font-family:var(--font-mono);}
+    .session-status.active{background:var(--success-soft);color:var(--green);border:1px solid rgba(22,163,74,0.3);}
+    .session-status.ended{background:var(--panel2);color:var(--muted);border:1px solid var(--border);}
+    .no-sessions{color:var(--muted);font-size:13px;padding:8px 0;}
+    .session-duration{display:inline-block;padding:1px 8px;border-radius:6px;background:var(--accent-soft);color:var(--accent);font-size:11px;font-family:var(--font-mono);font-weight:600;margin-left:6px;}
+    /* MACHINE ACCESS */
+    .machine-access-area{padding:20px 24px;}
+    .ip-row{display:flex;align-items:center;gap:10px;margin-bottom:20px;padding:16px;background:var(--panel);border:1px solid var(--border);border-radius:10px;flex-wrap:wrap;}
+    .ip-row label{font-size:13px;font-weight:600;color:var(--text);white-space:nowrap;}
+    .ip-input{flex:1;min-width:180px;max-width:260px;padding:8px 12px;border:1px solid var(--border);border-radius:8px;font-size:13px;font-family:var(--font-mono);color:var(--text);background:var(--panel2);outline:none;}
+    .ip-input:focus{border-color:var(--accent);box-shadow:0 0 0 3px var(--focus-ring);}
+    .ip-actions{display:flex;gap:8px;flex-wrap:wrap;}
+    .action-btn{padding:8px 16px;border-radius:8px;border:1px solid var(--border);background:var(--panel);color:var(--text);font-size:13px;font-weight:500;font-family:var(--font-ui);cursor:pointer;transition:all 0.15s;display:flex;align-items:center;gap:6px;}
+    .action-btn:hover{border-color:var(--accent);color:var(--accent);background:var(--accent-soft);}
+    .action-btn.primary{background:var(--accent);border-color:var(--accent);color:#fff;}
+    .action-btn.primary:hover{background:var(--accent-dark);}
+    .action-btn:disabled{opacity:0.5;cursor:not-allowed;}
+    /* RECORDINGS */
+    .recordings-layout{display:grid;grid-template-columns:minmax(240px,320px) minmax(0,1fr);gap:16px;align-items:start;}
+    .recordings-list{display:flex;flex-direction:column;gap:8px;}
+    .recording-item{background:var(--panel);border:1px solid var(--border);border-radius:8px;padding:10px 12px;cursor:pointer;transition:border-color 0.15s,background 0.15s;}
+    .recording-item:hover,.recording-item.active{border-color:var(--accent);background:var(--accent-soft);}
+    .recording-name{color:var(--text);font-family:var(--font-mono);font-size:12px;overflow-wrap:anywhere;font-weight:600;}
+    .recording-meta{display:flex;gap:10px;flex-wrap:wrap;margin-top:5px;color:var(--muted);font-size:11px;}
+    .recordings-status{color:var(--muted);font-size:13px;padding:8px 0;}
+    .recordings-player{width:100%;max-height:480px;background:#111;border:1px solid var(--border);border-radius:10px;display:block;}
+    .recording-head{display:flex;align-items:flex-start;gap:8px;}
+    .recording-head .recording-name{flex:1;min-width:0;}
+    .recording-delete{border:1px solid var(--border);border-radius:6px;background:var(--panel);color:var(--red);cursor:pointer;flex:0 0 auto;font-family:var(--font-ui);font-size:11px;padding:4px 8px;}
+    .recording-delete:hover{border-color:var(--red);background:var(--danger-soft);}
+    /* LOGS */
+    .logs-toolbar{display:flex;align-items:center;gap:10px;margin-bottom:14px;flex-wrap:wrap;}
+    .logs-toolbar .search{max-width:360px;}
+    .logs-filter{min-width:150px;padding:8px 12px;background:var(--panel);border:1px solid var(--border);border-radius:8px;color:var(--text);font-size:13px;font-family:var(--font-ui);outline:none;}
+    .logs-filter:focus{border-color:var(--accent);box-shadow:0 0 0 3px var(--focus-ring);}
+    .logs-status{color:var(--muted);font-size:13px;margin-bottom:8px;}
+    .logs-table-wrap{max-height:460px;}
+    .logs-table-wrap table{min-width:760px;}
+    /* POSITION */
+    .position-widget{display:flex;gap:16px;align-items:stretch;flex-wrap:wrap;padding:20px 24px;}
+    .position-chart-card{background:var(--panel);border:1px solid var(--border);border-radius:10px;padding:16px;flex:1;min-width:300px;}
+    .card-title{font-size:11px;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;color:var(--muted);margin-bottom:12px;}
+    .pos-canvas{width:100%;height:150px;border-radius:6px;background:var(--panel2);display:block;}
+    .chart-legend{display:flex;gap:14px;margin-top:8px;font-size:11px;font-family:var(--font-mono);}
+    .legend-item{display:flex;align-items:center;gap:5px;}
+    .legend-dot{width:8px;height:8px;border-radius:50%;}
+    .position-nums-card{background:var(--panel);border:1px solid var(--border);border-radius:10px;padding:20px 24px;display:flex;flex-direction:column;justify-content:center;gap:14px;min-width:160px;}
+    .pos-axis{display:flex;align-items:baseline;gap:10px;}
+    .pos-axis-label{font-size:13px;font-weight:700;width:16px;}
+    .pos-axis-val{font-family:var(--font-mono);font-size:26px;font-weight:700;color:var(--text);letter-spacing:-0.02em;}
+    .pos-axis-unit{font-family:var(--font-mono);font-size:12px;color:var(--muted);}
+    .pos-axis-label.x{color:#3B82F6;} .pos-axis-label.y{color:#10B981;} .pos-axis-label.z{color:#F59E0B;}
+    /* CAMERA */
+    .camera-section{padding:0 24px 20px;}
+    .camera-collapsed-card{display:flex;align-items:center;gap:12px;padding:14px 18px;background:var(--panel);border:1px solid var(--border);border-radius:10px;}
+    .camera-collapsed-text{font-size:13px;color:var(--muted);flex:1;}
+    .camera-expanded-card{background:var(--panel);border:1px solid var(--border);border-radius:10px;overflow:hidden;}
+    .camera-head{display:flex;align-items:center;justify-content:space-between;padding:12px 16px;border-bottom:1px solid var(--border);}
+    .camera-head-title{font-size:13px;font-weight:600;color:var(--text);display:flex;align-items:center;gap:8px;}
+    .live-badge{display:inline-flex;align-items:center;gap:5px;padding:2px 8px;background:#DC2626;color:#fff;border-radius:999px;font-size:10px;font-weight:700;letter-spacing:0.05em;}
+    .live-badge::before{content:'';width:6px;height:6px;background:#fff;border-radius:50%;animation:blink 1s infinite;}
+    @keyframes blink{0%,100%{opacity:1;}50%{opacity:0.3;}}
+    .camera-frame{position:relative;width:100%;aspect-ratio:16/9;overflow:hidden;background:#0a0a0a;}
+    .camera-frame img{width:100%;height:100%;object-fit:contain;display:block;}
+    .camera-placeholder{position:absolute;inset:0;display:grid;place-items:center;color:#fff;background:#1a1a1a;text-align:center;font-size:13px;}
+    .camera-controls{display:flex;gap:8px;padding:12px 16px;border-top:1px solid var(--border);align-items:center;}
+    .camera-status-text{font-size:12px;color:var(--muted);flex:1;}
+    /* EVENTS */
+    .events-wrap{margin:0 24px 24px;background:var(--panel);border:1px solid var(--border);border-radius:10px;overflow:hidden;}
+    .events-head{padding:10px 16px;font-size:11px;font-weight:700;letter-spacing:0.07em;text-transform:uppercase;color:var(--muted);border-bottom:1px solid var(--border);background:var(--panel2);}
+    .events-body{height:100px;overflow-y:auto;padding:8px 16px;font-family:var(--font-mono);font-size:12px;}
+    .events-list{list-style:none;display:flex;flex-direction:column-reverse;gap:4px;}
+    .events-list li{color:var(--muted);}
+    .events-list li span{color:var(--accent);margin-right:6px;}
+    /* TOAST */
+    .toast{position:fixed;right:18px;bottom:18px;z-index:200;max-width:min(360px,calc(100vw - 36px));padding:10px 16px;border:1px solid var(--border);border-radius:10px;background:var(--panel);color:var(--text);box-shadow:0 8px 24px rgba(27,111,232,0.12);font-size:13px;opacity:0;pointer-events:none;transform:translateY(8px);transition:opacity 0.18s,transform 0.18s;}
+    .toast.visible{opacity:1;transform:translateY(0);}
+    .toast.error{color:var(--red);border-color:var(--red);background:var(--danger-soft);}
+    .empty{display:none;padding:36px 16px;text-align:center;color:var(--muted);border:1px solid var(--border);border-radius:10px;background:var(--panel);}
+    .empty.visible{display:block;}
+    .toggle-btn{display:flex;align-items:center;gap:7px;background:var(--panel);border:1px solid var(--border);color:var(--text);border-radius:8px;padding:7px 14px;font-size:13px;cursor:pointer;font-family:var(--font-ui);transition:all 0.15s;}
+    .toggle-btn:hover{border-color:var(--accent);color:var(--accent);}
+    .toggle-btn.open,.toggle-btn.download-btn{background:var(--accent);border-color:var(--accent);color:#fff;}
+    .toggle-btn.download-btn:hover,.toggle-btn.open:hover{background:var(--accent-dark);}
+    .toggle-btn:disabled{cursor:not-allowed;opacity:0.5;}
+    @media(max-width:700px){
+      .runtime-row,.recordings-layout{flex-direction:column;grid-template-columns:1fr;}
+      .topbar{flex-wrap:wrap;height:auto;padding:10px;}
+      .section-content,.machine-access-area,.sessions-area,.position-widget,.camera-section{padding-left:12px;padding-right:12px;}
+      .tab-bar,.events-wrap{padding-left:12px;padding-right:12px;}
+      .events-wrap{margin-left:12px;margin-right:12px;}
     }
   </style>
-</head>
-<body>
+</head><body>
 
 <!-- TOPBAR -->
 <header class="topbar">
-  <div class="brand" style="display:flex;align-items:center;gap:8px;"><img src="\static\Unnati.svg" height="24" alt="logo">UFAMeasy <span>Machine Server</span></div>
+  <div class="brand"><img src="\static\Unnati.svg" height="24" alt="logo">UFAMeasy <span>Machine Server</span></div>
   <div class="topbar-mid">
     <select id="deviceSelect"><option value="">-- select device --</option></select>
   </div>
@@ -568,121 +190,104 @@
   </div>
 </header>
 
-<!-- RUNTIME PANEL (always visible) -->
+<!-- RUNTIME CARDS -->
 <div class="runtime-panel">
   <div class="runtime-row">
-    <!-- File name -->
-    <div class="rt-card wide">
-      <div class="label">Current File</div>
-      <div class="val" id="rtFile">&mdash;</div>
-    </div>
-    <!-- Layer progress -->
+    <div class="rt-card wide"><div class="label">Current File</div><div class="val" id="rtFile">&mdash;</div></div>
     <div class="rt-card progress-card">
       <div class="label">Print Progress</div>
       <div class="stack-sm">
-        <div class="prog-bar">
-          <div id="progressBar" class="prog-fill"></div>
-        </div>
+        <div class="prog-bar"><div id="progressBar" class="prog-fill"></div></div>
         <div id="progressPct" class="progress-text">&mdash;</div>
       </div>
     </div>
-    <!-- Gas -->
-    <div class="rt-card">
-      <div class="label">Gas</div>
-      <div id="rtGas"><span class="pill off">OFF</span></div>
+    <div class="rt-card"><div class="label">Gas</div><div id="rtGas"><span class="pill off">OFF</span></div></div>
+    <div class="rt-card"><div class="label">Powder</div><div id="rtPowder"><span class="pill off">OFF</span></div></div>
+    <div class="rt-card"><div class="label">Light</div><div id="rtLight"><span class="pill off">OFF</span></div></div>
+    <div class="rt-card"><div class="label">Laser</div><div id="rtLaser"><span class="pill off">OFF</span></div></div>
+    <div class="rt-card"><div class="label">Laser Power</div><div class="val" id="rtPower">&mdash;</div></div>
+    <div class="rt-card"><div class="label">Connection</div><div id="rtState"><span class="state-badge">&mdash;</span></div></div>
+    <div class="rt-card"><div class="label">Powder Usage</div><div class="val" id="est-powder">&mdash;</div></div>
+    <div class="rt-card"><div class="label">Dep. Efficiency</div><div class="val" id="est-efficiency">&mdash;</div></div>
+    <div class="rt-card"><div class="label">Energy (Wh)</div><div class="val" id="est-energy">&mdash;</div></div>
+    <div class="rt-card wide full-width"><div class="label">Live Runtime Parameters</div><div id="rtLiveGrid" class="live-grid"></div></div>
+  </div>
+</div>
+
+<!-- LIVE POSITION -->
+<div class="position-widget">
+  <div class="position-chart-card">
+    <div class="card-title">Live Position &mdash; XYZ Trace</div>
+    <canvas id="posCanvas" class="pos-canvas"></canvas>
+    <div class="chart-legend">
+      <div class="legend-item"><div class="legend-dot" style="background:#3B82F6"></div>X</div>
+      <div class="legend-item"><div class="legend-dot" style="background:#10B981"></div>Y</div>
+      <div class="legend-item"><div class="legend-dot" style="background:#F59E0B"></div>Z</div>
     </div>
-    <div class="rt-card">
-      <div class="label">Powder</div>
-      <div id="rtPowder"><span class="pill off">OFF</span></div>
-    </div>
-    <div class="rt-card">
-      <div class="label">Light</div>
-      <div id="rtLight"><span class="pill off">OFF</span></div>
-    </div>
-    <!-- Laser -->
-    <div class="rt-card">
-      <div class="label">Laser</div>
-      <div id="rtLaser"><span class="pill off">OFF</span></div>
-    </div>
-    <!-- Laser Power -->
-    <div class="rt-card">
-      <div class="label">Laser Power</div>
-      <div class="val" id="rtPower">&mdash;</div>
-    </div>
-    <!-- Connection -->
-    <div class="rt-card">
-      <div class="label">Connection</div>
-      <div id="rtState"><span class="state-badge">&mdash;</span></div>
-    </div>
-    <!-- Powder Usage -->
-    <div class="rt-card">
-      <div class="label">Powder Usage</div>
-      <div class="val" id="est-powder">&mdash;</div>
-    </div>
-    <!-- Deposition Efficiency -->
-    <div class="rt-card">
-      <div class="label">Dep. Efficiency</div>
-      <div class="val" id="est-efficiency">&mdash;</div>
-    </div>
-    <!-- Energy -->
-    <div class="rt-card">
-      <div class="label">Energy (Wh)</div>
-      <div class="val" id="est-energy">&mdash;</div>
-    </div>
-    <!-- Live Runtime Parameters -->
-    <div class="rt-card wide full-width">
-      <div class="label">Live Runtime Parameters</div>
-      <div id="rtLiveGrid" class="live-grid"></div>
-    </div>
-    <div class="rt-card wide">
-      <div class="label">System Logs</div>
-      <div class="stack-sm">
-        <button class="toggle-btn download-btn" onclick="const ip=prompt('Enter machine IP address'); if(!ip || !ip.trim()){return;} window.location='/logs/fetch?ip=' + encodeURIComponent(ip.trim())">Download Logs CSV</button>
+  </div>
+  <div class="position-nums-card">
+    <div class="card-title">Position</div>
+    <div class="pos-axis"><span class="pos-axis-label x">X</span><span class="pos-axis-val" id="posX">0.000</span><span class="pos-axis-unit">mm</span></div>
+    <div class="pos-axis"><span class="pos-axis-label y">Y</span><span class="pos-axis-val" id="posY">0.000</span><span class="pos-axis-unit">mm</span></div>
+    <div class="pos-axis"><span class="pos-axis-label z">Z</span><span class="pos-axis-val" id="posZ">0.000</span><span class="pos-axis-unit">mm</span></div>
+  </div>
+</div>
+
+<!-- LIVE PROCESS MONITORING (camera - collapsed by default) -->
+<div class="camera-section">
+  <div id="cameraCollapsed" class="camera-collapsed-card">
+    <span style="font-size:18px">📷</span>
+    <span class="camera-collapsed-text">Live Process Monitoring &mdash; camera feed is inactive.</span>
+    <button class="action-btn primary" id="cameraLiveBtn" type="button">▶ Start Live Stream</button>
+  </div>
+  <div id="cameraExpanded" class="camera-expanded-card hidden">
+    <div class="camera-head">
+      <div class="camera-head-title">
+        <span>Live Process Monitoring</span>
+        <span class="live-badge">LIVE</span>
       </div>
+      <div style="display:flex;gap:8px;align-items:center;">
+        <span id="cameraStatus" class="camera-status-text"></span>
+        <button class="action-btn" id="cameraStopBtn" type="button">✕ Stop</button>
+      </div>
+    </div>
+    <div class="camera-frame">
+      <img id="cameraFeed" alt="Live machine camera feed" class="hidden">
+      <div id="cameraPlaceholder" class="camera-placeholder">Connecting to live feed&hellip;</div>
+    </div>
+    <div class="camera-controls">
+      <span id="cameraStatusBar" class="camera-status-text"></span>
     </div>
   </div>
 </div>
 
-<!-- SECTION TOGGLES -->
-<div class="section-bar">
-  <button class="toggle-btn" id="btnParams" onclick="toggleSection('params')">
-    View Parameters <span class="arrow">▼</span>
-  </button>
-  <button class="toggle-btn" id="btnSessions" onclick="toggleSection('sessions')">
-    Session History <span class="arrow">▼</span>
-  </button>
-  <button class="toggle-btn" id="btnRecordings" onclick="viewRecordings()">
-    View Recordings <span class="arrow">v</span>
-  </button>
+<!-- TAB BAR -->
+<div class="tab-bar">
+  <button class="tab-btn active" id="btnParams" onclick="switchTab('params')">📊 Parameters</button>
+  <button class="tab-btn" id="btnSessions" onclick="switchTab('sessions')">🕐 History</button>
+  <button class="tab-btn" id="btnMachineAccess" onclick="switchTab('machineAccess')">🔗 Machine Access</button>
 </div>
 
 <main>
   <!-- PARAMS SECTION -->
-  <div class="collapse" id="secParams">
-    <div class="params-area">
+  <div class="collapse open" id="secParams">
+    <div class="section-content">
       <div class="toolbar">
         <input id="searchInput" class="search" type="search" placeholder="Search Param ID or Field..." autocomplete="off">
-        <select id="sliceFilter">
-          <option value="">All Slices</option>
-        </select>
+        <select id="sliceFilter"><option value="">All Slices</option></select>
         <span id="summary" class="summary">0 parameters</span>
       </div>
       <div id="emptyState" class="empty">No snapshot data yet</div>
       <div id="tableWrap" class="table-wrap hidden">
         <table>
-          <thead>
-            <tr>
-              <th>Param ID</th><th>Field</th><th>Value</th>
-              <th>Unit</th><th>Domain</th><th>Slice</th>
-            </tr>
-          </thead>
+          <thead><tr><th>Param ID</th><th>Field</th><th>Value</th><th>Unit</th><th>Domain</th><th>Slice</th></tr></thead>
           <tbody id="tableBody"></tbody>
         </table>
       </div>
     </div>
   </div>
 
-  <!-- SESSIONS SECTION -->
+  <!-- HISTORY SECTION -->
   <div class="collapse" id="secSessions">
     <div class="sessions-area">
       <div id="sessionList" class="session-list">
@@ -691,15 +296,46 @@
     </div>
   </div>
 
-  <!-- RECORDINGS SECTION -->
-  <div class="collapse" id="secRecordings">
-    <div class="recordings-area">
-      <div class="recordings-layout">
-        <div>
-          <div id="recordingsStatus" class="recordings-status">Enter a machine IP to view recordings.</div>
-          <div id="recordingsList" class="recordings-list"></div>
+  <!-- MACHINE ACCESS SECTION -->
+  <div class="collapse" id="secMachineAccess">
+    <div class="machine-access-area">
+      <div class="ip-row">
+        <label for="sharedIpInput">Machine IP</label>
+        <input id="sharedIpInput" class="ip-input" type="text" placeholder="e.g. 192.168.1.100" autocomplete="off">
+        <div class="ip-actions">
+          <button class="action-btn primary" id="maLiveStreamBtn" type="button">▶ Live Stream</button>
+          <button class="action-btn" id="maRecordingsBtn" type="button">🎬 View Recordings</button>
+          <button class="action-btn" id="maLogsBtn" type="button">📄 View Logs</button>
+          <button class="action-btn" id="maDownloadBtn" type="button">⬇ Download Log CSV</button>
         </div>
-        <video id="recordingsVideo" class="recordings-player" controls preload="metadata"></video>
+      </div>
+
+      <!-- RECORDINGS SUB-SECTION -->
+      <div id="recordingsSection" class="hidden">
+        <div style="font-size:11px;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;color:var(--muted);margin-bottom:12px;">Recordings</div>
+        <div class="recordings-layout">
+          <div>
+            <div id="recordingsStatus" class="recordings-status">Enter a machine IP to view recordings.</div>
+            <div id="recordingsList" class="recordings-list"></div>
+          </div>
+          <video id="recordingsVideo" class="recordings-player" controls preload="metadata"></video>
+        </div>
+      </div>
+
+      <!-- LOGS SUB-SECTION -->
+      <div id="logsSection" class="hidden">
+        <div style="font-size:11px;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;color:var(--muted);margin-bottom:12px;">System Logs</div>
+        <div class="logs-toolbar">
+          <input id="logsSearchInput" class="search" type="search" placeholder="Search logs..." autocomplete="off">
+          <select id="logsCategoryFilter" class="logs-filter hidden"></select>
+          <select id="logsSeverityFilter" class="logs-filter hidden"></select>
+          <button class="toggle-btn download-btn" id="logsRefreshBtn" type="button">Refresh</button>
+        </div>
+        <div id="logsStatus" class="logs-status">Enter a machine IP to view logs.</div>
+        <div id="logsTableWrap" class="table-wrap logs-table-wrap hidden">
+          <table><thead id="logsTableHead"></thead><tbody id="logsTableBody"></tbody></table>
+        </div>
+        <div id="logsEmptyState" class="empty">No logs found</div>
       </div>
     </div>
   </div>
@@ -707,883 +343,325 @@
   <!-- EVENTS LOG -->
   <div class="events-wrap">
     <div class="events-head">Activity Log</div>
-    <div class="events-body">
-      <ul id="eventsList" class="events-list"></ul>
-    </div>
+    <div class="events-body"><ul id="eventsList" class="events-list"></ul></div>
   </div>
 </main>
+<div id="toast" class="toast" role="status" aria-live="polite"></div><script>
+  // DOM refs
+  const tableBody=document.getElementById("tableBody"),tableWrap=document.getElementById("tableWrap"),emptyState=document.getElementById("emptyState");
+  const searchInput=document.getElementById("searchInput"),sliceFilter=document.getElementById("sliceFilter"),summary=document.getElementById("summary");
+  const statusDot=document.getElementById("statusDot"),statusText=document.getElementById("statusText"),eventsList=document.getElementById("eventsList");
+  const deviceSelect=document.getElementById("deviceSelect"),sessionList=document.getElementById("sessionList");
+  const recordingsList=document.getElementById("recordingsList"),recordingsStatus=document.getElementById("recordingsStatus"),recordingsVideo=document.getElementById("recordingsVideo");
+  const logsSearchInput=document.getElementById("logsSearchInput"),logsCategoryFilter=document.getElementById("logsCategoryFilter");
+  const logsSeverityFilter=document.getElementById("logsSeverityFilter"),logsRefreshBtn=document.getElementById("logsRefreshBtn");
+  const logsStatus=document.getElementById("logsStatus"),logsTableWrap=document.getElementById("logsTableWrap");
+  const logsTableHead=document.getElementById("logsTableHead"),logsTableBody=document.getElementById("logsTableBody"),logsEmptyState=document.getElementById("logsEmptyState");
+  const toast=document.getElementById("toast"),cameraFeed=document.getElementById("cameraFeed"),cameraPlaceholder=document.getElementById("cameraPlaceholder");
+  const cameraStatus=document.getElementById("cameraStatus"),cameraLiveBtn=document.getElementById("cameraLiveBtn");
+  const rtFile=document.getElementById("rtFile"),rtProgFill=document.getElementById("progressBar"),progressPct=document.getElementById("progressPct");
+  const rtGas=document.getElementById("rtGas"),rtLaser=document.getElementById("rtLaser"),rtPower=document.getElementById("rtPower"),rtState=document.getElementById("rtState");
+  const estPowder=document.getElementById("est-powder"),estEfficiency=document.getElementById("est-efficiency"),estEnergy=document.getElementById("est-energy");
 
-<script>
-  // ── DOM refs ──
-  document.getElementById("btnParams").style.display = "none";
-  document.getElementById("btnSessions").style.display = "none";
-  const tableBody     = document.getElementById("tableBody");
-  const tableWrap     = document.getElementById("tableWrap");
-  const emptyState    = document.getElementById("emptyState");
-  const searchInput   = document.getElementById("searchInput");
-  const sliceFilter   = document.getElementById("sliceFilter");
-  const summary       = document.getElementById("summary");
-  const statusDot     = document.getElementById("statusDot");
-  const statusText    = document.getElementById("statusText");
-  const eventsList    = document.getElementById("eventsList");
-  const deviceSelect  = document.getElementById("deviceSelect");
-  const sessionList   = document.getElementById("sessionList");
-  const recordingsList = document.getElementById("recordingsList");
-  const recordingsStatus = document.getElementById("recordingsStatus");
-  const recordingsVideo = document.getElementById("recordingsVideo");
+  // State
+  const rowsByKey=new Map();
+  let socket=null,reconnectTimer=null,totalLayers=0,liveRuntimeData={};
+  let currentRecordingsIp="",currentLogsIp="",logsRows=[],logsColumns=[],logsCategoryColumn="",logsSeverityColumn="";
+  let toastTimer=null,devicesById=new Map(),currentMachineConnected=false;
+  let manualCameraIp="",currentCameraIp="",cameraFeedFailed=false;
 
-  // ── Runtime card refs ──
-  const rtFile     = document.getElementById("rtFile");
-  const rtLayer    = document.getElementById("rtLayer");
-  const rtTotal    = document.getElementById("rtTotal");
-  const rtProgFill = document.getElementById("progressBar");
-  const progressPct = document.getElementById("progressPct");
-  const rtGas      = document.getElementById("rtGas");
-  const rtLaser    = document.getElementById("rtLaser");
-  const rtPower    = document.getElementById("rtPower");
-  const rtState    = document.getElementById("rtState");
-  const estPowder  = document.getElementById("est-powder");
-  const estEfficiency = document.getElementById("est-efficiency");
-  const estEnergy  = document.getElementById("est-energy");
-
-  // ── State ──
-  const rowsByKey = new Map();
-  let socket = null;
-  let reconnectTimer = null;
-  let totalLayers = 0;
-  let liveRuntimeData = {};
-
-  async function fetchSessionDetails(sessionId, sessionSummary = {}) {
-    if (!deviceSelect.value) return;
-    try {
-      const res = await fetch(`/sessions/${sessionId}/replay`);
-      const data = await res.json();
-      if (data.error) { console.error(data.error); return; }
-
-      const snapshots = {};
-      data.slices.forEach(slice => {
-        snapshots[String(slice.slice_index)] = slice.params_json;
-      });
-      const flattened = flattenSnapshots(snapshots);
-      renderTable(flattened);
-      openSection("params");
-      updateReplayRuntime(data.runtime, sessionSummary);
-      logEvent("session_loaded", sessionId.slice(-8));
-    } catch(e) { console.error("fetchSessionDetails", e); }
+  // ── Tab switching ──
+  function switchTab(name){
+    const tabs={params:"secParams",sessions:"secSessions",machineAccess:"secMachineAccess"};
+    const btns={params:"btnParams",sessions:"btnSessions",machineAccess:"btnMachineAccess"};
+    Object.values(tabs).forEach(id=>{const el=document.getElementById(id);if(el)el.classList.remove("open");});
+    Object.values(btns).forEach(id=>{const el=document.getElementById(id);if(el)el.classList.remove("active");});
+    const sec=document.getElementById(tabs[name]);if(sec)sec.classList.add("open");
+    const btn=document.getElementById(btns[name]);if(btn)btn.classList.add("active");
   }
-
-  // ── Section toggle ──
-  function openSection(name) {
-    const secs = { params: "secParams", sessions: "secSessions", recordings: "secRecordings" };
-    const btns = { params: "btnParams", sessions: "btnSessions", recordings: "btnRecordings" };
-    const sec = document.getElementById(secs[name]);
-    const btn = document.getElementById(btns[name]);
-    if (!sec || sec.classList.contains("open")) return;
-    Object.values(secs).forEach(id => document.getElementById(id).classList.remove("open"));
-    Object.values(btns).forEach(id => document.getElementById(id).classList.remove("open"));
-    sec.classList.add("open");
-    btn.classList.add("open");
+  // Keep old openSection/toggleSection for internal use
+  function openSection(name){
+    if(name==="params"||name==="sessions")switchTab(name);
+    else if(name==="recordings"||name==="logs"){switchTab("machineAccess");
+      document.getElementById("recordingsSection").classList.toggle("hidden",name!=="recordings");
+      document.getElementById("logsSection").classList.toggle("hidden",name!=="logs");}
   }
+  function toggleSection(name){openSection(name);}
 
-  function toggleSection(name) {
-    const secs = { params: "secParams", sessions: "secSessions", recordings: "secRecordings" };
-    const btns = { params: "btnParams", sessions: "btnSessions", recordings: "btnRecordings" };
-    const sec = document.getElementById(secs[name]);
-    const btn = document.getElementById(btns[name]);
-    const isOpen = sec.classList.contains("open");
-    // close all
-    Object.values(secs).forEach(id => document.getElementById(id).classList.remove("open"));
-    Object.values(btns).forEach(id => document.getElementById(id).classList.remove("open"));
-    if (!isOpen) {
-      sec.classList.add("open");
-      btn.classList.add("open");
-    }
+  // ── Position chart ──
+  const POS_MAX=80;
+  const posHistory={x:[],y:[],z:[]};
+  function pushPos(x,y,z){
+    [posHistory.x,posHistory.y,posHistory.z].forEach((arr,i)=>{arr.push([x,y,z][i]);if(arr.length>POS_MAX)arr.shift();});
   }
+  function drawPosChart(){
+    const canvas=document.getElementById("posCanvas");if(!canvas)return;
+    const dpr=window.devicePixelRatio||1;
+    canvas.width=canvas.offsetWidth*dpr;canvas.height=canvas.offsetHeight*dpr;
+    const ctx=canvas.getContext("2d");ctx.scale(dpr,dpr);
+    const W=canvas.offsetWidth,H=canvas.offsetHeight,pad=10;
+    ctx.clearRect(0,0,W,H);
+    const all=[...posHistory.x,...posHistory.y,...posHistory.z];
+    if(all.length===0)return;
+    const mn=Math.min(...all),mx=Math.max(...all),range=mx-mn||1;
+    const scaleY=v=>(H-2*pad)*(1-(v-mn)/range)+pad;
+    [[posHistory.x,"#3B82F6"],[posHistory.y,"#10B981"],[posHistory.z,"#F59E0B"]].forEach(([arr,color])=>{
+      if(arr.length<2)return;
+      ctx.beginPath();ctx.strokeStyle=color;ctx.lineWidth=2;ctx.lineJoin="round";
+      arr.forEach((v,i)=>{const x=pad+(i/(POS_MAX-1))*(W-2*pad);const y=scaleY(v);i===0?ctx.moveTo(x,y):ctx.lineTo(x,y);});
+      ctx.stroke();
+    });
+  }
+  function updatePositionDisplay(xma){
+    const arr=Array.isArray(xma)?xma:Object.values(xma||{});
+    const x=Number(arr[0])||0,y=Number(arr[1])||0,z=Number(arr[2])||0;
+    document.getElementById("posX").textContent=x.toFixed(3);
+    document.getElementById("posY").textContent=y.toFixed(3);
+    document.getElementById("posZ").textContent=z.toFixed(3);
+    pushPos(x,y,z);drawPosChart();
+  }
+  // ── Shared IP + Machine Access buttons ──
+  function getSharedIp(){return (document.getElementById("sharedIpInput").value||"").trim();}
+  function requireIp(){const ip=getSharedIp();if(!ip){showToast("Enter a machine IP address first.",true);}return ip;}
 
-  // ── Runtime panel updates ──
-  function pill(on) {
-    return `<span class="pill ${on ? 'on' : 'off'}">${on ? 'ON' : 'OFF'}</span>`;
-  }
-  function stateBadge(connected) {
-    return `<span class="state-badge ${connected ? 'connected' : 'disconnected'}">${connected ? 'CONNECTED' : 'DISCONNECTED'}</span>`;
-  }
+  document.getElementById("maLiveStreamBtn").addEventListener("click",async()=>{
+    const ip=requireIp();if(!ip)return;
+    const cleanIp=cleanMachineHost(ip);
+    if(!(await checkCameraAvailable(cleanIp))){showToast(`Camera not reachable at ${cleanIp}:8765`,true);return;}
+    manualCameraIp=cleanIp;currentCameraIp="";cameraFeedFailed=false;
+    document.getElementById("cameraCollapsed").classList.add("hidden");
+    document.getElementById("cameraExpanded").classList.remove("hidden");
+    updateCameraPanel();showToast(`Live stream started for ${cleanIp}.`);logEvent("camera_live_stream",cleanIp);
+  });
+  document.getElementById("maRecordingsBtn").addEventListener("click",()=>{
+    const ip=requireIp();if(!ip)return;
+    document.getElementById("recordingsSection").classList.remove("hidden");
+    document.getElementById("logsSection").classList.add("hidden");
+    viewRecordingsIp(ip);
+  });
+  document.getElementById("maLogsBtn").addEventListener("click",()=>{
+    const ip=requireIp();if(!ip)return;
+    document.getElementById("logsSection").classList.remove("hidden");
+    document.getElementById("recordingsSection").classList.add("hidden");
+    viewLogsIp(ip);
+  });
+  document.getElementById("maDownloadBtn").addEventListener("click",()=>{
+    const ip=requireIp();if(!ip)return;
+    window.location="/logs/fetch?ip="+encodeURIComponent(ip);
+  });
 
-  function normalizeConnected(value) {
-    if (typeof value === "boolean") return value;
-    if (typeof value === "number") return value !== 0;
-    if (typeof value === "string") {
-      const s = value.trim().toLowerCase();
-      if (["connected", "online", "true", "1", "yes"].includes(s)) return true;
-      if (["disconnected", "offline", "false", "0", "no"].includes(s)) return false;
-    }
+  // Camera panel controls
+  document.getElementById("cameraLiveBtn").addEventListener("click",async()=>{
+    switchTab("machineAccess");
+    const ip=getSharedIp()||getSelectedMachineIp()||cleanMachineHost(location.hostname);
+    if(ip)document.getElementById("sharedIpInput").value=ip;
+    document.getElementById("maLiveStreamBtn").click();
+  });
+  document.getElementById("cameraStopBtn").addEventListener("click",()=>{
+    manualCameraIp="";currentCameraIp="";cameraFeedFailed=false;
+    cameraFeed.removeAttribute("src");
+    document.getElementById("cameraExpanded").classList.add("hidden");
+    document.getElementById("cameraCollapsed").classList.remove("hidden");
+    logEvent("camera_stopped");
+  });
+
+  // ── Runtime helpers ──
+  function pill(on){return `<span class="pill ${on?'on':'off'}">${on?'ON':'OFF'}</span>`;}
+  function stateBadge(c){return `<span class="state-badge ${c?'connected':'disconnected'}">${c?'CONNECTED':'DISCONNECTED'}</span>`;}
+  function normalizeConnected(v){
+    if(typeof v==="boolean")return v;if(typeof v==="number")return v!==0;
+    if(typeof v==="string"){const s=v.trim().toLowerCase();if(["connected","online","true","1","yes"].includes(s))return true;if(["disconnected","offline","false","0","no"].includes(s))return false;}
     return null;
   }
-
-  function formatAxis(value) {
-    const n = Number(value);
-    return Number.isFinite(n) ? n.toFixed(3) : "—";
+  function formatAxis(v){const n=Number(v);return Number.isFinite(n)?n.toFixed(3):"—";}
+  function formatLiveRuntimeValue(key,val){
+    if(key==="xma_live"){const axes=["X","Y","Z","A","B","C"];const arr=Array.isArray(val)?val:Object.values(val||{});return axes.slice(0,arr.length).map((k,i)=>`${k}: ${Number(arr[i]).toFixed(3)}`).join(" | ");}
+    if(val&&typeof val==="object"){return Object.entries(val).filter(([k])=>!["timestamp","source"].includes(k)).map(([k,v])=>`${k}:${typeof v==="number"?v.toFixed(3):v}`).join(" ");}
+    return typeof val==="number"?val.toFixed(3):val;
   }
-
-  function formatLiveRuntimeValue(key, val) {
-    if (key === "xma_live") {
-      const axes = ["X", "Y", "Z", "A", "B", "C"];
-      const arr = Array.isArray(val) ? val : Object.values(val || {});
-      return axes
-        .slice(0, arr.length)
-        .map((k, i) => `${k}: ${Number(arr[i]).toFixed(3)}`)
-        .join(" | ");
-    }
-    if (val && typeof val === "object") {
-      return Object.entries(val)
-        .filter(([k]) => !["timestamp", "source"].includes(k))
-        .map(([k, v]) => `${k}:${typeof v === "number" ? v.toFixed(3) : v}`)
-        .join(" ");
-    }
-    return typeof val === "number" ? val.toFixed(3) : val;
-  }
-
-  function renderLiveRuntimeGrid(data) {
-    const grid = document.getElementById("rtLiveGrid");
-    if (!grid) return;
-    grid.innerHTML = "";
-    const HEADER_KEYS = new Set([
-      "laser_enabled", "gas_enabled", "current_file",
-      "connection_state", "laser_power_pct", "machine_connected",
-      "progress_pct", "remaining_time", "time_remaining", "remaining_seconds",
-      "DS028", "xma", "xmr", "laser_on", "session_id", "id"
-    ]);
-    Object.entries(data || {}).forEach(([key, val]) => {
-      if (HEADER_KEYS.has(key)) return;
-      const box = document.createElement("div");
-      box.style.cssText = "background:var(--panel2);border:1px solid var(--border);border-radius:6px;padding:6px 8px;";
-
-      const keyEl = document.createElement("span");
-      keyEl.style.color = "var(--muted)";
-      keyEl.textContent = LABEL_MAP[key] || key;
-
-      const valueEl = document.createElement("div");
-      if (key === "xma_live") valueEl.style.whiteSpace = "pre-line";
-      valueEl.textContent = formatLiveRuntimeValue(key, val);
-
-      box.appendChild(keyEl);
-      box.appendChild(valueEl);
-      grid.appendChild(box);
+  function renderLiveRuntimeGrid(data){
+    const grid=document.getElementById("rtLiveGrid");if(!grid)return;grid.innerHTML="";
+    const SKIP=new Set(["laser_enabled","gas_enabled","current_file","connection_state","laser_power_pct","machine_connected","progress_pct","remaining_time","time_remaining","remaining_seconds","DS028","xma","xmr","laser_on","session_id","id"]);
+    Object.entries(data||{}).forEach(([key,val])=>{
+      if(SKIP.has(key))return;
+      const box=document.createElement("div");
+      box.style.cssText="background:var(--panel2);border:1px solid var(--border);border-radius:6px;padding:6px 8px;";
+      const kEl=document.createElement("span");kEl.style.color="var(--muted)";kEl.textContent=LABEL_MAP[key]||key;
+      const vEl=document.createElement("div");if(key==="xma_live")vEl.style.whiteSpace="pre-line";vEl.textContent=formatLiveRuntimeValue(key,val);
+      box.appendChild(kEl);box.appendChild(vEl);grid.appendChild(box);
     });
   }
-
-  function latestRuntimeRecord(records) {
-    return Array.isArray(records) && records.length ? records[records.length - 1] : null;
-  }
-
-  function updateReplayRuntime(records, sessionSummary = {}) {
-    const d = latestRuntimeRecord(records) || {};
-    updateRuntime({
-      current_layer:   d.current_layer   ?? d.RT005,
-      total_layers:    d.total_layers    ?? d.PS011 ?? sessionSummary.total_layers,
-      current_file:    d.current_file    ?? d.file_name ?? d.RT013 ?? sessionSummary.file_name,
-      gas_enabled:     d.gas_enabled     ?? d.RT029,
-      laser_enabled:   d.laser_enabled   ?? d.laser_on ?? d.RT027,
-      laser_power_pct: d.laser_power_pct ?? d.laser_power ?? d.DS010,
-      connected:       d.machine_connected ?? d.connected ?? d.RT006,
-      connection_state: d.connection_state ?? d.RT007,
-      estimated_time:  d.estimated_time  ?? d.total_time_fmt,
-      powder_usage:    d.powder_usage    ?? d.total_powder_g,
-      deposition_efficiency: d.deposition_efficiency,
-      energy:          d.energy          ?? d.total_energy_wh,
-    });
-    liveRuntimeData = {
-        ...d,
-        xma_live: (() => { try { return JSON.parse(d.xma); } catch(e) { return null; } })(),
-        laser_enabled: d.laser_on,
-        laser_power_pct: d.laser_power,
-    };
+  function latestRuntimeRecord(r){return Array.isArray(r)&&r.length?r[r.length-1]:null;}
+  function updateReplayRuntime(records,ss={}){
+    const d=latestRuntimeRecord(records)||{};
+    updateRuntime({current_layer:d.current_layer??d.RT005,total_layers:d.total_layers??d.PS011??ss.total_layers,current_file:d.current_file??d.file_name??d.RT013??ss.file_name,gas_enabled:d.gas_enabled??d.RT029,laser_enabled:d.laser_enabled??d.laser_on??d.RT027,laser_power_pct:d.laser_power_pct??d.laser_power??d.DS010,connected:d.machine_connected??d.connected??d.RT006,connection_state:d.connection_state??d.RT007,estimated_time:d.estimated_time??d.total_time_fmt,powder_usage:d.powder_usage??d.total_powder_g,deposition_efficiency:d.deposition_efficiency,energy:d.energy??d.total_energy_wh});
+    liveRuntimeData={...d,xma_live:(()=>{try{return JSON.parse(d.xma);}catch(e){return null;}})(),laser_enabled:d.laser_on,laser_power_pct:d.laser_power};
     renderLiveRuntimeGrid(liveRuntimeData);
   }
-
-  function updateRuntime(data) {
-    if (!data) return;
-    if (data.current_file !== undefined) {
-      const assignedValue = data.current_file || "—";
-      rtFile.textContent = assignedValue;
-    }
-    if (data.current_layer !== undefined) {
-      if (rtLayer) rtLayer.textContent = data.current_layer;
-      const pct = totalLayers > 0 ? Math.min(100, (data.current_layer / totalLayers) * 100) : 0;
-      if (rtProgFill) rtProgFill.style.width = pct + "%";
-    }
-    if (data.total_layers  !== undefined) {
-      totalLayers = data.total_layers || 0;
-      if (rtTotal) rtTotal.textContent = totalLayers || "—";
-    }
-    if (data.gas_enabled    !== undefined) rtGas.innerHTML   = pill(data.gas_enabled);
-    if (data.laser_enabled  !== undefined) rtLaser.innerHTML  = pill(data.laser_enabled);
-    if (data.powder_enabled !== undefined) document.getElementById("rtPowder").innerHTML = pill(data.powder_enabled);
-    if (data.light_enabled !== undefined) document.getElementById("rtLight").innerHTML = pill(data.light_enabled);
-    if (data.laser_power_pct !== undefined) rtPower.textContent = (data.laser_power_pct ?? "—") + (data.laser_power_pct != null ? "%" : "");
-    const connected = normalizeConnected(data.connected);
-    const connectionState = normalizeConnected(data.connection_state);
-    const isConnected = connected ?? connectionState;
-    if (isConnected !== null) rtState.innerHTML = stateBadge(isConnected);
-    if (data.powder_usage !== undefined) estPowder.textContent = data.powder_usage != null ? data.powder_usage + "g" : "-";
-    if (data.deposition_efficiency !== undefined) estEfficiency.textContent = data.deposition_efficiency != null ? (data.deposition_efficiency * 100).toFixed(1) + "%" : "-";
-    if (data.energy !== undefined) estEnergy.textContent = data.energy ?? "-";
+  function updateRuntime(data){
+    if(!data)return;
+    if(data.current_file!==undefined)rtFile.textContent=data.current_file||"—";
+    if(data.current_layer!==undefined){const pct=totalLayers>0?Math.min(100,(data.current_layer/totalLayers)*100):0;if(rtProgFill)rtProgFill.style.width=pct+"%";}
+    if(data.total_layers!==undefined)totalLayers=data.total_layers||0;
+    if(data.gas_enabled!==undefined)rtGas.innerHTML=pill(data.gas_enabled);
+    if(data.laser_enabled!==undefined)rtLaser.innerHTML=pill(data.laser_enabled);
+    if(data.powder_enabled!==undefined)document.getElementById("rtPowder").innerHTML=pill(data.powder_enabled);
+    if(data.light_enabled!==undefined)document.getElementById("rtLight").innerHTML=pill(data.light_enabled);
+    if(data.laser_power_pct!==undefined)rtPower.textContent=(data.laser_power_pct??"—")+(data.laser_power_pct!=null?"%":"");
+    const connected=normalizeConnected(data.connected),connectionState=normalizeConnected(data.connection_state),isConnected=connected??connectionState;
+    if(isConnected!==null){if(data._live_connection)currentMachineConnected=isConnected;rtState.innerHTML=stateBadge(isConnected);}
+    if(data.powder_usage!==undefined)estPowder.textContent=data.powder_usage!=null?data.powder_usage+"g":"-";
+    if(data.deposition_efficiency!==undefined)estEfficiency.textContent=data.deposition_efficiency!=null?(data.deposition_efficiency*100).toFixed(1)+"%":"-";
+    if(data.energy!==undefined)estEnergy.textContent=data.energy??"-";
   }
-
-  function clearRuntime() {
-    rtFile.textContent = "—";
-    if (rtLayer) rtLayer.textContent = "—";
-    if (rtTotal) rtTotal.textContent = "—";
-    rtPower.textContent = "—";
-    if (rtProgFill) rtProgFill.style.width = "0%";
-    if (progressPct) progressPct.textContent = "—";
-    rtGas.innerHTML   = pill(false);
-    rtLaser.innerHTML = pill(false);
-    document.getElementById("rtPowder").innerHTML = pill(false);
-    document.getElementById("rtLight").innerHTML = pill(false);
-
-    estPowder.textContent = "—";
-    estEfficiency.textContent = "—";
-    estEnergy.textContent = "—";
-    liveRuntimeData = {};
-    renderLiveRuntimeGrid(liveRuntimeData);
-    totalLayers = 0;
+  function clearRuntime(){
+    rtFile.textContent="—";rtPower.textContent="—";if(rtProgFill)rtProgFill.style.width="0%";if(progressPct)progressPct.textContent="—";
+    rtGas.innerHTML=pill(false);rtLaser.innerHTML=pill(false);
+    document.getElementById("rtPowder").innerHTML=pill(false);document.getElementById("rtLight").innerHTML=pill(false);
+    estPowder.textContent="—";estEfficiency.textContent="—";estEnergy.textContent="—";
+    liveRuntimeData={};renderLiveRuntimeGrid(liveRuntimeData);totalLayers=0;currentMachineConnected=false;
   }
+  // ── Devices ──
+  async function loadDevices(){try{const res=await fetch("/devices");const devs=await res.json();devicesById=new Map(devs.map(d=>[String(d.device_id),d]));devs.forEach(d=>{if(![...deviceSelect.options].some(o=>o.value===d.device_id)){const opt=document.createElement("option");opt.value=d.device_id;opt.textContent=d.device_id;deviceSelect.appendChild(opt);}});}catch(e){console.error("loadDevices",e);}}
+  function refreshSessions(){const id=deviceSelect.value;if(!id)return;deviceSelect.dispatchEvent(new CustomEvent("change",{detail:{auto:true}}));}
+  function cleanMachineHost(value){const raw=String(value||"").trim();if(!raw)return "";try{const url=new URL(raw.includes("://")?raw:`http://${raw}`);return url.hostname||"";}catch{return raw.replace(/^https?:\/\//i,"").split("/")[0].replace(/:\d+$/,"");}}
+  function isUsableMachineHost(v){const h=cleanMachineHost(v);return Boolean(h&&(h==="localhost"||/^(\d{1,3}\.){3}\d{1,3}$/.test(h)||/^[0-9a-f:]+$/i.test(h)&&h.includes(":")||h.includes(".")));}
+  function getSelectedMachineIp(){const id=deviceSelect.value;if(!id)return "";const device=devicesById.get(String(id))||{};const eh=cleanMachineHost(device.ip||device.host||device.broker_host||device.BrokerHost||device.mqtt_host||device.ftp_host);if(eh)return eh;if(device.name&&device.name!==id&&isUsableMachineHost(device.name))return cleanMachineHost(device.name);if(isUsableMachineHost(id))return cleanMachineHost(id);return isUsableMachineHost(location.hostname)?cleanMachineHost(location.hostname):"";}
 
-  // ── Device dropdown ──
-  async function loadDevices() {
-    try {
-      const res = await fetch("/devices");
-      const devs = await res.json();
-      devs.forEach(d => {
-        if (![...deviceSelect.options].some(o => o.value === d.device_id)) {
-          const opt = document.createElement("option");
-          opt.value = d.device_id;
-          opt.textContent = d.device_id;
-          deviceSelect.appendChild(opt);
-        }
-      });
-    } catch(e) { console.error("loadDevices", e); }
+  // Camera
+  function cameraBaseUrl(){return manualCameraIp?`http://${manualCameraIp}:8765`:"";} 
+  function setCameraPlaceholder(msg){cameraPlaceholder.textContent=msg;cameraPlaceholder.classList.remove("hidden");cameraFeed.classList.add("hidden");}
+  function showCameraFeed(){cameraPlaceholder.classList.add("hidden");cameraFeed.classList.remove("hidden");}
+  function updateCameraPanel(){
+    const ip=manualCameraIp,baseUrl=cameraBaseUrl();
+    if(!ip){currentCameraIp="";cameraFeedFailed=false;cameraFeed.removeAttribute("src");setCameraPlaceholder("Click Live Stream to start.");if(cameraStatus)cameraStatus.textContent="";return;}
+    if(currentCameraIp!==ip){currentCameraIp=ip;cameraFeedFailed=false;cameraFeed.src=`${baseUrl}/video-feed`;setCameraPlaceholder("Connecting to live feed…");if(cameraStatus)cameraStatus.textContent=`Live stream: ${ip}`;}
   }
+  async function checkCameraAvailable(ip){try{const res=await fetch(`/camera/check?ip=${encodeURIComponent(ip)}&port=8765`,{cache:"no-store"});const data=await res.json();return Boolean(res.ok&&data.available);}catch{return false;}}
+  async function openLiveStreamPrompt(){const suggestedIp=manualCameraIp||getSelectedMachineIp()||cleanMachineHost(location.hostname);const ip=prompt("Enter machine IP address",suggestedIp);if(!ip||!ip.trim())return;const cleanIp=cleanMachineHost(ip);if(!cleanIp){showToast("Enter a valid IP address.",true);return;}if(!(await checkCameraAvailable(cleanIp))){manualCameraIp="";currentCameraIp="";cameraFeedFailed=false;cameraFeed.removeAttribute("src");setCameraPlaceholder("Live feed unavailable");if(cameraStatus)cameraStatus.textContent=`Camera not reachable at ${cleanIp}:8765`;showToast(`Camera not reachable at ${cleanIp}:8765.`,true);logEvent("camera_unavailable",cleanIp);return;}manualCameraIp=cleanIp;currentCameraIp="";cameraFeedFailed=false;document.getElementById("cameraCollapsed").classList.add("hidden");document.getElementById("cameraExpanded").classList.remove("hidden");updateCameraPanel();showToast(`Live stream started for ${cleanIp}.`);logEvent("camera_live_stream",cleanIp);}
+  cameraFeed.addEventListener("load",()=>{if(cameraBaseUrl())showCameraFeed();});
+  cameraFeed.addEventListener("error",()=>{cameraFeedFailed=true;cameraFeed.removeAttribute("src");setCameraPlaceholder("Live feed unavailable");if(cameraStatus)cameraStatus.textContent="Live feed unavailable";});
 
-  function refreshSessions() {
-    const id = deviceSelect.value;
-    if (!id) return;
-    deviceSelect.dispatchEvent(new CustomEvent("change", { detail: { auto: true } }));
-  }
+  // ── Recordings ──
+  function formatBytes(b){const n=Number(b);if(!Number.isFinite(n))return "size unknown";if(n<1024)return `${n} B`;const u=["KB","MB","GB"];let v=n/1024,i=0;while(v>=1024&&i<u.length-1){v/=1024;i++;}return `${v.toFixed(v>=10?1:2)} ${u[i]}`;}
+  function formatRecordingDate(v){if(!v)return "date unknown";const d=new Date(v);return Number.isNaN(d.getTime())?v:d.toLocaleString("en-GB",{hour12:false});}
+  function showToast(msg,isError=false){toast.textContent=msg;toast.classList.toggle("error",isError);toast.classList.add("visible");clearTimeout(toastTimer);toastTimer=setTimeout(()=>toast.classList.remove("visible"),2600);}
+  function encodeRecordingPath(p){return String(p||"").split("/").map(encodeURIComponent).join("/");}
+  function updateRecordingCount(){const c=recordingsList.querySelectorAll(".recording-item").length;recordingsStatus.textContent=c?`${c} recording${c===1?"":"s"} found.`:"No recordings found.";}
+  async function deleteRecording(item,ip,card){const rp=item.path||item.filename||"";if(!rp){showToast("Missing filename.",true);return;}try{const res=await fetch(`/recordings/${encodeRecordingPath(rp)}?ip=${encodeURIComponent(ip)}`,{method:"DELETE"});const data=await res.json().catch(()=>({}));if(!res.ok)throw new Error(data.detail||"Unable to delete");const wasActive=card.classList.contains("active");card.remove();if(wasActive){recordingsVideo.removeAttribute("src");recordingsVideo.load();}updateRecordingCount();showToast("Recording deleted.");logEvent("recording_deleted",item.filename||item.path||"");}catch(e){showToast(e.message||"Unable to delete.",true);}}
+  function renderRecordings(rows,ip){recordingsList.textContent="";recordingsVideo.removeAttribute("src");recordingsVideo.load();if(!rows.length){recordingsStatus.textContent="No recordings found.";return;}recordingsStatus.textContent=`${rows.length} recording${rows.length===1?"":"s"} found.`;rows.forEach(item=>{const div=document.createElement("div");div.className="recording-item";const hEl=document.createElement("div");hEl.className="recording-head";const nEl=document.createElement("div");nEl.className="recording-name";nEl.textContent=item.filename||item.path||"recording";const dBtn=document.createElement("button");dBtn.className="recording-delete";dBtn.type="button";dBtn.textContent="Delete";dBtn.addEventListener("click",async(e)=>{e.stopPropagation();dBtn.disabled=true;await deleteRecording(item,ip,div);dBtn.disabled=false;});hEl.appendChild(nEl);hEl.appendChild(dBtn);const mEl=document.createElement("div");mEl.className="recording-meta";[item.device_id||"device unknown",formatBytes(item.size),formatRecordingDate(item.modified_at)].forEach(t=>{const s=document.createElement("span");s.textContent=t;mEl.appendChild(s);});div.appendChild(hEl);div.appendChild(mEl);div.addEventListener("click",()=>{document.querySelectorAll(".recording-item").forEach(el=>el.classList.remove("active"));div.classList.add("active");recordingsVideo.src=`/recordings/download?ip=${encodeURIComponent(ip)}&file=${encodeURIComponent(item.path||item.filename||"")}`;recordingsVideo.play().catch(()=>{});});recordingsList.appendChild(div);});}
+  async function viewRecordingsIp(ip){currentRecordingsIp=ip;const selectedDevice=deviceSelect.value;const params=new URLSearchParams({ip});if(selectedDevice)params.set("device_id",selectedDevice);recordingsStatus.textContent="Loading recordings…";recordingsList.textContent="";recordingsVideo.removeAttribute("src");recordingsVideo.load();try{const res=await fetch(`/recordings?${params.toString()}`);const data=await res.json();if(!res.ok)throw new Error(data.detail||"Unable to list recordings");renderRecordings(data,ip);logEvent("recordings_loaded",selectedDevice||"all");}catch(e){recordingsStatus.textContent=e.message||"Unable to load recordings.";logEvent("recordings_error",recordingsStatus.textContent);}}
+  async function viewRecordings(){const ip=getSelectedMachineIp()||prompt("Enter machine IP address");if(!ip||!ip.trim())return;openSection("recordings");viewRecordingsIp(ip.trim());}
 
-  function formatBytes(bytes) {
-    const n = Number(bytes);
-    if (!Number.isFinite(n)) return "size unknown";
-    if (n < 1024) return `${n} B`;
-    const units = ["KB", "MB", "GB"];
-    let value = n / 1024;
-    let idx = 0;
-    while (value >= 1024 && idx < units.length - 1) {
-      value /= 1024;
-      idx += 1;
-    }
-    return `${value.toFixed(value >= 10 ? 1 : 2)} ${units[idx]}`;
-  }
+  // ── Logs ──
+  function findLogColumn(names){const nn=names.map(n=>({name:n,normalized:String(n).toLowerCase().replace(/[\s_-]+/g,"")}));const m=nn.find(i=>["category","type"].includes(i.normalized));return m?m.name:"";}
+  function findSeverityColumn(names){const nn=names.map(n=>({name:n,normalized:String(n).toLowerCase().replace(/[\s_-]+/g,"")}));const m=nn.find(i=>["severity","level","priority"].includes(i.normalized));return m?m.name:"";}
+  function populateLogFilter(sel,col,label){sel.textContent="";if(!col){sel.classList.add("hidden");return;}const ao=document.createElement("option");ao.value="";ao.textContent=`All ${label}`;sel.appendChild(ao);[...new Set(logsRows.map(r=>r[col]).filter(Boolean))].sort((a,b)=>String(a).localeCompare(String(b))).forEach(v=>{const o=document.createElement("option");o.value=v;o.textContent=v;sel.appendChild(o);});sel.classList.remove("hidden");}
+  function renderLogsTable(rows){logsTableHead.textContent="";logsTableBody.textContent="";const hr=document.createElement("tr");logsColumns.forEach(c=>{const th=document.createElement("th");th.textContent=c;hr.appendChild(th);});logsTableHead.appendChild(hr);const f=document.createDocumentFragment();rows.forEach(row=>{const tr=document.createElement("tr");logsColumns.forEach(c=>{const td=document.createElement("td");td.textContent=row[c]??"";tr.appendChild(td);});f.appendChild(tr);});logsTableBody.appendChild(f);}
+  function applyLogFilters(){const q=logsSearchInput.value.trim().toLowerCase(),cat=logsCategoryFilter.value,sev=logsSeverityFilter.value;const filtered=logsRows.filter(row=>{const ms=!q||logsColumns.some(c=>String(row[c]??"").toLowerCase().includes(q));const mc=!logsCategoryColumn||!cat||row[logsCategoryColumn]===cat;const msv=!logsSeverityColumn||!sev||row[logsSeverityColumn]===sev;return ms&&mc&&msv;});renderLogsTable(filtered);logsTableWrap.classList.toggle("hidden",filtered.length===0);logsEmptyState.classList.toggle("visible",filtered.length===0);logsStatus.textContent=`${filtered.length} of ${logsRows.length} log rows shown.`;}
+  function renderLogs(rows){logsRows=Array.isArray(rows)?rows:[];logsColumns=[...logsRows.reduce((s,r)=>{Object.keys(r||{}).forEach(k=>s.add(k));return s;},new Set())];logsCategoryColumn=findLogColumn(logsColumns);logsSeverityColumn=findSeverityColumn(logsColumns);populateLogFilter(logsCategoryFilter,logsCategoryColumn,"categories");populateLogFilter(logsSeverityFilter,logsSeverityColumn,"severities");if(!logsRows.length||!logsColumns.length){logsTableHead.textContent="";logsTableBody.textContent="";logsTableWrap.classList.add("hidden");logsEmptyState.classList.add("visible");logsStatus.textContent="No logs found.";return;}logsEmptyState.classList.remove("visible");applyLogFilters();}
+  async function viewLogsIp(ip){currentLogsIp=ip;logsStatus.textContent="Loading logs…";logsTableHead.textContent="";logsTableBody.textContent="";logsTableWrap.classList.add("hidden");logsEmptyState.classList.remove("visible");try{const res=await fetch(`/logs/view?ip=${encodeURIComponent(ip)}`);const data=await res.json();if(!res.ok)throw new Error(data.detail||"Unable to load logs");renderLogs(data.logs||[]);logEvent("logs_loaded",ip);}catch(e){logsStatus.textContent=e.message||"Unable to load logs.";logsEmptyState.classList.add("visible");showToast(logsStatus.textContent,true);logEvent("logs_error",logsStatus.textContent);}}
+  async function viewLogs(forcePrompt=false){let ip=currentLogsIp||currentRecordingsIp;if(forcePrompt||!ip){const v=prompt("Enter machine IP address",ip||"");if(!v||!v.trim())return;ip=v.trim();}currentLogsIp=ip;openSection("logs");viewLogsIp(ip);}
+  // ── Session list ──
+  async function fetchSessionDetails(sessionId,sessionSummary={}){if(!deviceSelect.value)return;try{const res=await fetch(`/sessions/${sessionId}/replay`);const data=await res.json();if(data.error){console.error(data.error);return;}const snapshots={};data.slices.forEach(slice=>{snapshots[String(slice.slice_index)]=slice.params_json;});const flattened=flattenSnapshots(snapshots);renderTable(flattened);switchTab("params");updateReplayRuntime(data.runtime,sessionSummary);logEvent("session_loaded",sessionId.slice(-8));}catch(e){console.error("fetchSessionDetails",e);}}
 
-  function formatRecordingDate(value) {
-    if (!value) return "date unknown";
-    const date = new Date(value);
-    return Number.isNaN(date.getTime()) ? value : date.toLocaleString("en-GB", { hour12: false });
-  }
-
-  function renderRecordings(rows, ip) {
-    recordingsList.textContent = "";
-    recordingsVideo.removeAttribute("src");
-    recordingsVideo.load();
-
-    if (!rows.length) {
-      recordingsStatus.textContent = "No recordings found.";
-      return;
-    }
-
-    recordingsStatus.textContent = `${rows.length} recording${rows.length === 1 ? "" : "s"} found.`;
-    rows.forEach(item => {
-      const div = document.createElement("div");
-      div.className = "recording-item";
-
-      const nameEl = document.createElement("div");
-      nameEl.className = "recording-name";
-      nameEl.textContent = item.filename || item.path || "recording";
-
-      const metaEl = document.createElement("div");
-      metaEl.className = "recording-meta";
-      [item.device_id || "device unknown", formatBytes(item.size), formatRecordingDate(item.modified_at)].forEach(text => {
-        const span = document.createElement("span");
-        span.textContent = text;
-        metaEl.appendChild(span);
-      });
-
-      div.appendChild(nameEl);
-      div.appendChild(metaEl);
-      div.addEventListener("click", () => {
-        document.querySelectorAll(".recording-item").forEach(el => el.classList.remove("active"));
-        div.classList.add("active");
-        recordingsVideo.src = `/recordings/download?ip=${encodeURIComponent(ip)}&file=${encodeURIComponent(item.path || item.filename || "")}`;
-        recordingsVideo.play().catch(() => {});
-      });
-      recordingsList.appendChild(div);
-    });
-  }
-
-  async function viewRecordings() {
-    const ip = prompt("Enter machine IP address");
-    if (!ip || !ip.trim()) return;
-
-    const cleanIp = ip.trim();
-    const selectedDevice = deviceSelect.value;
-    const params = new URLSearchParams({ ip: cleanIp });
-    if (selectedDevice) params.set("device_id", selectedDevice);
-
-    openSection("recordings");
-    recordingsStatus.textContent = "Loading recordings...";
-    recordingsList.textContent = "";
-    recordingsVideo.removeAttribute("src");
-    recordingsVideo.load();
-
-    try {
-      const res = await fetch(`/recordings?${params.toString()}`);
-      const data = await res.json();
-      if (!res.ok) {
-        throw new Error(data.detail || "Unable to list recordings");
-      }
-      renderRecordings(data, cleanIp);
-      logEvent("recordings_loaded", selectedDevice || "all devices");
-    } catch (e) {
-      recordingsStatus.textContent = e.message || "Unable to load recordings.";
-      logEvent("recordings_error", recordingsStatus.textContent);
-    }
-  }
-
-  deviceSelect.addEventListener("change", async (e) => {
-    const isAuto = e && e.detail && e.detail.auto;
-    clearRuntime();
-    const id = deviceSelect.value;
-    if (id) localStorage.setItem("ufameasy_selected_device", id)
-    if (!id) { sessionList.innerHTML = '<div class="no-sessions">Select a device to view session history.</div>'; return; }
-    try {
-      const res  = await fetch(`/devices/${id}/sessions`);
-      const rows = await res.json();
-      if (!rows.length) {
-        sessionList.innerHTML = '<div class="no-sessions">No sessions recorded for this device.</div>';
-        return;
-      }
-      sessionList.innerHTML = "";
-      rows.forEach(s => {
-        const div = document.createElement("div");
-        div.className = "session-item";
-        const rawStatus = s.status || "ended";
-        const hasEnded = Boolean(s.ended_at);
-        const status = hasEnded && (rawStatus === "active" || rawStatus === "running") ? "ended" : rawStatus;
-        const statusCls = (!hasEnded && (status === "active" || status === "running")) ? "active" : "ended";
-        div.innerHTML = `
-          <div class="session-header">
-            <span class="sfile">${s.file_name || "&mdash;"}</span>
-            <span class="session-status ${statusCls}">${status}</span>
-            <button class="del-session-btn" data-sid="${s.session_id}" style="float:right; margin-left:8px; padding:2px 7px; border:1px solid var(--accent); border-radius:4px; background:var(--accent); color:var(--panel); font-size:12px; line-height:1.4; cursor:pointer;">🗑</button>
-          </div>
-          <div class="session-meta">
-            <span>Start: ${s.started_at || "&mdash;"}</span>
-            <span>End: ${s.ended_at || "&mdash;"}</span>
-            <span>${s.total_layers != null ? s.total_layers + " layers" : "layers unknown"}</span>
-            <span class="sid">ID: ${s.session_id || ""}</span>
-          </div>
-        `;
-        div.onclick = () => fetchSessionDetails(s.session_id, s);
-        div.querySelector('.del-session-btn').addEventListener('click', async (e) => {
-          e.stopPropagation();
-          if (!confirm('Delete this session and all its data?')) return;
-          await fetch(`/sessions/${s.session_id}`, {method: 'DELETE'});
-          refreshSessions();
-        });
+  deviceSelect.addEventListener("change",async(e)=>{
+    const isAuto=e&&e.detail&&e.detail.auto;clearRuntime();const id=deviceSelect.value;
+    if(id)localStorage.setItem("ufameasy_selected_device",id);
+    if(!id){sessionList.innerHTML='<div class="no-sessions">Select a device to view session history.</div>';return;}
+    // Auto-fill shared IP from device
+    const autoIp=getSelectedMachineIp();if(autoIp&&!getSharedIp())document.getElementById("sharedIpInput").value=autoIp;
+    try{const res=await fetch(`/devices/${id}/sessions`);const rows=await res.json();
+      if(!rows.length){sessionList.innerHTML='<div class="no-sessions">No sessions recorded.</div>';return;}
+      sessionList.innerHTML="";
+      rows.forEach(s=>{
+        const div=document.createElement("div");div.className="session-item";
+        const rawStatus=s.status||"ended",hasEnded=Boolean(s.ended_at);
+        const status=hasEnded&&(rawStatus==="active"||rawStatus==="running")?"ended":rawStatus;
+        const statusCls=(!hasEnded&&(status==="active"||status==="running"))?"active":"ended";
+        // Compute duration
+        let durStr="";if(s.started_at&&s.ended_at){const ms=new Date(s.ended_at)-new Date(s.started_at);if(!isNaN(ms)){const m=Math.floor(ms/60000),sec=Math.floor((ms%60000)/1000);durStr=`<span class="session-duration">${m}m ${sec}s</span>`;}}
+        div.innerHTML=`<div class="session-header"><span class="sfile">${s.file_name||"&mdash;"}</span><div style="display:flex;align-items:center;gap:6px;"><span class="session-status ${statusCls}">${status}</span>${durStr}<button class="del-session-btn" data-sid="${s.session_id}" style="padding:2px 7px;border:1px solid var(--border);border-radius:6px;background:var(--panel);color:var(--red);font-size:11px;cursor:pointer;">🗑</button></div></div><div class="session-meta"><span>Start: ${s.started_at||"—"}</span><span>End: ${s.ended_at||"—"}</span><span>${s.total_layers!=null?s.total_layers+" layers":"layers unknown"}</span><span class="sid">ID: ${s.session_id||""}</span></div>`;
+        div.onclick=()=>fetchSessionDetails(s.session_id,s);
+        div.querySelector(".del-session-btn").addEventListener("click",async(e)=>{e.stopPropagation();if(!confirm("Delete this session and all its data?"))return;await fetch(`/sessions/${s.session_id}`,{method:"DELETE"});refreshSessions();});
         sessionList.appendChild(div);
       });
-      if (!isAuto) {
-        const activeSession = rows.find(s => !s.ended_at && (s.status === "running" || s.status === "active"));
-        if (activeSession) fetchSessionDetails(activeSession.session_id, activeSession);
-      }
-    } catch(e) { console.error("sessions fetch", e); }
+      if(!isAuto){const activeSession=rows.find(s=>!s.ended_at&&(s.status==="running"||s.status==="active"));if(activeSession)fetchSessionDetails(activeSession.session_id,activeSession);}
+    }catch(e){console.error("sessions fetch",e);}
   });
 
-  // ── Params table (preserved logic) ──
-  function rowKey(paramId, sliceIdx) { return `${sliceIdx}::${paramId}`; }
-
-  function stringifyValue(v) {
-    if (v == null) return "";
-    if (Array.isArray(v)) return v.map((item, i) => `${i}: ${stringifyValue(item)}`).join(', ');
-    if (typeof v === 'object') return Object.entries(v).map(([k, vv]) => `${k}: ${stringifyValue(vv)}`).join(', ');
-    return String(v);
-  }
-
-  const LABEL_MAP = {
-    "xma_live": "Machine Position",
-    "SR001": "Layer Thickness (mm)", "SR002": "First Layer Thickness (mm)",
-    "SR003": "First Layer Feedrate (mm/min)", "SR004": "Standoff Distance (mm)",
-    "SR005": "Spot Size (mm)", "SR006": "Contour Pass",
-    "SR007": "Contour Bead Width (mm)", "SR008": "Perimeter Feedrate (mm/min)",
-    "SR009": "Perimeter First", "SR010": "Seam Style", "SR011": "Seam X (mm)",
-    "SR012": "Seam Y (mm)", "SR013": "Start Point Policy", "SR014": "Fill Pattern",
-    "SR015": "Fill Angle (°)", "SR016": "Infill Bead Width (mm)",
-    "SR017": "Infill Feedrate (mm/min)", "SR018": "Solid Infill Feedrate (mm/min)",
-    "SR019": "Stepover (mm)", "SR020": "Bead Overlap (%)", "SR021": "Bottom Infill Pattern",
-    "SR022": "Deposition Feedrate (mm/min)", "SR023": "Travel Feedrate (mm/min)",
-    "SR024": "Interlayer Dwell (s)", "SR025": "Safe Distance (mm)",
-    "SR026": "Lead-in Distance (mm)", "SR027": "Lead-in Radius (mm)",
-    "SR028": "Lead-out Distance (mm)", "SR029": "Lead-out Radius (mm)",
-    "SR030": "Lead Feedrate (mm/min)", "SR031": "Comments",
-    "DED001": "Laser Power (%)", "DED002": "First Layer Laser Power (%)",
-    "DED003": "PWM Frequency (Hz)", "DED004": "PWM Duty (%)",
-    "DED005": "Powder Flow Rate (gms/min)", "DED006": "PF1", "DED007": "PF2",
-    "DED008": "PF3", "DED009": "PF4", "DED010": "Pre Heat Source",
-    "DED011": "Pre Heat Temperature (°C)", "DED012": "Laser ON Delay (s)",
-    "DED013": "Laser OFF Delay (s)", "DED014": "Gas Delay (s)",
-    "PH001": "Header Gcode", "PH002": "Footer Gcode", "PH003": "Pre Layer Gcode",
-    "PH004": "Layer Gcode", "PH005": "Post Layer Gcode", "PH006": "Post-Process Script",
-    "PH007": "User Defined Script"
-  };
-
-  function normalizeParam(paramId, param, sliceIdx) {
-    const d = param || {};
-    const v = d.value;
-    return {
-      param_id: String(d.param_id || paramId || ""),
-      field:    LABEL_MAP[String(d.param_id || paramId || "")] || String(d.field || ""),
-      value:    v == null ? "" : stringifyValue(v),
-      unit:     String(d.unit || ""),
-      domain:   String(d.domain || "Uncategorized"),
-      slice_idx:String(d.slice_idx || sliceIdx || "")
-    };
-  }
-
-  function flattenSnapshots(snapshots) {
-    const rows = [];
-    Object.entries(snapshots || {}).forEach(([si, params]) => {
-      Object.entries(params || {}).forEach(([pid, p]) => rows.push(normalizeParam(pid, p, si)));
-    });
-    return rows;
-  }
-
-  function sortRows(rows) {
-    return rows.sort((a, b) => {
-      const d = a.domain.localeCompare(b.domain);
-      if (d) return d;
-      const s = a.slice_idx.localeCompare(b.slice_idx, undefined, { numeric: true });
-      if (s) return s;
-      return a.param_id.localeCompare(b.param_id, undefined, { numeric: true });
-    });
-  }
-
-  function createCell(text, cls) {
-    const td = document.createElement("td");
-    td.textContent = text;
-    if (cls) td.className = cls;
-    return td;
-  }
-
-  function createDataRow(row) {
-    const tr = document.createElement("tr");
-    tr.id = `row-${row.slice_idx}-${row.param_id}`;
-    tr.dataset.key = rowKey(row.param_id, row.slice_idx);
-    tr.dataset.paramId = row.param_id.toLowerCase();
-    tr.dataset.field = row.field.toLowerCase();
-    tr.dataset.domain = row.domain;
-    tr.dataset.slice = row.slice_idx;
-    tr.appendChild(createCell(row.param_id, "param-id"));
-    tr.appendChild(createCell(row.field, "field"));
-    tr.appendChild(createCell(row.value, "value"));
-    tr.appendChild(createCell(row.unit, "unit"));
-    tr.appendChild(createCell(row.domain, "domain"));
-    tr.appendChild(createCell(row.slice_idx, "slice"));
-    return tr;
-  }
-
-  function createDomainRow(domain) {
-    const tr = document.createElement("tr");
-    tr.className = "domain-row";
-    tr.dataset.domainHeader = domain;
-    const th = document.createElement("th");
-    th.colSpan = 6; th.textContent = domain;
-    tr.appendChild(th);
-    return tr;
-  }
-
-  function createSliceHeaderRow(sliceIdx) {
-    const tr = document.createElement("tr");
-    tr.className = "slice-header";
-    tr.dataset.sliceHeader = sliceIdx;
-    const td = document.createElement("td");
-    td.colSpan = 6; td.textContent = `Slice ${sliceIdx}`;
-    tr.appendChild(td);
-    return tr;
-  }
-
-  function renderTable(rows) {
-    tableBody.textContent = "";
-    rowsByKey.clear();
-    populateSliceFilter(rows);
-    const sorted = sortRows(rows);
-    let currentDomain = null;
-    let currentSlice = null;
-    sorted.forEach(row => {
-      if (row.domain !== currentDomain) {
-        currentDomain = row.domain;
-        currentSlice = null;
-        tableBody.appendChild(createDomainRow(currentDomain));
-      }
-      if (row.slice_idx !== currentSlice) {
-        currentSlice = row.slice_idx;
-        tableBody.appendChild(createSliceHeaderRow(currentSlice));
-      }
-      const tr = createDataRow(row);
-      rowsByKey.set(rowKey(row.param_id, row.slice_idx), tr);
-      tableBody.appendChild(tr);
-    });
-    updateVisibility();
-  }
-
-  function syncSummary() {
-    const n = Array.from(tableBody.querySelectorAll("tr[data-key]")).filter(r => r.style.display !== "none").length;
-    summary.textContent = `${n} parameter${n === 1 ? "" : "s"}`;
-  }
-
-  function updateEmptyState() {
-    const total = rowsByKey.size;
-    const hasVisible = Array.from(rowsByKey.values()).some(r => r.style.display !== "none");
-    emptyState.classList.toggle("visible", total === 0 || !hasVisible);
-    emptyState.textContent = total === 0 ? "No snapshot data yet" : "No matching parameters";
-    tableWrap.classList.toggle("hidden", total === 0);
-  }
-
-  function updateDomainHeaders() {
-    tableBody.querySelectorAll("tr[data-domain-header]").forEach(h => {
-      const domain = h.dataset.domainHeader;
-      const vis = Array.from(rowsByKey.values()).filter(r => r.dataset.domain === domain).some(r => r.style.display !== "none");
-      h.style.display = vis ? "" : "none";
-    });
-  }
-
-  function populateSliceFilter(rows) {
-    const selected = sliceFilter.value;
-    const slices = [...new Set(rows.map(row => row.slice_idx).filter(Boolean))]
-      .sort((a, b) => a.localeCompare(b, undefined, { numeric: true }));
-    sliceFilter.innerHTML = '<option value="">All Slices</option>';
-    slices.forEach(slice => {
-      const opt = document.createElement("option");
-      opt.value = slice;
-      opt.textContent = `Slice ${slice}`;
-      sliceFilter.appendChild(opt);
-    });
-    sliceFilter.value = slices.includes(selected) ? selected : "";
-  }
-
-  function ensureSliceOption(sliceIdx) {
-    if (!sliceIdx || [...sliceFilter.options].some(o => o.value === sliceIdx)) return;
-    const opt = document.createElement("option");
-    opt.value = sliceIdx;
-    opt.textContent = `Slice ${sliceIdx}`;
-    sliceFilter.appendChild(opt);
-  }
-
-  function updateSliceHeaders() {
-    tableBody.querySelectorAll("tr[data-slice-header]").forEach(h => {
-      const slice = h.dataset.sliceHeader;
-      const vis = Array.from(rowsByKey.values()).filter(r => r.dataset.slice === slice).some(r => r.style.display !== "none");
-      h.style.display = vis ? "" : "none";
-    });
-  }
-
-  function updateVisibility() {
-    const q = searchInput.value.trim().toLowerCase();
-    const selectedSlice = sliceFilter.value;
-    rowsByKey.forEach(row => {
-      const matchSearch = !q || row.dataset.paramId.startsWith(q) || row.dataset.field.includes(q);
-      const matchSlice = !selectedSlice || row.dataset.slice === selectedSlice;
-      const match = matchSearch && matchSlice;
-      row.style.display = match ? "" : "none";
-    });
-    updateSliceHeaders();
-    updateDomainHeaders();
-    updateEmptyState();
-    syncSummary();
-  }
-
-  function flashCell(cell) {
-    cell.classList.remove("flash");
-    void cell.offsetWidth;
-    cell.classList.add("flash");
-    setTimeout(() => cell.classList.remove("flash"), 500);
-  }
-
-  function updateCell(row, sel, val) {
-    const cell = row.querySelector(sel);
-    if (cell && cell.textContent !== val) { cell.textContent = val; flashCell(cell); }
-  }
-
-  function compareRows(a, b) {
-    const d = a.domain.localeCompare(b.domain); if (d) return d;
-    const p = a.param_id.localeCompare(b.param_id, undefined, { numeric: true }); if (p) return p;
-    return a.slice_idx.localeCompare(b.slice_idx, undefined, { numeric: true });
-  }
-
-  function getRowData(tr) {
-    return { param_id: tr.children[0].textContent, field: tr.children[1].textContent,
-      value: tr.children[2].textContent, unit: tr.children[3].textContent,
-      domain: tr.children[4].textContent, slice_idx: tr.children[5].textContent };
-  }
-
-  function ensureDomainHeader(domain) {
-    let h = Array.from(tableBody.querySelectorAll("tr[data-domain-header]")).find(x => x.dataset.domainHeader === domain);
-    if (h) return h;
-    h = createDomainRow(domain);
-    const next = Array.from(tableBody.querySelectorAll("tr[data-domain-header]")).find(x => x.dataset.domainHeader.localeCompare(domain) > 0);
-    next ? tableBody.insertBefore(h, next) : tableBody.appendChild(h);
-    return h;
-  }
-
-  function insertNewRow(row) {
-    const tr = createDataRow(row);
-    ensureSliceOption(row.slice_idx);
-    const header = ensureDomainHeader(row.domain);
-    let cursor = header.nextElementSibling;
-    while (cursor && !cursor.dataset.domainHeader) {
-      if (compareRows(row, getRowData(cursor)) < 0) {
-        tableBody.insertBefore(tr, cursor);
-        rowsByKey.set(rowKey(row.param_id, row.slice_idx), tr);
-        return tr;
-      }
-      cursor = cursor.nextElementSibling;
-    }
-    tableBody.insertBefore(tr, cursor);
-    rowsByKey.set(rowKey(row.param_id, row.slice_idx), tr);
-    return tr;
-  }
-
-  function renderSnapshot(sliceIdx, data) {
-    emptyState.classList.remove("visible");
-    tableWrap.classList.remove("hidden");
-    Object.entries(data || {}).forEach(([pid, param]) => {
-      const row = normalizeParam(pid, param, sliceIdx);
-      if (!document.getElementById(`row-${row.slice_idx}-${row.param_id}`)) {
-        flashCell(insertNewRow(row).querySelector(".value"));
-      }
-    });
-    updateVisibility();
-  }
-
-  function insertOrUpdateRow(row) {
-    const key = rowKey(row.param_id, row.slice_idx);
-    const ex = rowsByKey.get(key);
-    if (ex) {
-      updateCell(ex, ".field", row.field);
-      updateCell(ex, ".value", row.value);
-      updateCell(ex, ".unit", row.unit);
-      updateCell(ex, ".domain", row.domain);
-      updateCell(ex, ".slice", row.slice_idx);
-      updateVisibility(); return;
-    }
-    flashCell(insertNewRow(row).querySelector(".value"));
-    updateVisibility();
-  }
+  // ── Params table ──
+  function rowKey(pid,si){return `${si}::${pid}`;}
+  function stringifyValue(v){if(v==null)return "";if(Array.isArray(v))return v.map((item,i)=>`${i}: ${stringifyValue(item)}`).join(", ");if(typeof v==="object")return Object.entries(v).map(([k,vv])=>`${k}: ${stringifyValue(vv)}`).join(", ");return String(v);}
+  const LABEL_MAP={"xma_live":"Machine Position","SR001":"Layer Thickness (mm)","SR002":"First Layer Thickness (mm)","SR003":"First Layer Feedrate (mm/min)","SR004":"Standoff Distance (mm)","SR005":"Spot Size (mm)","SR006":"Contour Pass","SR007":"Contour Bead Width (mm)","SR008":"Perimeter Feedrate (mm/min)","SR009":"Perimeter First","SR010":"Seam Style","SR011":"Seam X (mm)","SR012":"Seam Y (mm)","SR013":"Start Point Policy","SR014":"Fill Pattern","SR015":"Fill Angle (°)","SR016":"Infill Bead Width (mm)","SR017":"Infill Feedrate (mm/min)","SR018":"Solid Infill Feedrate (mm/min)","SR019":"Stepover (mm)","SR020":"Bead Overlap (%)","SR021":"Bottom Infill Pattern","SR022":"Deposition Feedrate (mm/min)","SR023":"Travel Feedrate (mm/min)","SR024":"Interlayer Dwell (s)","SR025":"Safe Distance (mm)","SR026":"Lead-in Distance (mm)","SR027":"Lead-in Radius (mm)","SR028":"Lead-out Distance (mm)","SR029":"Lead-out Radius (mm)","SR030":"Lead Feedrate (mm/min)","SR031":"Comments","DED001":"Laser Power (%)","DED002":"First Layer Laser Power (%)","DED003":"PWM Frequency (Hz)","DED004":"PWM Duty (%)","DED005":"Powder Flow Rate (gms/min)","DED006":"PF1","DED007":"PF2","DED008":"PF3","DED009":"PF4","DED010":"Pre Heat Source","DED011":"Pre Heat Temperature (°C)","DED012":"Laser ON Delay (s)","DED013":"Laser OFF Delay (s)","DED014":"Gas Delay (s)","PH001":"Header Gcode","PH002":"Footer Gcode","PH003":"Pre Layer Gcode","PH004":"Layer Gcode","PH005":"Post Layer Gcode","PH006":"Post-Process Script","PH007":"User Defined Script"};
+  function normalizeParam(paramId,param,sliceIdx){const d=param||{},v=d.value;return{param_id:String(d.param_id||paramId||""),field:LABEL_MAP[String(d.param_id||paramId||"")]||String(d.field||""),value:v==null?"":stringifyValue(v),unit:String(d.unit||""),domain:String(d.domain||"Uncategorized"),slice_idx:String(d.slice_idx||sliceIdx||"")};}
+  function flattenSnapshots(snapshots){const rows=[];Object.entries(snapshots||{}).forEach(([si,params])=>{Object.entries(params||{}).forEach(([pid,p])=>rows.push(normalizeParam(pid,p,si)));});return rows;}
+  function sortRows(rows){return rows.sort((a,b)=>{const d=a.domain.localeCompare(b.domain);if(d)return d;const s=a.slice_idx.localeCompare(b.slice_idx,undefined,{numeric:true});if(s)return s;return a.param_id.localeCompare(b.param_id,undefined,{numeric:true});});}
+  function createCell(text,cls){const td=document.createElement("td");td.textContent=text;if(cls)td.className=cls;return td;}
+  function createDataRow(row){const tr=document.createElement("tr");tr.id=`row-${row.slice_idx}-${row.param_id}`;tr.dataset.key=rowKey(row.param_id,row.slice_idx);tr.dataset.paramId=row.param_id.toLowerCase();tr.dataset.field=row.field.toLowerCase();tr.dataset.domain=row.domain;tr.dataset.slice=row.slice_idx;tr.appendChild(createCell(row.param_id,"param-id"));tr.appendChild(createCell(row.field,"field"));tr.appendChild(createCell(row.value,"value"));tr.appendChild(createCell(row.unit,"unit"));tr.appendChild(createCell(row.domain,"domain"));tr.appendChild(createCell(row.slice_idx,"slice"));return tr;}
+  function createDomainRow(domain){const tr=document.createElement("tr");tr.className="domain-row";tr.dataset.domainHeader=domain;const th=document.createElement("th");th.colSpan=6;th.textContent=domain;tr.appendChild(th);return tr;}
+  function createSliceHeaderRow(si){const tr=document.createElement("tr");tr.className="slice-header";tr.dataset.sliceHeader=si;const td=document.createElement("td");td.colSpan=6;td.textContent=`Slice ${si}`;tr.appendChild(td);return tr;}
+  function renderTable(rows){tableBody.textContent="";rowsByKey.clear();populateSliceFilter(rows);const sorted=sortRows(rows);let currentDomain=null,currentSlice=null;sorted.forEach(row=>{if(row.domain!==currentDomain){currentDomain=row.domain;currentSlice=null;tableBody.appendChild(createDomainRow(currentDomain));}if(row.slice_idx!==currentSlice){currentSlice=row.slice_idx;tableBody.appendChild(createSliceHeaderRow(currentSlice));}const tr=createDataRow(row);rowsByKey.set(rowKey(row.param_id,row.slice_idx),tr);tableBody.appendChild(tr);});updateVisibility();}
+  function syncSummary(){const n=Array.from(tableBody.querySelectorAll("tr[data-key]")).filter(r=>r.style.display!=="none").length;summary.textContent=`${n} parameter${n===1?"":"s"}`;}
+  function updateEmptyState(){const total=rowsByKey.size,hasVisible=Array.from(rowsByKey.values()).some(r=>r.style.display!=="none");emptyState.classList.toggle("visible",total===0||!hasVisible);emptyState.textContent=total===0?"No snapshot data yet":"No matching parameters";tableWrap.classList.toggle("hidden",total===0);}
+  function updateDomainHeaders(){tableBody.querySelectorAll("tr[data-domain-header]").forEach(h=>{const domain=h.dataset.domainHeader,vis=Array.from(rowsByKey.values()).filter(r=>r.dataset.domain===domain).some(r=>r.style.display!=="none");h.style.display=vis?"":"none";});}
+  function populateSliceFilter(rows){const selected=sliceFilter.value,slices=[...new Set(rows.map(r=>r.slice_idx).filter(Boolean))].sort((a,b)=>a.localeCompare(b,undefined,{numeric:true}));sliceFilter.innerHTML='<option value="">All Slices</option>';slices.forEach(slice=>{const opt=document.createElement("option");opt.value=slice;opt.textContent=`Slice ${slice}`;sliceFilter.appendChild(opt);});sliceFilter.value=slices.includes(selected)?selected:"";}
+  function ensureSliceOption(si){if(!si||[...sliceFilter.options].some(o=>o.value===si))return;const opt=document.createElement("option");opt.value=si;opt.textContent=`Slice ${si}`;sliceFilter.appendChild(opt);}
+  function updateSliceHeaders(){tableBody.querySelectorAll("tr[data-slice-header]").forEach(h=>{const slice=h.dataset.sliceHeader,vis=Array.from(rowsByKey.values()).filter(r=>r.dataset.slice===slice).some(r=>r.style.display!=="none");h.style.display=vis?"":"none";});}
+  function updateVisibility(){const q=searchInput.value.trim().toLowerCase(),selectedSlice=sliceFilter.value;rowsByKey.forEach(row=>{const ms=!q||row.dataset.paramId.startsWith(q)||row.dataset.field.includes(q),msl=!selectedSlice||row.dataset.slice===selectedSlice;row.style.display=(ms&&msl)?"":"none";});updateSliceHeaders();updateDomainHeaders();updateEmptyState();syncSummary();}
+  function flashCell(cell){cell.classList.remove("flash");void cell.offsetWidth;cell.classList.add("flash");setTimeout(()=>cell.classList.remove("flash"),500);}
+  function updateCell(row,sel,val){const cell=row.querySelector(sel);if(cell&&cell.textContent!==val){cell.textContent=val;flashCell(cell);}}
+  function compareRows(a,b){const d=a.domain.localeCompare(b.domain);if(d)return d;const p=a.param_id.localeCompare(b.param_id,undefined,{numeric:true});if(p)return p;return a.slice_idx.localeCompare(b.slice_idx,undefined,{numeric:true});}
+  function getRowData(tr){return{param_id:tr.children[0].textContent,field:tr.children[1].textContent,value:tr.children[2].textContent,unit:tr.children[3].textContent,domain:tr.children[4].textContent,slice_idx:tr.children[5].textContent};}
+  function ensureDomainHeader(domain){let h=Array.from(tableBody.querySelectorAll("tr[data-domain-header]")).find(x=>x.dataset.domainHeader===domain);if(h)return h;h=createDomainRow(domain);const next=Array.from(tableBody.querySelectorAll("tr[data-domain-header]")).find(x=>x.dataset.domainHeader.localeCompare(domain)>0);next?tableBody.insertBefore(h,next):tableBody.appendChild(h);return h;}
+  function insertNewRow(row){const tr=createDataRow(row);ensureSliceOption(row.slice_idx);const header=ensureDomainHeader(row.domain);let cursor=header.nextElementSibling;while(cursor&&!cursor.dataset.domainHeader){if(compareRows(row,getRowData(cursor))<0){tableBody.insertBefore(tr,cursor);rowsByKey.set(rowKey(row.param_id,row.slice_idx),tr);return tr;}cursor=cursor.nextElementSibling;}tableBody.insertBefore(tr,cursor);rowsByKey.set(rowKey(row.param_id,row.slice_idx),tr);return tr;}
+  function renderSnapshot(si,data){emptyState.classList.remove("visible");tableWrap.classList.remove("hidden");Object.entries(data||{}).forEach(([pid,param])=>{const row=normalizeParam(pid,param,si);if(!document.getElementById(`row-${row.slice_idx}-${row.param_id}`)){flashCell(insertNewRow(row).querySelector(".value"));}});updateVisibility();}
+  function insertOrUpdateRow(row){const key=rowKey(row.param_id,row.slice_idx),ex=rowsByKey.get(key);if(ex){updateCell(ex,".field",row.field);updateCell(ex,".value",row.value);updateCell(ex,".unit",row.unit);updateCell(ex,".domain",row.domain);updateCell(ex,".slice",row.slice_idx);updateVisibility();return;}flashCell(insertNewRow(row).querySelector(".value"));updateVisibility();}
 
   // ── Events log ──
-  function logEvent(type, detail) {
-    const li = document.createElement("li");
-    const ts = new Date().toLocaleString("en-GB", {hour12: false});
-    li.innerHTML = `<span>${ts}</span>${type}${detail ? " — " + detail : ""}`;
-    eventsList.prepend(li);
-    while (eventsList.children.length > 20) eventsList.lastElementChild.remove();
-  }
-
-  function sessionIdSuffix(sessionId) {
-    return sessionId ? ` #${String(sessionId).slice(-8)}` : "";
-  }
+  function logEvent(type,detail){const li=document.createElement("li");const ts=new Date().toLocaleString("en-GB",{hour12:false});li.innerHTML=`<span>${ts}</span>${type}${detail?" — "+detail:""}`;eventsList.prepend(li);while(eventsList.children.length>20)eventsList.lastElementChild.remove();}
+  function sessionIdSuffix(id){return id?` #${String(id).slice(-8)}`:"" ;}
 
   // ── WebSocket ──
-  function setConn(on) {
-    statusDot.classList.toggle("on", on);
-    statusText.textContent = on ? "Connected" : "Disconnected";
-  }
-
-
-  function scheduleReconnect() {
-    if (reconnectTimer) return;
-    reconnectTimer = setTimeout(() => { reconnectTimer = null; connectWS(); }, 3000);
-  }
-
-  function connectWS() {
-    if (socket && (socket.readyState === WebSocket.OPEN || socket.readyState === WebSocket.CONNECTING)) return;
-    socket = new WebSocket(`${location.protocol === "https:" ? "wss" : "ws"}://${location.host}/ws`);
-    socket.onopen = async () => {
-      setConn(true);
-      logEvent("WebSocket connected");
-    };
-
-    socket.onmessage = (ev) => {
-      let msg;
-      try { msg = JSON.parse(ev.data); } catch { return; }
-
-      const selected = deviceSelect.value;
-      if (msg.type !== "init" && (!selected || (msg.device_id && msg.device_id !== selected) || (!msg.device_id && !["estimate_result"].includes(msg.type)))) return;
-      
-
-      switch (msg.type) {
-
-        case "init": {
-          const sessions = msg.active_sessions || {};
-          const sessionsData = msg.sessions_data || {};
-          Object.entries(sessions).forEach(([device_id]) => {
-            if (![...deviceSelect.options].some(o => o.value === device_id)) {
-              const o = document.createElement("option");
-              o.value = device_id; o.textContent = device_id;
-              deviceSelect.appendChild(o);
-            }
-          });
-          const currentVal = deviceSelect.value;
-          const activeDevices = Object.keys(sessions);
-          const saved = localStorage.getItem("ufameasy_selected_device");
-          if (!currentVal || !sessions[currentVal]) {
-            const preferred = (saved && sessions[saved]) ? saved : null;
-              if (preferred) deviceSelect.value = preferred;
-          }
-          const selected = deviceSelect.value;
-          if (selected) {
-            if (sessionsData[selected]) {
-              const s = sessionsData[selected];
-              updateRuntime({ current_file: s.file_name, total_layers: s.total_layers, current_layer: 0 });
-            } else {
-              clearRuntime();
-              rtFile.textContent = "No active session";
-            }
-            if (saved) refreshSessions();
-            // If the init payload indicates an active session for the selected
-            // device, restore the dashboard by loading the session replay.
-            // This reuses the existing fetchSessionDetails -> updateReplayRuntime
-            // -> updateRuntime pipeline and preserves manual click behavior.
-            try {
-              const sessionId = sessions[selected];
-              if (sessionId && sessionsData[selected] && saved) {
-                // Call the same function used by session list clicks.
-                fetchSessionDetails(sessionId, sessionsData[selected]);
-              }
-            } catch (e) {
-              console.error('AUTO-RESTORE failed', e);
-            }
-          }
-          break;
-        }
-
-        case "session_reset":
-          tableBody.innerHTML = ""; rowsByKey.clear();
-          emptyState.classList.add("visible"); tableWrap.classList.add("hidden");
-          clearRuntime();
-          logEvent("session_reset");
-          break;
-
-        case "session_start":
-
-          updateRuntime({
-            current_file: msg.file_name,
-            total_layers: msg.total_layers,
-            current_layer: 0
-          });
-          refreshSessions();
-          logEvent("session_start", `${msg.file_name || ""}${sessionIdSuffix(msg.session_id)}`);
-          break;
-
-        case "session_end":
-          refreshSessions();
-          logEvent("session_end", `${msg.status || ""}${sessionIdSuffix(msg.session_id)}`);
-          break;
-
-        case "runtime_update": {
-          const d = msg.data || {};
-          updateRuntime({
-            current_layer:   d.current_layer   ?? d.RT005,
-            total_layers:    d.total_layers     ?? d.PS011,
-            current_file:    d.current_file     ?? d.RT013,
-            gas_enabled:     d.gas_enabled      ?? d.RT029,
-            laser_enabled:   d.laser_enabled    ?? d.RT027,
-            powder_enabled: d.powder_enabled ?? d.RT028,
-            light_enabled:  d.light_enabled  ?? d.RT031,
-            laser_power_pct: d.laser_power_pct  ?? d.DS010,
-            connected:       d.machine_connected ?? d.RT006,
-            connection_state: d.connection_state ?? d.RT007,
-          });
-          liveRuntimeData = { ...liveRuntimeData, ...d };
-          const pct = liveRuntimeData.progress_pct;
-          if (pct !== undefined && pct !== null) {
-            const p = Math.min(100, Math.max(0, Number(pct)));
-            document.getElementById("progressBar").style.width = p + "%";
-            document.getElementById("progressPct").textContent = p.toFixed(1) + "%";
-          }
-          renderLiveRuntimeGrid(liveRuntimeData);
-          logEvent("runtime_update");
-          break;
-        }
-
-        case "position_update": {
-          const d = (msg.data && msg.data.xma) ? msg.data.xma : (msg.data || {});
-          liveRuntimeData = { ...liveRuntimeData, xma_live: d };
-          renderLiveRuntimeGrid(liveRuntimeData);
-          break;
-        }
-
-        case "estimate_result": {
-          const d = msg.data || {};
-          estPowder.textContent = d.total_powder_g != null ? d.total_powder_g.toFixed(1) + "g" : "—";
-          estEfficiency.textContent = d.deposition_efficiency != null ? (d.deposition_efficiency * 100).toFixed(1) + "%" : "—";
-          estEnergy.textContent = d.total_energy_wh != null ? d.total_energy_wh.toFixed(2) : "—";
-          logEvent("estimate_result");
-          break;
-        }
-
-        case "snapshot": {
-          const si = String(msg.slice_idx || "");
-          let needInsert = false;
-          Object.entries(msg.data || {}).forEach(([pid, param]) => {
-            const row = normalizeParam(pid, param, si);
-            const ex = document.getElementById(`row-${row.slice_idx}-${row.param_id}`);
-            if (ex) updateCell(ex, ".value", row.value);
-            else needInsert = true;
-          });
-          if (needInsert) renderSnapshot(si, msg.data);
-          else updateVisibility();
-          logEvent("snapshot", `slice ${si}`);
-          break;
-        }
-
-        case "slice_update": {
-          const si = String(msg.slice_idx || "");
-          Object.entries(msg.data || {}).forEach(([pid, param]) => {
-            insertOrUpdateRow(normalizeParam(pid, param, si));
-          });
-          logEvent("slice_update", `slice ${si}`);
-          break;
-        }
+  function setConn(on){statusDot.classList.toggle("on",on);statusText.textContent=on?"Connected":"Disconnected";}
+  function scheduleReconnect(){if(reconnectTimer)return;reconnectTimer=setTimeout(()=>{reconnectTimer=null;connectWS();},3000);}
+  function connectWS(){
+    if(socket&&(socket.readyState===WebSocket.OPEN||socket.readyState===WebSocket.CONNECTING))return;
+    socket=new WebSocket(`${location.protocol==="https:"?"wss":"ws"}://${location.host}/ws`);
+    socket.onopen=async()=>{setConn(true);logEvent("WebSocket connected");};
+    socket.onmessage=(ev)=>{
+      let msg;try{msg=JSON.parse(ev.data);}catch{return;}
+      const selected=deviceSelect.value;
+      if(msg.type!=="init"&&(!selected||(msg.device_id&&msg.device_id!==selected)||(!msg.device_id&&!["estimate_result"].includes(msg.type))))return;
+      switch(msg.type){
+        case "init":{const sessions=msg.active_sessions||{},sessionsData=msg.sessions_data||{};Object.entries(sessions).forEach(([did])=>{if(![...deviceSelect.options].some(o=>o.value===did)){const o=document.createElement("option");o.value=did;o.textContent=did;deviceSelect.appendChild(o);}});const currentVal=deviceSelect.value,saved=localStorage.getItem("ufameasy_selected_device");if(!currentVal||!sessions[currentVal]){const preferred=(saved&&sessions[saved])?saved:null;if(preferred)deviceSelect.value=preferred;}const sel=deviceSelect.value;if(sel){if(sessionsData[sel]){const s=sessionsData[sel];updateRuntime({current_file:s.file_name,total_layers:s.total_layers,current_layer:0});}else{clearRuntime();rtFile.textContent="No active session";}if(saved)refreshSessions();try{const sessionId=sessions[sel];if(sessionId&&sessionsData[sel]&&saved)fetchSessionDetails(sessionId,sessionsData[sel]);}catch(e){console.error("AUTO-RESTORE failed",e);}}break;}
+        case "session_reset":tableBody.innerHTML="";rowsByKey.clear();emptyState.classList.add("visible");tableWrap.classList.add("hidden");clearRuntime();logEvent("session_reset");break;
+        case "session_start":updateRuntime({current_file:msg.file_name,total_layers:msg.total_layers,current_layer:0});refreshSessions();logEvent("session_start",`${msg.file_name||""}${sessionIdSuffix(msg.session_id)}`);break;
+        case "session_end":currentMachineConnected=false;refreshSessions();logEvent("session_end",`${msg.status||""}${sessionIdSuffix(msg.session_id)}`);break;
+        case "runtime_update":{const d=msg.data||{};updateRuntime({current_layer:d.current_layer??d.RT005,total_layers:d.total_layers??d.PS011,current_file:d.current_file??d.RT013,gas_enabled:d.gas_enabled??d.RT029,laser_enabled:d.laser_enabled??d.RT027,powder_enabled:d.powder_enabled??d.RT028,light_enabled:d.light_enabled??d.RT031,laser_power_pct:d.laser_power_pct??d.DS010,connected:d.machine_connected??d.RT006,connection_state:d.connection_state??d.RT007,_live_connection:true});liveRuntimeData={...liveRuntimeData,...d};const pct=liveRuntimeData.progress_pct;if(pct!==undefined&&pct!==null){const p=Math.min(100,Math.max(0,Number(pct)));document.getElementById("progressBar").style.width=p+"%";document.getElementById("progressPct").textContent=p.toFixed(1)+"%";}renderLiveRuntimeGrid(liveRuntimeData);logEvent("runtime_update");break;}
+        case "position_update":{const d=(msg.data&&msg.data.xma)?msg.data.xma:(msg.data||{});liveRuntimeData={...liveRuntimeData,xma_live:d};renderLiveRuntimeGrid(liveRuntimeData);updatePositionDisplay(d);break;}
+        case "estimate_result":{const d=msg.data||{};estPowder.textContent=d.total_powder_g!=null?d.total_powder_g.toFixed(1)+"g":"—";estEfficiency.textContent=d.deposition_efficiency!=null?(d.deposition_efficiency*100).toFixed(1)+"%":"—";estEnergy.textContent=d.total_energy_wh!=null?d.total_energy_wh.toFixed(2):"—";logEvent("estimate_result");break;}
+        case "snapshot":{const si=String(msg.slice_idx||"");let needInsert=false;Object.entries(msg.data||{}).forEach(([pid,param])=>{const row=normalizeParam(pid,param,si);const ex=document.getElementById(`row-${row.slice_idx}-${row.param_id}`);if(ex)updateCell(ex,".value",row.value);else needInsert=true;});if(needInsert)renderSnapshot(si,msg.data);else updateVisibility();logEvent("snapshot",`slice ${si}`);break;}
+        case "slice_update":{const si=String(msg.slice_idx||"");Object.entries(msg.data||{}).forEach(([pid,param])=>{insertOrUpdateRow(normalizeParam(pid,param,si));});logEvent("slice_update",`slice ${si}`);break;}
       }
     };
-
-    socket.onerror = () => setConn(false);
-    socket.onclose = () => { setConn(false); scheduleReconnect(); };
+    socket.onerror=()=>setConn(false);
+    socket.onclose=()=>{setConn(false);scheduleReconnect();};
   }
 
-  deviceSelect.addEventListener("change", () => {
-    const id = deviceSelect.value;
-    document.getElementById("btnParams").style.display = id ? "" : "none";
-    document.getElementById("btnSessions").style.display = id ? "" : "none";
-    document.querySelector(".params-area") && document.getElementById("secParams").classList.remove("open");
-  });
+  deviceSelect.addEventListener("change",()=>{const id=deviceSelect.value;const autoIp=getSelectedMachineIp();if(autoIp&&!getSharedIp())document.getElementById("sharedIpInput").value=autoIp;document.querySelector("#secParams")&&document.getElementById("secParams").classList.remove("open");});
+  searchInput.addEventListener("input",updateVisibility);
+  sliceFilter.addEventListener("change",updateVisibility);
+  logsSearchInput.addEventListener("input",applyLogFilters);
+  logsCategoryFilter.addEventListener("change",applyLogFilters);
+  logsSeverityFilter.addEventListener("change",applyLogFilters);
+  logsRefreshBtn.addEventListener("click",()=>viewLogsIp(currentLogsIp||getSharedIp()));
 
-  searchInput.addEventListener("input", updateVisibility);
-  sliceFilter.addEventListener("change", updateVisibility);
-
-  // ── Init ──
+  // Init
   loadDevices();
   connectWS();
+  // Resize chart on window resize
+  window.addEventListener("resize",drawPosChart);
 </script>
 </body>
 </html>

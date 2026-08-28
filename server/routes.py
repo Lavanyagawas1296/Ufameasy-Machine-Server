@@ -15,10 +15,13 @@ import mimetypes
 import os
 import posixpath
 import queue
+import socket
 import sqlite3
 import tempfile
 import threading
 from datetime import datetime
+from pathlib import Path
+from fastapi.responses import FileResponse
 
 from fastapi import APIRouter, HTTPException
 from fastapi.responses import Response, StreamingResponse
@@ -109,6 +112,20 @@ def _telemetry_db_bytes_to_csv(db_bytes: bytes) -> bytes:
 
 def _fetch_telemetry_events_csv(ip: str, port: int) -> bytes:
     return _download_log_bytes(ip, port)
+
+
+def _fetch_log_csv(ip: str) -> list[dict]:
+    try:
+        with _ftp_connect(ip) as ftp:
+            buf = io.BytesIO()
+            ftp.retrbinary("RETR ufameasy_sys.csv", buf.write)
+            buf.seek(0)
+            reader = csv.DictReader(io.TextIOWrapper(buf, encoding="utf-8"))
+            return [row for row in reader]
+    except ftplib.error_perm as exc:
+        raise RecordingFetchError(404, f"Log file not found: {exc}") from exc
+    except ftplib.all_errors as exc:
+        raise RecordingFetchError(502, f"FTP error fetching logs: {exc}") from exc
 
 
 def _safe_log_filename(ip: str) -> str:
@@ -292,6 +309,19 @@ def _assert_recording_exists(ip: str, remote_path: str) -> None:
         raise RecordingFetchError(502, f"Unable to access recording: {exc}") from exc
 
 
+def _delete_recording_ftp(ip: str, remote_path: str) -> None:
+    try:
+        with _ftp_connect(ip) as ftp:
+            print(f"[DELETE] attempting ftp.delete({remote_path!r})")
+            ftp.delete(remote_path)
+    except ftplib.error_perm as exc:
+        print(f"[DELETE] perm error: {exc}")
+        raise RecordingFetchError(404, f"Recording not found or already deleted: {exc}") from exc
+    except ftplib.all_errors as exc:
+        print(f"[DELETE] ftp error: {exc}")
+        raise RecordingFetchError(502, f"FTP error during delete: {exc}") from exc
+
+
 def _stream_recording(ip: str, remote_path: str):
     chunks: queue.Queue[bytes | Exception | None] = queue.Queue(maxsize=8)
 
@@ -439,6 +469,38 @@ async def fetch_logs(ip: str, port: int = 2121):
         headers={"Content-Disposition": f"attachment; filename=ufameasy_logs_{ip}.csv"},
     )
 
+@router.get("/logs/view")
+async def view_logs(ip: str):
+    ip = ip.strip()
+    if not ip:
+        raise HTTPException(status_code=400, detail="ip is required")
+    loop = asyncio.get_running_loop()
+    try:
+        rows = await loop.run_in_executor(None, _fetch_log_csv, ip)
+    except RecordingFetchError as exc:
+        raise HTTPException(status_code=exc.status_code, detail=exc.detail) from exc
+    return {"logs": rows}
+
+@router.get("/camera/check")
+async def check_camera(ip: str, port: int = 8765):
+    ip = ip.strip()
+    if not ip:
+        raise HTTPException(status_code=400, detail="ip is required")
+    if port < 1 or port > 65535:
+      raise HTTPException(status_code=400, detail="port must be between 1 and 65535")
+
+    loop = asyncio.get_running_loop()
+
+    def _can_connect() -> bool:
+        try:
+            with socket.create_connection((ip, port), timeout=0.75):
+                return True
+        except OSError:
+            return False
+
+    available = await loop.run_in_executor(None, _can_connect)
+    return {"available": available, "ip": ip, "port": port}
+
 @router.get("/recordings")
 async def get_recordings(ip: str, device_id: str | None = None):
     ip = ip.strip()
@@ -462,19 +524,30 @@ async def download_recording(ip: str, file: str):
     except RecordingFetchError as exc:
         raise HTTPException(status_code=exc.status_code, detail=exc.detail) from exc
 
-    loop = asyncio.get_running_loop()
-    try:
-        await loop.run_in_executor(None, _assert_recording_exists, ip, remote_path)
-    except RecordingFetchError as exc:
-        raise HTTPException(status_code=exc.status_code, detail=exc.detail) from exc
+    local_relative_path = Path(*remote_path.split("/")[1:])
+    local_path = Path.home() / ".ufameasy" / "recordings" / local_relative_path
+    if not local_path.exists():
+        raise HTTPException(status_code=404, detail="Recording not found")
 
     filename = _safe_download_filename(remote_path)
     media_type = mimetypes.guess_type(filename)[0] or "application/octet-stream"
-    return StreamingResponse(
-        _stream_recording(ip, remote_path),
-        media_type=media_type,
-        headers={"Content-Disposition": f'inline; filename="{filename}"'},
-    )
+    return FileResponse(local_path, media_type=media_type, filename=filename)
+
+@router.delete("/recordings/{filename:path}")
+async def delete_recording(filename: str, ip: str):
+    ip = ip.strip()
+    if not ip:
+        raise HTTPException(status_code=400, detail="ip is required")
+    try:
+        remote_path = _safe_recording_file_path(filename)
+    except RecordingFetchError as exc:
+        raise HTTPException(status_code=exc.status_code, detail=exc.detail) from exc
+    loop = asyncio.get_running_loop()
+    try:
+        await loop.run_in_executor(None, _delete_recording_ftp, ip, remote_path)
+    except RecordingFetchError as exc:
+        raise HTTPException(status_code=exc.status_code, detail=exc.detail) from exc
+    return {"deleted": filename}
 
 @router.get("/sessions")
 def list_sessions():
