@@ -8,7 +8,6 @@ ingest side of the MQTT -> StateStore -> API architecture.
 import asyncio
 import json
 import threading
-import time
 import paho.mqtt.client as mqtt
 
 from server.db import (
@@ -25,8 +24,6 @@ from server.ws_manager import manager
 
 mqtt_event_loop = None
 _active_sessions = {}
-last_position_ts: dict[str, float] = {}
-device_connected: dict[str, bool] = {}
 
 
 def _log_broadcast_error(future):
@@ -46,23 +43,6 @@ def _broadcast(message):
             mqtt_event_loop,
         )
         future.add_done_callback(_log_broadcast_error)
-
-
-async def _staleness_monitor():
-    while True:
-        await asyncio.sleep(0.5)
-        now = time.time()
-        for device_id, ts in list(last_position_ts.items()):
-            if now - ts > 2.0 and device_connected.get(device_id, True) is True:
-                device_connected[device_id] = False
-                _broadcast({
-                    "type": "runtime_update",
-                    "device_id": device_id,
-                    "data": {
-                        "machine_connected": False,
-                        "connection_state": "stale",
-                    },
-                })
 
 
 def on_connect(client, userdata, flags, reason_code, properties=None):
@@ -211,7 +191,6 @@ def on_message(client, userdata, msg):
             data = json.loads(payload)
             session_id = data.get("session_id") or _active_sessions.get(device_id)
             status = data.get("status") or "ended"
-            device_connected[device_id] = False
 
             if session_id:
                 try:
@@ -227,15 +206,6 @@ def on_message(client, userdata, msg):
                 "device_id": device_id,
                 "session_id": session_id,
                 "status": status,
-            })
-            _broadcast({
-                "type": "runtime_update",
-                "device_id": device_id,
-                "session_id": session_id,
-                "data": {
-                    "machine_connected": False,
-                    "connection_state": "explicit_disconnect",
-                },
             })
             return
 
@@ -260,34 +230,8 @@ def on_message(client, userdata, msg):
             })
             return
 
-        if topic_parts[2:] == ["machine", "config"]:
-            data = json.loads(payload)
-            session_id = data.get("session_id")
-
-            for key, value in data.items():
-                state.update_parameter(device_id, key, value)
-
-            _broadcast({
-                "type": "runtime_update",
-                "device_id": device_id,
-                "session_id": session_id,
-                "data": data,
-            })
-            return
-
         if topic_parts[2:] == ["runtime", "position"]:
             data = json.loads(payload)
-            last_position_ts[device_id] = time.time()
-            if device_connected.get(device_id) is not True:
-                device_connected[device_id] = True
-                _broadcast({
-                    "type": "runtime_update",
-                    "device_id": device_id,
-                    "data": {
-                        "machine_connected": True,
-                        "connection_state": "connected",
-                    },
-                })
             _broadcast({
                 "type": "position_update",
                 "device_id": device_id,
@@ -395,4 +339,3 @@ def start_mqtt():
     client.connect("localhost", 1883, 60)
     # loop_start avoids blocking FastAPI startup while callbacks keep running.
     client.loop_start()
-    asyncio.run_coroutine_threadsafe(_staleness_monitor(), mqtt_event_loop)

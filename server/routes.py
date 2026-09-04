@@ -19,7 +19,7 @@ import socket
 import sqlite3
 import tempfile
 import threading
-from datetime import datetime, timezone
+from datetime import datetime
 from pathlib import Path
 from fastapi.responses import FileResponse
 
@@ -33,10 +33,6 @@ router = APIRouter()
 REMOTE_LOG_PATH = "ufameasy_sys.csv"
 FTP_PORT = 2121
 RECORDINGS_ROOT = "recordings"
-UFAMEASY_HOME = Path.home() / ".ufameasy"
-LOCAL_RECORDINGS_ROOT = UFAMEASY_HOME / "recordings"
-LOCAL_TELEMETRY_DIR = UFAMEASY_HOME / "telemetry"
-LOCAL_TELEMETRY_DB_NAMES = ("ufameasy_sys.u5d", "ufameasy_sys.U5LOG", "ufameasy_logs.db")
 
 
 class LogFetchError(Exception):
@@ -66,60 +62,6 @@ def _download_log_bytes(ip: str, port: int) -> bytes:
     data = buffer.getvalue()
     if not data:
         raise LogFetchError(404, "Fetched log file is empty")
-    return data
-
-
-def _local_telemetry_db_path() -> Path | None:
-    for filename in LOCAL_TELEMETRY_DB_NAMES:
-        path = LOCAL_TELEMETRY_DIR / filename
-        if path.exists() and path.is_file():
-            return path
-    return None
-
-
-def _read_telemetry_rows(db_path: Path) -> list[dict]:
-    try:
-        conn = sqlite3.connect(f"{db_path.as_uri()}?mode=ro", uri=True, timeout=2)
-        conn.row_factory = sqlite3.Row
-        try:
-            rows = conn.execute("SELECT * FROM telemetry_events ORDER BY id DESC").fetchall()
-            return [dict(row) for row in rows]
-        finally:
-            conn.close()
-    except sqlite3.OperationalError as exc:
-        detail = "telemetry_events table not found" if "no such table" in str(exc).lower() else str(exc)
-        raise LogFetchError(422, detail) from exc
-    except sqlite3.DatabaseError as exc:
-        raise LogFetchError(422, f"Local telemetry database is not readable: {exc}") from exc
-    except OSError as exc:
-        raise LogFetchError(500, f"Unable to read local telemetry database: {exc}") from exc
-
-
-def _rows_to_csv_bytes(rows: list[dict]) -> bytes:
-    output = io.StringIO(newline="")
-    if not rows:
-        return b""
-    headers = list(rows[0].keys())
-    writer = csv.DictWriter(output, fieldnames=headers, extrasaction="ignore")
-    writer.writeheader()
-    writer.writerows(rows)
-    return output.getvalue().encode("utf-8")
-
-
-def _local_log_rows() -> list[dict] | None:
-    db_path = _local_telemetry_db_path()
-    if not db_path:
-        return None
-    return _read_telemetry_rows(db_path)
-
-
-def _local_log_csv_bytes() -> bytes | None:
-    rows = _local_log_rows()
-    if rows is None:
-        return None
-    data = _rows_to_csv_bytes(rows)
-    if not data:
-        raise LogFetchError(404, "Local telemetry log is empty")
     return data
 
 
@@ -169,17 +111,10 @@ def _telemetry_db_bytes_to_csv(db_bytes: bytes) -> bytes:
 
 
 def _fetch_telemetry_events_csv(ip: str, port: int) -> bytes:
-    local_bytes = _local_log_csv_bytes()
-    if local_bytes is not None:
-        return local_bytes
     return _download_log_bytes(ip, port)
 
 
 def _fetch_log_csv(ip: str) -> list[dict]:
-    local_rows = _local_log_rows()
-    if local_rows is not None:
-        return local_rows
-
     try:
         with _ftp_connect(ip) as ftp:
             buf = io.BytesIO()
@@ -203,11 +138,6 @@ def _ftp_connect(ip: str, port: int = FTP_PORT) -> ftplib.FTP:
     ftp.connect(ip, port, timeout=10)
     ftp.login()
     return ftp
-
-
-def _local_recording_path(remote_path: str) -> Path:
-    local_relative_path = Path(*remote_path.split("/")[1:])
-    return LOCAL_RECORDINGS_ROOT / local_relative_path
 
 
 def _safe_device_folder(device_id: str) -> str:
@@ -267,43 +197,6 @@ def _recording_metadata(ftp: ftplib.FTP, device_id: str, filename: str, facts: d
         "size": int(size) if size not in (None, "") else None,
         "modified_at": _ftp_timestamp(modified_at),
     }
-
-
-def _local_recording_metadata(device_id: str, path: Path) -> dict:
-    stat = path.stat()
-    return {
-        "device_id": device_id,
-        "filename": path.name,
-        "path": f"{device_id}/{path.name}",
-        "size": stat.st_size,
-        "modified_at": datetime.fromtimestamp(stat.st_mtime, timezone.utc).isoformat().replace("+00:00", "Z"),
-    }
-
-
-def _list_local_device_recordings(device_id: str) -> list[dict] | None:
-    folder = LOCAL_RECORDINGS_ROOT / _safe_device_folder(device_id)
-    if not folder.exists():
-        return None
-    if not folder.is_dir():
-        raise RecordingFetchError(404, f"Recordings path is not a folder for device_id '{device_id}'")
-    return [
-        _local_recording_metadata(device_id, path)
-        for path in sorted(folder.iterdir(), key=lambda item: item.stat().st_mtime, reverse=True)
-        if path.is_file()
-    ]
-
-
-def _list_local_recordings(device_id: str | None = None) -> list[dict] | None:
-    if not LOCAL_RECORDINGS_ROOT.exists():
-        return None
-    if device_id:
-        return _list_local_device_recordings(device_id)
-
-    recordings = []
-    for folder in sorted(LOCAL_RECORDINGS_ROOT.iterdir()):
-        if folder.is_dir():
-            recordings.extend(_list_local_device_recordings(folder.name) or [])
-    return recordings
 
 
 def _list_device_recordings(ftp: ftplib.FTP, device_id: str) -> list[dict]:
@@ -372,10 +265,6 @@ def _list_recording_device_folders(ftp: ftplib.FTP) -> list[str]:
 
 
 def _list_recordings(ip: str, device_id: str | None = None) -> list[dict]:
-    local_recordings = _list_local_recordings(device_id)
-    if local_recordings is not None:
-        return local_recordings
-
     try:
         with _ftp_connect(ip) as ftp:
             if device_id:
@@ -588,7 +477,7 @@ async def view_logs(ip: str):
     loop = asyncio.get_running_loop()
     try:
         rows = await loop.run_in_executor(None, _fetch_log_csv, ip)
-    except LogFetchError as exc:
+    except RecordingFetchError as exc:
         raise HTTPException(status_code=exc.status_code, detail=exc.detail) from exc
     return {"logs": rows}
 
@@ -625,7 +514,7 @@ async def get_recordings(ip: str, device_id: str | None = None):
         raise HTTPException(status_code=exc.status_code, detail=exc.detail) from exc
 
 @router.get("/recordings/download")
-async def download_recording(ip: str, file: str, download: bool = False):
+async def download_recording(ip: str, file: str):
     ip = ip.strip()
     if not ip:
         raise HTTPException(status_code=400, detail="ip is required")
@@ -635,27 +524,14 @@ async def download_recording(ip: str, file: str, download: bool = False):
     except RecordingFetchError as exc:
         raise HTTPException(status_code=exc.status_code, detail=exc.detail) from exc
 
+    local_relative_path = Path(*remote_path.split("/")[1:])
+    local_path = Path.home() / ".ufameasy" / "recordings" / local_relative_path
+    if not local_path.exists():
+        raise HTTPException(status_code=404, detail="Recording not found")
+
     filename = _safe_download_filename(remote_path)
     media_type = mimetypes.guess_type(filename)[0] or "application/octet-stream"
-    disposition = "attachment" if download else "inline"
-    local_path = _local_recording_path(remote_path)
-    if local_path.exists() and local_path.is_file():
-        return FileResponse(
-            local_path,
-            media_type=media_type,
-            headers={"Content-Disposition": f'{disposition}; filename="{filename}"'},
-        )
-
-    try:
-        _assert_recording_exists(ip, remote_path)
-    except RecordingFetchError as exc:
-        raise HTTPException(status_code=exc.status_code, detail=exc.detail) from exc
-
-    return StreamingResponse(
-        _stream_recording(ip, remote_path),
-        media_type=media_type,
-        headers={"Content-Disposition": f'{disposition}; filename="{filename}"'},
-    )
+    return FileResponse(local_path, media_type=media_type, filename=filename)
 
 @router.delete("/recordings/{filename:path}")
 async def delete_recording(filename: str, ip: str):

@@ -6,7 +6,6 @@ startup, and exposes lightweight state and health-style endpoints. This
 module connects the HTTP layer to the shared in-memory state store.
 """
 
-import logging
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
@@ -16,21 +15,6 @@ from server.mqtt_client import start_mqtt
 from server.routes import router
 from server.ws_manager import manager
 from server.db import init_db
-
-
-class _IgnoreWinSemaphoreTimeout(logging.Filter):
-    def filter(self, record):
-        exc = record.exc_info[1] if record.exc_info else None
-        return not (
-            isinstance(exc, OSError)
-            and getattr(exc, "winerror", None) == 121
-            and "data transfer failed" in record.getMessage()
-        )
-
-
-logging.getLogger("websockets.protocol").addFilter(_IgnoreWinSemaphoreTimeout())
-logging.getLogger("websockets.legacy.protocol").addFilter(_IgnoreWinSemaphoreTimeout())
-logging.getLogger("websockets.server").addFilter(_IgnoreWinSemaphoreTimeout())
 
 
 @asynccontextmanager
@@ -123,7 +107,7 @@ async def websocket_endpoint(websocket: WebSocket):
     try:
         while True:
             await websocket.receive_text()
-    except (WebSocketDisconnect, OSError):
+    except WebSocketDisconnect:
         pass
     finally:
         await manager.disconnect(websocket)
