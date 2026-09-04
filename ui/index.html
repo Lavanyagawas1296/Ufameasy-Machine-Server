@@ -109,7 +109,11 @@
     .recordings-player{width:100%;max-height:480px;background:#111;border:1px solid var(--border);border-radius:10px;display:block;}
     .recording-head{display:flex;align-items:flex-start;gap:8px;}
     .recording-head .recording-name{flex:1;min-width:0;}
-    .recording-delete{border:1px solid var(--border);border-radius:6px;background:var(--panel);color:var(--red);cursor:pointer;flex:0 0 auto;font-family:var(--font-ui);font-size:11px;padding:4px 8px;}
+    .recording-actions{display:flex;gap:6px;flex:0 0 auto;}
+    .recording-action{border:1px solid var(--border);border-radius:6px;background:var(--panel);cursor:pointer;font-family:var(--font-ui);font-size:11px;padding:4px 8px;}
+    .recording-download{color:var(--accent);}
+    .recording-delete{color:var(--red);}
+    .recording-action:hover{background:var(--accent-soft);border-color:var(--accent);}
     .recording-delete:hover{border-color:var(--red);background:var(--danger-soft);}
     /* LOGS */
     .logs-toolbar{display:flex;align-items:center;gap:10px;margin-bottom:14px;flex-wrap:wrap;}
@@ -119,20 +123,7 @@
     .logs-status{color:var(--muted);font-size:13px;margin-bottom:8px;}
     .logs-table-wrap{max-height:460px;}
     .logs-table-wrap table{min-width:760px;}
-    /* POSITION */
-    .position-widget{display:flex;gap:16px;align-items:stretch;flex-wrap:wrap;padding:20px 24px;}
-    .position-chart-card{background:var(--panel);border:1px solid var(--border);border-radius:10px;padding:16px;flex:1;min-width:300px;}
     .card-title{font-size:11px;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;color:var(--muted);margin-bottom:12px;}
-    .pos-canvas{width:100%;height:150px;border-radius:6px;background:var(--panel2);display:block;}
-    .chart-legend{display:flex;gap:14px;margin-top:8px;font-size:11px;font-family:var(--font-mono);}
-    .legend-item{display:flex;align-items:center;gap:5px;}
-    .legend-dot{width:8px;height:8px;border-radius:50%;}
-    .position-nums-card{background:var(--panel);border:1px solid var(--border);border-radius:10px;padding:20px 24px;display:flex;flex-direction:column;justify-content:center;gap:14px;min-width:160px;}
-    .pos-axis{display:flex;align-items:baseline;gap:10px;}
-    .pos-axis-label{font-size:13px;font-weight:700;width:16px;}
-    .pos-axis-val{font-family:var(--font-mono);font-size:26px;font-weight:700;color:var(--text);letter-spacing:-0.02em;}
-    .pos-axis-unit{font-family:var(--font-mono);font-size:12px;color:var(--muted);}
-    .pos-axis-label.x{color:#3B82F6;} .pos-axis-label.y{color:#10B981;} .pos-axis-label.z{color:#F59E0B;}
     /* CAMERA */
     .camera-section{padding:0 24px 20px;}
     .camera-collapsed-card{display:flex;align-items:center;gap:12px;padding:14px 18px;background:var(--panel);border:1px solid var(--border);border-radius:10px;}
@@ -169,7 +160,7 @@
     @media(max-width:700px){
       .runtime-row,.recordings-layout{flex-direction:column;grid-template-columns:1fr;}
       .topbar{flex-wrap:wrap;height:auto;padding:10px;}
-      .section-content,.machine-access-area,.sessions-area,.position-widget,.camera-section{padding-left:12px;padding-right:12px;}
+      .section-content,.machine-access-area,.sessions-area,.camera-section{padding-left:12px;padding-right:12px;}
       .tab-bar,.events-wrap{padding-left:12px;padding-right:12px;}
       .events-wrap{margin-left:12px;margin-right:12px;}
     }
@@ -211,25 +202,6 @@
     <div class="rt-card"><div class="label">Dep. Efficiency</div><div class="val" id="est-efficiency">&mdash;</div></div>
     <div class="rt-card"><div class="label">Energy (Wh)</div><div class="val" id="est-energy">&mdash;</div></div>
     <div class="rt-card wide full-width"><div class="label">Live Runtime Parameters</div><div id="rtLiveGrid" class="live-grid"></div></div>
-  </div>
-</div>
-
-<!-- LIVE POSITION -->
-<div class="position-widget">
-  <div class="position-chart-card">
-    <div class="card-title">Live Position &mdash; XYZ Trace</div>
-    <canvas id="posCanvas" class="pos-canvas"></canvas>
-    <div class="chart-legend">
-      <div class="legend-item"><div class="legend-dot" style="background:#3B82F6"></div>X</div>
-      <div class="legend-item"><div class="legend-dot" style="background:#10B981"></div>Y</div>
-      <div class="legend-item"><div class="legend-dot" style="background:#F59E0B"></div>Z</div>
-    </div>
-  </div>
-  <div class="position-nums-card">
-    <div class="card-title">Position</div>
-    <div class="pos-axis"><span class="pos-axis-label x">X</span><span class="pos-axis-val" id="posX">0.000</span><span class="pos-axis-unit">mm</span></div>
-    <div class="pos-axis"><span class="pos-axis-label y">Y</span><span class="pos-axis-val" id="posY">0.000</span><span class="pos-axis-unit">mm</span></div>
-    <div class="pos-axis"><span class="pos-axis-label z">Z</span><span class="pos-axis-val" id="posZ">0.000</span><span class="pos-axis-unit">mm</span></div>
   </div>
 </div>
 
@@ -388,38 +360,6 @@
   }
   function toggleSection(name){openSection(name);}
 
-  // ── Position chart ──
-  const POS_MAX=80;
-  const posHistory={x:[],y:[],z:[]};
-  function pushPos(x,y,z){
-    [posHistory.x,posHistory.y,posHistory.z].forEach((arr,i)=>{arr.push([x,y,z][i]);if(arr.length>POS_MAX)arr.shift();});
-  }
-  function drawPosChart(){
-    const canvas=document.getElementById("posCanvas");if(!canvas)return;
-    const dpr=window.devicePixelRatio||1;
-    canvas.width=canvas.offsetWidth*dpr;canvas.height=canvas.offsetHeight*dpr;
-    const ctx=canvas.getContext("2d");ctx.scale(dpr,dpr);
-    const W=canvas.offsetWidth,H=canvas.offsetHeight,pad=10;
-    ctx.clearRect(0,0,W,H);
-    const all=[...posHistory.x,...posHistory.y,...posHistory.z];
-    if(all.length===0)return;
-    const mn=Math.min(...all),mx=Math.max(...all),range=mx-mn||1;
-    const scaleY=v=>(H-2*pad)*(1-(v-mn)/range)+pad;
-    [[posHistory.x,"#3B82F6"],[posHistory.y,"#10B981"],[posHistory.z,"#F59E0B"]].forEach(([arr,color])=>{
-      if(arr.length<2)return;
-      ctx.beginPath();ctx.strokeStyle=color;ctx.lineWidth=2;ctx.lineJoin="round";
-      arr.forEach((v,i)=>{const x=pad+(i/(POS_MAX-1))*(W-2*pad);const y=scaleY(v);i===0?ctx.moveTo(x,y):ctx.lineTo(x,y);});
-      ctx.stroke();
-    });
-  }
-  function updatePositionDisplay(xma){
-    const arr=Array.isArray(xma)?xma:Object.values(xma||{});
-    const x=Number(arr[0])||0,y=Number(arr[1])||0,z=Number(arr[2])||0;
-    document.getElementById("posX").textContent=x.toFixed(3);
-    document.getElementById("posY").textContent=y.toFixed(3);
-    document.getElementById("posZ").textContent=z.toFixed(3);
-    pushPos(x,y,z);drawPosChart();
-  }
   // ── Shared IP + Machine Access buttons ──
   function getSharedIp(){return (document.getElementById("sharedIpInput").value||"").trim();}
   function requireIp(){const ip=getSharedIp();if(!ip){showToast("Enter a machine IP address first.",true);}return ip;}
@@ -468,6 +408,16 @@
   // ── Runtime helpers ──
   function pill(on){return `<span class="pill ${on?'on':'off'}">${on?'ON':'OFF'}</span>`;}
   function stateBadge(c){return `<span class="state-badge ${c?'connected':'disconnected'}">${c?'CONNECTED':'DISCONNECTED'}</span>`;}
+  function emptyRuntimeSwitches(){
+    rtGas.textContent="—";rtLaser.textContent="—";
+    document.getElementById("rtPowder").textContent="—";document.getElementById("rtLight").textContent="—";
+  }
+  function clearMachineRuntimeValues(){
+    emptyRuntimeSwitches();rtPower.textContent="—";
+    if(rtProgFill)rtProgFill.style.width="0%";if(progressPct)progressPct.textContent="—";
+    estPowder.textContent="—";estEfficiency.textContent="—";estEnergy.textContent="—";
+    liveRuntimeData={};renderLiveRuntimeGrid(liveRuntimeData);
+  }
   function normalizeConnected(v){
     if(typeof v==="boolean")return v;if(typeof v==="number")return v!==0;
     if(typeof v==="string"){const s=v.trim().toLowerCase();if(["connected","online","true","1","yes"].includes(s))return true;if(["disconnected","offline","false","0","no"].includes(s))return false;}
@@ -492,10 +442,13 @@
     });
   }
   function latestRuntimeRecord(r){return Array.isArray(r)&&r.length?r[r.length-1]:null;}
+  function isFreshRuntimeRecord(r){const t=Date.parse(r&&r.recorded_at||"");return Number.isFinite(t)&&Date.now()-t<=2500;}
   function updateReplayRuntime(records,ss={}){
     const d=latestRuntimeRecord(records)||{};
-    updateRuntime({current_layer:d.current_layer??d.RT005,total_layers:d.total_layers??d.PS011??ss.total_layers,current_file:d.current_file??d.file_name??d.RT013??ss.file_name,gas_enabled:d.gas_enabled??d.RT029,laser_enabled:d.laser_enabled??d.laser_on??d.RT027,laser_power_pct:d.laser_power_pct??d.laser_power??d.DS010,connected:d.machine_connected??d.connected??d.RT006,connection_state:d.connection_state??d.RT007,estimated_time:d.estimated_time??d.total_time_fmt,powder_usage:d.powder_usage??d.total_powder_g,deposition_efficiency:d.deposition_efficiency,energy:d.energy??d.total_energy_wh});
-    liveRuntimeData={...d,xma_live:(()=>{try{return JSON.parse(d.xma);}catch(e){return null;}})(),laser_enabled:d.laser_on,laser_power_pct:d.laser_power};
+    const fresh=isFreshRuntimeRecord(d);
+    const replayConnected=fresh?normalizeConnected(d.machine_connected??d.connected??d.RT006):false;
+    updateRuntime({current_layer:d.current_layer??d.RT005,total_layers:d.total_layers??d.PS011??ss.total_layers,current_file:d.current_file??d.file_name??d.RT013??ss.file_name,gas_enabled:d.gas_enabled??d.RT029,laser_enabled:d.laser_enabled??d.laser_on??d.RT027,laser_power_pct:d.laser_power_pct??d.laser_power??d.DS010,connected:replayConnected,connection_state:fresh?(d.connection_state??d.RT007):"stale",estimated_time:d.estimated_time??d.total_time_fmt,powder_usage:d.powder_usage??d.total_powder_g,deposition_efficiency:d.deposition_efficiency,energy:d.energy??d.total_energy_wh});
+    liveRuntimeData=fresh&&replayConnected!==false?{...d,xma_live:(()=>{try{return JSON.parse(d.xma);}catch(e){return null;}})(),laser_enabled:d.laser_on,laser_power_pct:d.laser_power}:{};
     renderLiveRuntimeGrid(liveRuntimeData);
   }
   function updateRuntime(data){
@@ -509,15 +462,14 @@
     if(data.light_enabled!==undefined)document.getElementById("rtLight").innerHTML=pill(data.light_enabled);
     if(data.laser_power_pct!==undefined)rtPower.textContent=(data.laser_power_pct??"—")+(data.laser_power_pct!=null?"%":"");
     const connected=normalizeConnected(data.connected),connectionState=normalizeConnected(data.connection_state),isConnected=connected??connectionState;
-    if(isConnected!==null){if(data._live_connection)currentMachineConnected=isConnected;rtState.innerHTML=stateBadge(isConnected);}
+    if(isConnected!==null){if(data._live_connection)currentMachineConnected=isConnected;rtState.innerHTML=stateBadge(isConnected);if(!isConnected)clearMachineRuntimeValues();}
     if(data.powder_usage!==undefined)estPowder.textContent=data.powder_usage!=null?data.powder_usage+"g":"-";
     if(data.deposition_efficiency!==undefined)estEfficiency.textContent=data.deposition_efficiency!=null?(data.deposition_efficiency*100).toFixed(1)+"%":"-";
     if(data.energy!==undefined)estEnergy.textContent=data.energy??"-";
   }
   function clearRuntime(){
     rtFile.textContent="—";rtPower.textContent="—";if(rtProgFill)rtProgFill.style.width="0%";if(progressPct)progressPct.textContent="—";
-    rtGas.innerHTML=pill(false);rtLaser.innerHTML=pill(false);
-    document.getElementById("rtPowder").innerHTML=pill(false);document.getElementById("rtLight").innerHTML=pill(false);
+    emptyRuntimeSwitches();
     estPowder.textContent="—";estEfficiency.textContent="—";estEnergy.textContent="—";
     liveRuntimeData={};renderLiveRuntimeGrid(liveRuntimeData);totalLayers=0;currentMachineConnected=false;
   }
@@ -547,9 +499,10 @@
   function formatRecordingDate(v){if(!v)return "date unknown";const d=new Date(v);return Number.isNaN(d.getTime())?v:d.toLocaleString("en-GB",{hour12:false});}
   function showToast(msg,isError=false){toast.textContent=msg;toast.classList.toggle("error",isError);toast.classList.add("visible");clearTimeout(toastTimer);toastTimer=setTimeout(()=>toast.classList.remove("visible"),2600);}
   function encodeRecordingPath(p){return String(p||"").split("/").map(encodeURIComponent).join("/");}
+  function recordingDownloadUrl(item,ip,download=false){const file=encodeURIComponent(item.path||item.filename||"");return `/recordings/download?ip=${encodeURIComponent(ip)}&file=${file}${download?"&download=1":""}`;}
   function updateRecordingCount(){const c=recordingsList.querySelectorAll(".recording-item").length;recordingsStatus.textContent=c?`${c} recording${c===1?"":"s"} found.`:"No recordings found.";}
   async function deleteRecording(item,ip,card){const rp=item.path||item.filename||"";if(!rp){showToast("Missing filename.",true);return;}try{const res=await fetch(`/recordings/${encodeRecordingPath(rp)}?ip=${encodeURIComponent(ip)}`,{method:"DELETE"});const data=await res.json().catch(()=>({}));if(!res.ok)throw new Error(data.detail||"Unable to delete");const wasActive=card.classList.contains("active");card.remove();if(wasActive){recordingsVideo.removeAttribute("src");recordingsVideo.load();}updateRecordingCount();showToast("Recording deleted.");logEvent("recording_deleted",item.filename||item.path||"");}catch(e){showToast(e.message||"Unable to delete.",true);}}
-  function renderRecordings(rows,ip){recordingsList.textContent="";recordingsVideo.removeAttribute("src");recordingsVideo.load();if(!rows.length){recordingsStatus.textContent="No recordings found.";return;}recordingsStatus.textContent=`${rows.length} recording${rows.length===1?"":"s"} found.`;rows.forEach(item=>{const div=document.createElement("div");div.className="recording-item";const hEl=document.createElement("div");hEl.className="recording-head";const nEl=document.createElement("div");nEl.className="recording-name";nEl.textContent=item.filename||item.path||"recording";const dBtn=document.createElement("button");dBtn.className="recording-delete";dBtn.type="button";dBtn.textContent="Delete";dBtn.addEventListener("click",async(e)=>{e.stopPropagation();dBtn.disabled=true;await deleteRecording(item,ip,div);dBtn.disabled=false;});hEl.appendChild(nEl);hEl.appendChild(dBtn);const mEl=document.createElement("div");mEl.className="recording-meta";[item.device_id||"device unknown",formatBytes(item.size),formatRecordingDate(item.modified_at)].forEach(t=>{const s=document.createElement("span");s.textContent=t;mEl.appendChild(s);});div.appendChild(hEl);div.appendChild(mEl);div.addEventListener("click",()=>{document.querySelectorAll(".recording-item").forEach(el=>el.classList.remove("active"));div.classList.add("active");recordingsVideo.src=`/recordings/download?ip=${encodeURIComponent(ip)}&file=${encodeURIComponent(item.path||item.filename||"")}`;recordingsVideo.play().catch(()=>{});});recordingsList.appendChild(div);});}
+  function renderRecordings(rows,ip){recordingsList.textContent="";recordingsVideo.removeAttribute("src");recordingsVideo.load();if(!rows.length){recordingsStatus.textContent="No recordings found.";return;}recordingsStatus.textContent=`${rows.length} recording${rows.length===1?"":"s"} found.`;rows.forEach(item=>{const div=document.createElement("div");div.className="recording-item";const hEl=document.createElement("div");hEl.className="recording-head";const nEl=document.createElement("div");nEl.className="recording-name";nEl.textContent=item.filename||item.path||"recording";const actions=document.createElement("div");actions.className="recording-actions";const dlBtn=document.createElement("button");dlBtn.className="recording-action recording-download";dlBtn.type="button";dlBtn.textContent="Download";dlBtn.addEventListener("click",(e)=>{e.stopPropagation();window.location=recordingDownloadUrl(item,ip,true);});const dBtn=document.createElement("button");dBtn.className="recording-action recording-delete";dBtn.type="button";dBtn.textContent="Delete";dBtn.addEventListener("click",async(e)=>{e.stopPropagation();dBtn.disabled=true;await deleteRecording(item,ip,div);dBtn.disabled=false;});actions.appendChild(dlBtn);actions.appendChild(dBtn);hEl.appendChild(nEl);hEl.appendChild(actions);const mEl=document.createElement("div");mEl.className="recording-meta";[item.device_id||"device unknown",formatBytes(item.size),formatRecordingDate(item.modified_at)].forEach(t=>{const s=document.createElement("span");s.textContent=t;mEl.appendChild(s);});div.appendChild(hEl);div.appendChild(mEl);div.addEventListener("click",()=>{document.querySelectorAll(".recording-item").forEach(el=>el.classList.remove("active"));div.classList.add("active");recordingsVideo.src=recordingDownloadUrl(item,ip);recordingsVideo.play().catch(()=>{});});recordingsList.appendChild(div);});}
   async function viewRecordingsIp(ip){currentRecordingsIp=ip;const selectedDevice=deviceSelect.value;const params=new URLSearchParams({ip});if(selectedDevice)params.set("device_id",selectedDevice);recordingsStatus.textContent="Loading recordings…";recordingsList.textContent="";recordingsVideo.removeAttribute("src");recordingsVideo.load();try{const res=await fetch(`/recordings?${params.toString()}`);const data=await res.json();if(!res.ok)throw new Error(data.detail||"Unable to list recordings");renderRecordings(data,ip);logEvent("recordings_loaded",selectedDevice||"all");}catch(e){recordingsStatus.textContent=e.message||"Unable to load recordings.";logEvent("recordings_error",recordingsStatus.textContent);}}
   async function viewRecordings(){const ip=getSelectedMachineIp()||prompt("Enter machine IP address");if(!ip||!ip.trim())return;openSection("recordings");viewRecordingsIp(ip.trim());}
 
@@ -637,9 +590,9 @@
         case "init":{const sessions=msg.active_sessions||{},sessionsData=msg.sessions_data||{};Object.entries(sessions).forEach(([did])=>{if(![...deviceSelect.options].some(o=>o.value===did)){const o=document.createElement("option");o.value=did;o.textContent=did;deviceSelect.appendChild(o);}});const currentVal=deviceSelect.value,saved=localStorage.getItem("ufameasy_selected_device");if(!currentVal||!sessions[currentVal]){const preferred=(saved&&sessions[saved])?saved:null;if(preferred)deviceSelect.value=preferred;}const sel=deviceSelect.value;if(sel){if(sessionsData[sel]){const s=sessionsData[sel];updateRuntime({current_file:s.file_name,total_layers:s.total_layers,current_layer:0});}else{clearRuntime();rtFile.textContent="No active session";}if(saved)refreshSessions();try{const sessionId=sessions[sel];if(sessionId&&sessionsData[sel]&&saved)fetchSessionDetails(sessionId,sessionsData[sel]);}catch(e){console.error("AUTO-RESTORE failed",e);}}break;}
         case "session_reset":tableBody.innerHTML="";rowsByKey.clear();emptyState.classList.add("visible");tableWrap.classList.add("hidden");clearRuntime();logEvent("session_reset");break;
         case "session_start":updateRuntime({current_file:msg.file_name,total_layers:msg.total_layers,current_layer:0});refreshSessions();logEvent("session_start",`${msg.file_name||""}${sessionIdSuffix(msg.session_id)}`);break;
-        case "session_end":currentMachineConnected=false;refreshSessions();logEvent("session_end",`${msg.status||""}${sessionIdSuffix(msg.session_id)}`);break;
-        case "runtime_update":{const d=msg.data||{};updateRuntime({current_layer:d.current_layer??d.RT005,total_layers:d.total_layers??d.PS011,current_file:d.current_file??d.RT013,gas_enabled:d.gas_enabled??d.RT029,laser_enabled:d.laser_enabled??d.RT027,powder_enabled:d.powder_enabled??d.RT028,light_enabled:d.light_enabled??d.RT031,laser_power_pct:d.laser_power_pct??d.DS010,connected:d.machine_connected??d.RT006,connection_state:d.connection_state??d.RT007,_live_connection:true});liveRuntimeData={...liveRuntimeData,...d};const pct=liveRuntimeData.progress_pct;if(pct!==undefined&&pct!==null){const p=Math.min(100,Math.max(0,Number(pct)));document.getElementById("progressBar").style.width=p+"%";document.getElementById("progressPct").textContent=p.toFixed(1)+"%";}renderLiveRuntimeGrid(liveRuntimeData);logEvent("runtime_update");break;}
-        case "position_update":{const d=(msg.data&&msg.data.xma)?msg.data.xma:(msg.data||{});liveRuntimeData={...liveRuntimeData,xma_live:d};renderLiveRuntimeGrid(liveRuntimeData);updatePositionDisplay(d);break;}
+        case "session_end":currentMachineConnected=false;updateRuntime({connected:false,connection_state:"explicit_disconnect",_live_connection:true});refreshSessions();logEvent("session_end",`${msg.status||""}${sessionIdSuffix(msg.session_id)}`);break;
+        case "runtime_update":{const d=msg.data||{};const liveConnected=normalizeConnected(d.machine_connected??d.RT006)??normalizeConnected(d.connection_state??d.RT007);updateRuntime({current_layer:d.current_layer??d.RT005,total_layers:d.total_layers??d.PS011,current_file:d.current_file??d.RT013,gas_enabled:d.gas_enabled??d.RT029,laser_enabled:d.laser_enabled??d.RT027,powder_enabled:d.powder_enabled??d.RT028,light_enabled:d.light_enabled??d.RT031,laser_power_pct:d.laser_power_pct??d.DS010,connected:d.machine_connected??d.RT006,connection_state:d.connection_state??d.RT007,_live_connection:true});if(liveConnected===false){liveRuntimeData={};renderLiveRuntimeGrid(liveRuntimeData);logEvent("runtime_update");break;}liveRuntimeData={...liveRuntimeData,...d};const pct=liveRuntimeData.progress_pct;if(pct!==undefined&&pct!==null){const p=Math.min(100,Math.max(0,Number(pct)));document.getElementById("progressBar").style.width=p+"%";document.getElementById("progressPct").textContent=p.toFixed(1)+"%";}renderLiveRuntimeGrid(liveRuntimeData);logEvent("runtime_update");break;}
+        case "position_update":{const d=(msg.data&&msg.data.xma)?msg.data.xma:(msg.data||{});liveRuntimeData={...liveRuntimeData,xma_live:d};renderLiveRuntimeGrid(liveRuntimeData);break;}
         case "estimate_result":{const d=msg.data||{};estPowder.textContent=d.total_powder_g!=null?d.total_powder_g.toFixed(1)+"g":"—";estEfficiency.textContent=d.deposition_efficiency!=null?(d.deposition_efficiency*100).toFixed(1)+"%":"—";estEnergy.textContent=d.total_energy_wh!=null?d.total_energy_wh.toFixed(2):"—";logEvent("estimate_result");break;}
         case "snapshot":{const si=String(msg.slice_idx||"");let needInsert=false;Object.entries(msg.data||{}).forEach(([pid,param])=>{const row=normalizeParam(pid,param,si);const ex=document.getElementById(`row-${row.slice_idx}-${row.param_id}`);if(ex)updateCell(ex,".value",row.value);else needInsert=true;});if(needInsert)renderSnapshot(si,msg.data);else updateVisibility();logEvent("snapshot",`slice ${si}`);break;}
         case "slice_update":{const si=String(msg.slice_idx||"");Object.entries(msg.data||{}).forEach(([pid,param])=>{insertOrUpdateRow(normalizeParam(pid,param,si));});logEvent("slice_update",`slice ${si}`);break;}
@@ -660,8 +613,6 @@
   // Init
   loadDevices();
   connectWS();
-  // Resize chart on window resize
-  window.addEventListener("resize",drawPosChart);
 </script>
 </body>
 </html>
