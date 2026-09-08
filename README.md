@@ -52,6 +52,12 @@ uvicorn server.main:app --host 0.0.0.0 --port 8000 --reload
 ```
 Find your IP with `ipconfig | findstr "IPv4"` and share `http://<ip>:8000`. For access outside the local network, tunnel with `ngrok http 8000`.
 
+If the dashboard itself is opened over HTTPS, the API must also be served over HTTPS. Generate or obtain a certificate for the server, then start Uvicorn with:
+```bash
+uvicorn server.main:app --host 0.0.0.0 --port 8000 --ssl-keyfile path/to/server-key.pem --ssl-certfile path/to/server-cert.pem
+```
+Open the dashboard at `https://<ip>:8000`. For local HTTP development, open the dashboard at `http://<ip>:8000` so the page and downloads use the same protocol.
+
 ## Project Structure
 
 | Path | Purpose |

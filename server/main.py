@@ -7,7 +7,7 @@ module connects the HTTP layer to the shared in-memory state store.
 """
 
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect
-from fastapi.responses import FileResponse
+from fastapi.responses import FileResponse, Response
 from fastapi.staticfiles import StaticFiles
 from server.state_store import state
 from contextlib import asynccontextmanager
@@ -63,6 +63,10 @@ def root():
         HTML file response for the browser UI.
     """
     return FileResponse("ui/index.html")
+
+@app.get("/favicon.ico", include_in_schema=False)
+def favicon():
+    return Response(status_code=204)
 
 @app.get("/state")
 def get_state(device_id: str):
