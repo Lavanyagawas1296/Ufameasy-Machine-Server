@@ -77,12 +77,17 @@ def _local_telemetry_db_path() -> Path | None:
     return None
 
 
-def _read_telemetry_rows(db_path: Path) -> list[dict]:
+def _read_telemetry_rows(db_path: Path, limit: int | None = None) -> list[dict]:
     try:
         conn = sqlite3.connect(f"{db_path.as_uri()}?mode=ro", uri=True, timeout=2)
         conn.row_factory = sqlite3.Row
         try:
-            rows = conn.execute("SELECT * FROM telemetry_events ORDER BY id DESC").fetchall()
+            query = "SELECT * FROM telemetry_events ORDER BY id DESC"
+            params = ()
+            if limit is not None:
+                query += " LIMIT ?"
+                params = (limit,)
+            rows = conn.execute(query, params).fetchall()
             return [dict(row) for row in rows]
         finally:
             conn.close()
@@ -105,9 +110,9 @@ def _rows_to_csv_bytes(rows: list[dict]) -> bytes:
     return output.getvalue().encode("utf-8")
 
 
-def _local_log_rows() -> list[dict] | None:
+def _local_log_rows(limit: int | None = None) -> list[dict] | None:
     db_path = _local_telemetry_db_path()
-    return _read_telemetry_rows(db_path) if db_path else None
+    return _read_telemetry_rows(db_path, limit) if db_path else None
 
 
 def _local_log_csv_bytes() -> bytes | None:
@@ -172,8 +177,8 @@ def _fetch_telemetry_events_csv(ip: str, port: int) -> bytes:
     return _download_log_bytes(ip, port)
 
 
-def _fetch_log_csv(ip: str) -> list[dict]:
-    local_rows = _local_log_rows()
+def _fetch_log_csv(ip: str, limit: int | None = None) -> list[dict]:
+    local_rows = _local_log_rows(limit)
     if local_rows is not None:
         return local_rows
 
@@ -183,7 +188,8 @@ def _fetch_log_csv(ip: str) -> list[dict]:
             ftp.retrbinary("RETR ufameasy_sys.csv", buf.write)
             buf.seek(0)
             reader = csv.DictReader(io.TextIOWrapper(buf, encoding="utf-8"))
-            return [row for row in reader]
+            rows = [row for row in reader]
+            return rows[-limit:] if limit is not None else rows
     except ftplib.error_perm as exc:
         raise RecordingFetchError(404, f"Log file not found: {exc}") from exc
     except ftplib.all_errors as exc:
@@ -576,10 +582,11 @@ async def fetch_logs(ip: str, port: int = 2121):
     )
 
 @router.get("/logs/view")
-async def view_logs(ip: str):
+async def view_logs(ip: str, limit: int = 1000):
     ip = ip.strip()
     if not ip:
         raise HTTPException(status_code=400, detail="ip is required")
+    limit = max(100, min(limit, 5000))
     loop = asyncio.get_running_loop()
     try:
         rows = await loop.run_in_executor(None, _fetch_log_csv, ip)
