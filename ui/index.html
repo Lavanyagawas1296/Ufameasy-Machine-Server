@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8">
@@ -32,9 +32,17 @@
     .runtime-panel{padding:16px 24px 12px;background:var(--bg);}
     .runtime-row{display:flex;gap:10px;flex-wrap:wrap;align-items:stretch;}
     .rt-card{background:linear-gradient(145deg,#14263B,#0F1C2D);border:1px solid var(--border);border-radius:8px;padding:12px 16px;min-width:130px;flex:1;box-shadow:0 5px 16px rgba(0,0,0,.16);}
-    .rt-card .label{font-size:10px;text-transform:uppercase;letter-spacing:0.08em;color:var(--muted);margin-bottom:6px;font-weight:600;}
-    .rt-card .val{font-family:var(--font-mono);font-size:18px;font-weight:600;color:var(--text);overflow-wrap:anywhere;}
-    .rt-card.wide{min-width:220px;} .rt-card.progress-card{min-width:240px;}
+    .rt-card .label{font-size:10px;text-transform:uppercase;letter-spacing:0.08em;color:var(--muted);margin-bottom:6px;font-weight:700;}
+    .rt-card .val{font-family:var(--font-mono);font-size:18px;font-weight:700;color:var(--text);overflow-wrap:anywhere;}
+    .rt-card.wide{min-width:220px;} .rt-card.position-card{min-width:340px;flex:1.8;} .rt-card.progress-card{min-width:240px;}
+    .rt-card.status-card .label{font-weight:800;font-size:11px;color:var(--accent);}
+    .rt-card.status-card{border-color:rgba(53,183,232,0.3);}
+    .live-grid-item-label{color:var(--muted);font-size:11px;}
+    .live-grid-item-val{font-weight:600;margin-top:2px;}
+    .live-grid-item-val.bold-val{font-weight:800;color:var(--text);font-size:13px;}
+    .machine-pos-box{background:var(--panel2);border:1px solid var(--accent);border-radius:6px;padding:6px 8px;grid-column:1/-1;}
+    .machine-pos-label{color:var(--accent);font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:0.06em;}
+    .machine-pos-val{font-weight:700;margin-top:3px;white-space:pre-line;color:var(--text);}
     .full-width{flex-basis:100%;} .stack-sm{margin-top:8px;}
     .prog-bar{height:7px;border-radius:999px;background:var(--border);margin-top:8px;overflow:hidden;}
     .prog-fill{height:100%;border-radius:999px;background:linear-gradient(90deg,var(--accent),#57E0B1);transition:width 0.4s;width:0%;}
@@ -182,6 +190,7 @@
 <div class="runtime-panel">
   <div class="runtime-row">
     <div class="rt-card wide"><div class="label">Current File</div><div class="val" id="rtFile">&mdash;</div></div>
+    <div class="rt-card position-card"><div class="label">Machine Position</div><div class="val" id="rtPosition">&mdash;</div></div>
     <div class="rt-card progress-card">
       <div class="label">Print Progress</div>
       <div class="stack-sm">
@@ -189,11 +198,11 @@
         <div id="progressPct" class="progress-text">&mdash;</div>
       </div>
     </div>
-    <div class="rt-card"><div class="label">Gas</div><div id="rtGas"><span class="pill off">OFF</span></div></div>
-    <div class="rt-card"><div class="label">Shielding Gas</div><div id="rtShieldingGas"><span class="pill off">OFF</span></div></div>
-    <div class="rt-card"><div class="label">Powder</div><div id="rtPowder"><span class="pill off">OFF</span></div></div>
-    <div class="rt-card"><div class="label">Light</div><div id="rtLight"><span class="pill off">OFF</span></div></div>
-    <div class="rt-card"><div class="label">Laser</div><div id="rtLaser"><span class="pill off">OFF</span></div></div>
+    <div class="rt-card status-card"><div class="label">Gas</div><div id="rtGas"><span class="pill off">OFF</span></div></div>
+    <div class="rt-card status-card"><div class="label">Shielding Gas</div><div id="rtShieldingGas"><span class="pill off">OFF</span></div></div>
+    <div class="rt-card status-card"><div class="label">Powder</div><div id="rtPowder"><span class="pill off">OFF</span></div></div>
+    <div class="rt-card status-card"><div class="label">Light</div><div id="rtLight"><span class="pill off">OFF</span></div></div>
+    <div class="rt-card status-card"><div class="label">Laser</div><div id="rtLaser"><span class="pill off">OFF</span></div></div>
     <div class="rt-card"><div class="label">Laser Power</div><div class="val" id="rtPower">&mdash;</div></div>
     <div class="rt-card"><div class="label">Connection</div><div id="rtState"><span class="state-badge">&mdash;</span></div></div>
     <div class="rt-card"><div class="label">Powder Usage</div><div class="val" id="est-powder">&mdash;</div></div>
@@ -329,7 +338,7 @@
   const logsTableHead=document.getElementById("logsTableHead"),logsTableBody=document.getElementById("logsTableBody"),logsEmptyState=document.getElementById("logsEmptyState");
   const toast=document.getElementById("toast"),cameraFeed=document.getElementById("cameraFeed"),cameraPlaceholder=document.getElementById("cameraPlaceholder");
   const cameraStatus=document.getElementById("cameraStatus"),cameraLiveBtn=document.getElementById("cameraLiveBtn");
-  const rtFile=document.getElementById("rtFile"),rtProgFill=document.getElementById("progressBar"),progressPct=document.getElementById("progressPct");
+  const rtFile=document.getElementById("rtFile"),rtPosition=document.getElementById("rtPosition"),rtProgFill=document.getElementById("progressBar"),progressPct=document.getElementById("progressPct");
   const rtGas=document.getElementById("rtGas"),rtShieldingGas=document.getElementById("rtShieldingGas"),rtLaser=document.getElementById("rtLaser"),rtPower=document.getElementById("rtPower"),rtState=document.getElementById("rtState");
   const estPowder=document.getElementById("est-powder"),estEfficiency=document.getElementById("est-efficiency"),estEnergy=document.getElementById("est-energy");
 
@@ -413,7 +422,21 @@
     if(typeof v==="string"){const s=v.trim().toLowerCase();if(["connected","online","true","1","yes"].includes(s))return true;if(["disconnected","offline","false","0","no"].includes(s))return false;}
     return null;
   }
+  function normalizeBool(v){
+    if(v===null||v===undefined)return false;
+    if(typeof v==="boolean")return v;
+    if(typeof v==="number")return v!==0;
+    if(typeof v==="string"){const s=v.trim().toLowerCase();return ["true","1","yes","on","enabled"].includes(s);}
+    return Boolean(v);
+  }
   function formatAxis(v){const n=Number(v);return Number.isFinite(n)?n.toFixed(3):"—";}
+  function formatMachinePosition(value){
+    const axes=["X","Y","Z","A","B","C"];
+    const values=Array.isArray(value)?value:(value&&typeof value==="object"?axes.map((axis,i)=>value[axis]??value[axis.toLowerCase()]??value[i]):[]);
+    const rendered=values.slice(0,axes.length).map((value,index)=>`${axes[index]}: ${formatAxis(value)}`);
+    return rendered.length?rendered.join(" | "):"—";
+  }
+  function updateMachinePosition(value){if(value!==undefined&&value!==null)rtPosition.textContent=formatMachinePosition(value);}
   function formatLiveRuntimeValue(key,val){
     if(key==="xma_live"){const axes=["X","Y","Z","A","B","C"];const arr=Array.isArray(val)?val:Object.values(val||{});return axes.slice(0,arr.length).map((k,i)=>`${k}: ${Number(arr[i]).toFixed(3)}`).join(" | ");}
     if(val&&typeof val==="object"){return Object.entries(val).filter(([k])=>!["timestamp","source"].includes(k)).map(([k,v])=>`${k}:${typeof v==="number"?v.toFixed(3):v}`).join(" ");}
@@ -421,34 +444,42 @@
   }
   function renderLiveRuntimeGrid(data){
     const grid=document.getElementById("rtLiveGrid");if(!grid)return;grid.innerHTML="";
-    const SKIP=new Set(["laser_enabled","gas_enabled","shielding_enabled","current_file","connection_state","laser_power_pct","machine_connected","progress_pct","remaining_time","time_remaining","remaining_seconds","DS028","xma","xmr","laser_on","session_id","id"]);
+    const SKIP=new Set(["laser_enabled","gas_enabled","shielding_enabled","current_file","connection_state","laser_power_pct","machine_connected","progress_pct","remaining_time","time_remaining","remaining_seconds","DS028","xma","xmr","laser_on","session_id","id","powder_enabled","light_enabled"]);
     Object.entries(data||{}).forEach(([key,val])=>{
       if(SKIP.has(key))return;
       const box=document.createElement("div");
       box.style.cssText="background:var(--panel2);border:1px solid var(--border);border-radius:6px;padding:6px 8px;";
       const kEl=document.createElement("span");kEl.style.color="var(--muted)";kEl.textContent=LABEL_MAP[key]||key;
-      const vEl=document.createElement("div");if(key==="xma_live")vEl.style.whiteSpace="pre-line";vEl.textContent=formatLiveRuntimeValue(key,val);
+      const vEl=document.createElement("div");if(key==="xma_live")vEl.style.whiteSpace="pre-line";vEl.style.fontWeight="700";vEl.textContent=formatLiveRuntimeValue(key,val);
       box.appendChild(kEl);box.appendChild(vEl);grid.appendChild(box);
     });
   }
   function latestRuntimeRecord(r){return Array.isArray(r)&&r.length?r[r.length-1]:null;}
   function updateReplayRuntime(records,ss={}){
-    const d=latestRuntimeRecord(records)||{};
+    const replay=latestRuntimeRecord(records)||{},d={...replay};
+    // A reconnect can replay an older sparse runtime row.  Keep fresher live
+    // machine/config values instead of replacing them with database nulls.
+    Object.entries(liveRuntimeData).forEach(([key,value])=>{if(d[key]==null)d[key]=value;});
     updateRuntime({current_layer:d.current_layer??d.RT005,total_layers:d.total_layers??d.PS011??ss.total_layers,current_file:d.current_file??d.file_name??d.RT013??ss.file_name,gas_enabled:d.gas_enabled??d.RT029,shielding_enabled:d.shielding_enabled,laser_enabled:d.laser_enabled??d.laser_on??d.RT027,laser_power_pct:d.laser_power_pct??d.laser_power??d.DS010,connected:d.machine_connected??d.connected??d.RT006,connection_state:d.connection_state??d.RT007,estimated_time:d.estimated_time??d.total_time_fmt,powder_usage:d.powder_usage??d.total_powder_g,deposition_efficiency:d.deposition_efficiency,energy:d.energy??d.total_energy_wh});
     liveRuntimeData={...d,xma_live:(()=>{try{return JSON.parse(d.xma);}catch(e){return null;}})(),laser_enabled:d.laser_on,laser_power_pct:d.laser_power};
     renderLiveRuntimeGrid(liveRuntimeData);
   }
   function updateRuntime(data){
     if(!data)return;
-    if(data.current_file!==undefined)rtFile.textContent=data.current_file||"—";
+    // Current file — filter out placeholder values like "unknown"
+    if(data.current_file!==undefined){
+      const cf=String(data.current_file||"").trim();
+      rtFile.textContent=(cf&&cf.toLowerCase()!=="unknown")?cf:"—";
+    }
     if(data.current_layer!==undefined){const pct=totalLayers>0?Math.min(100,(data.current_layer/totalLayers)*100):0;if(rtProgFill)rtProgFill.style.width=pct+"%";}
     if(data.total_layers!==undefined)totalLayers=data.total_layers||0;
-    if(data.gas_enabled!==undefined)rtGas.innerHTML=pill(data.gas_enabled);
-    if(data.shielding_enabled!==undefined)rtShieldingGas.innerHTML=pill(data.shielding_enabled);
-    if(data.laser_enabled!==undefined)rtLaser.innerHTML=pill(data.laser_enabled);
-    if(data.powder_enabled!==undefined)document.getElementById("rtPowder").innerHTML=pill(data.powder_enabled);
-    if(data.light_enabled!==undefined)document.getElementById("rtLight").innerHTML=pill(data.light_enabled);
-    if(data.laser_power_pct!==undefined)rtPower.textContent=(data.laser_power_pct??"—")+(data.laser_power_pct!=null?"%":"");
+    // Boolean status fields — normalizeBool so false/0/"false" correctly shows OFF
+    if(data.gas_enabled!==undefined)rtGas.innerHTML=pill(normalizeBool(data.gas_enabled));
+    if(data.shielding_enabled!==undefined)rtShieldingGas.innerHTML=pill(normalizeBool(data.shielding_enabled));
+    if(data.laser_enabled!==undefined)rtLaser.innerHTML=pill(normalizeBool(data.laser_enabled));
+    if(data.powder_enabled!==undefined)document.getElementById("rtPowder").innerHTML=pill(normalizeBool(data.powder_enabled));
+    if(data.light_enabled!==undefined)document.getElementById("rtLight").innerHTML=pill(normalizeBool(data.light_enabled));
+    if(data.laser_power_pct!==undefined){const lp=data.laser_power_pct;rtPower.textContent=lp!=null&&lp!==""?lp+"%":"—";}
     const connected=normalizeConnected(data.connected),connectionState=normalizeConnected(data.connection_state),isConnected=connected??connectionState;
     if(isConnected!==null){if(data._live_connection)currentMachineConnected=isConnected;rtState.innerHTML=stateBadge(isConnected);}
     if(data.powder_usage!==undefined)estPowder.textContent=data.powder_usage!=null?data.powder_usage+"g":"-";
@@ -456,7 +487,7 @@
     if(data.energy!==undefined)estEnergy.textContent=data.energy??"-";
   }
   function clearRuntime(){
-    rtFile.textContent="—";rtPower.textContent="—";if(rtProgFill)rtProgFill.style.width="0%";if(progressPct)progressPct.textContent="—";
+    rtFile.textContent="—";rtPosition.textContent="—";rtPower.textContent="—";if(rtProgFill)rtProgFill.style.width="0%";if(progressPct)progressPct.textContent="—";
     rtGas.innerHTML=pill(false);rtShieldingGas.innerHTML=pill(false);rtLaser.innerHTML=pill(false);
     document.getElementById("rtPowder").innerHTML=pill(false);document.getElementById("rtLight").innerHTML=pill(false);
     estPowder.textContent="—";estEfficiency.textContent="—";estEnergy.textContent="—";
@@ -578,11 +609,13 @@
       const selected=deviceSelect.value;
       if(msg.type!=="init"&&(!selected||(msg.device_id&&msg.device_id!==selected)||(!msg.device_id&&!["estimate_result"].includes(msg.type))))return;
       switch(msg.type){
-        case "init":{const sessions=msg.active_sessions||{},sessionsData=msg.sessions_data||{};Object.entries(sessions).forEach(([did])=>{if(![...deviceSelect.options].some(o=>o.value===did)){const o=document.createElement("option");o.value=did;o.textContent=did;deviceSelect.appendChild(o);}});const currentVal=deviceSelect.value,saved=localStorage.getItem("ufameasy_selected_device");if(!currentVal||!sessions[currentVal]){const preferred=(saved&&sessions[saved])?saved:null;if(preferred)deviceSelect.value=preferred;}const sel=deviceSelect.value;if(sel){if(sessionsData[sel]){const s=sessionsData[sel];updateRuntime({current_file:s.file_name,total_layers:s.total_layers,current_layer:0});}else{clearRuntime();rtFile.textContent="No active session";}if(saved)refreshSessions();try{const sessionId=sessions[sel];if(sessionId&&sessionsData[sel]&&saved)fetchSessionDetails(sessionId,sessionsData[sel]);}catch(e){console.error("AUTO-RESTORE failed",e);}}break;}
+        case "init":{const sessions=msg.active_sessions||{},sessionsData=msg.sessions_data||{},liveRuntime=msg.live_runtime||{};Object.entries(sessions).forEach(([did])=>{if(![...deviceSelect.options].some(o=>o.value===did)){const o=document.createElement("option");o.value=did;o.textContent=did;deviceSelect.appendChild(o);}});const currentVal=deviceSelect.value,saved=localStorage.getItem("ufameasy_selected_device");if(!currentVal||!sessions[currentVal]){const preferred=(saved&&sessions[saved])?saved:null;if(preferred)deviceSelect.value=preferred;}const sel=deviceSelect.value;if(sel){const live=liveRuntime[sel]||{};liveRuntimeData={...liveRuntimeData,...live};if(sessionsData[sel]){const s=sessionsData[sel];updateRuntime({current_file:s.file_name,total_layers:s.total_layers,current_layer:0});}else{clearRuntime();}renderLiveRuntimeGrid(liveRuntimeData);refreshSessions();try{const sessionId=sessions[sel];if(sessionId&&sessionsData[sel])fetchSessionDetails(sessionId,sessionsData[sel]);}catch(e){console.error("AUTO-RESTORE failed",e);}}break;}
         case "session_reset":tableBody.innerHTML="";rowsByKey.clear();emptyState.classList.add("visible");tableWrap.classList.add("hidden");clearRuntime();logEvent("session_reset");break;
         case "session_start":updateRuntime({current_file:msg.file_name,total_layers:msg.total_layers,current_layer:0});refreshSessions();logEvent("session_start",`${msg.file_name||""}${sessionIdSuffix(msg.session_id)}`);break;
+        case "file_update":{const fn=String(msg.file_name||"").trim();if(fn&&fn.toLowerCase()!=="unknown"){rtFile.textContent=fn;logEvent("file_update",fn);}break;}
+        case "position_update":updateMachinePosition((msg.data||{}).xma);break;
         case "session_end":currentMachineConnected=false;refreshSessions();logEvent("session_end",`${msg.status||""}${sessionIdSuffix(msg.session_id)}`);break;
-        case "runtime_update":{const d=msg.data||{};updateRuntime({current_layer:d.current_layer??d.RT005,total_layers:d.total_layers??d.PS011,current_file:d.current_file??d.RT013,gas_enabled:d.gas_enabled??d.RT029,shielding_enabled:d.shielding_enabled,laser_enabled:d.laser_enabled??d.RT027,powder_enabled:d.powder_enabled??d.RT028,light_enabled:d.light_enabled??d.RT031,laser_power_pct:d.laser_power_pct??d.DS010,connected:d.machine_connected??d.RT006,connection_state:d.connection_state??d.RT007,_live_connection:true});liveRuntimeData={...liveRuntimeData,...d};const pct=liveRuntimeData.progress_pct;if(pct!==undefined&&pct!==null){const p=Math.min(100,Math.max(0,Number(pct)));document.getElementById("progressBar").style.width=p+"%";document.getElementById("progressPct").textContent=p.toFixed(1)+"%";}renderLiveRuntimeGrid(liveRuntimeData);logEvent("runtime_update");break;}
+        case "runtime_update":{const d=msg.data||{};liveRuntimeData={...liveRuntimeData,...d};updateRuntime({current_layer:d.current_layer??d.RT005,total_layers:d.total_layers??d.PS011,current_file:d.current_file??d.RT013,gas_enabled:"gas_enabled" in d?d.gas_enabled:("RT029" in d?d.RT029:undefined),shielding_enabled:"shielding_enabled" in d?d.shielding_enabled:undefined,laser_enabled:"laser_enabled" in d?d.laser_enabled:("RT027" in d?d.RT027:("laser_on" in d?d.laser_on:undefined)),powder_enabled:"powder_enabled" in d?d.powder_enabled:("RT028" in d?d.RT028:undefined),light_enabled:"light_enabled" in d?d.light_enabled:("RT031" in d?d.RT031:undefined),laser_power_pct:d.laser_power_pct??d.DS010,melt_pool_high:d.melt_pool_high,melt_pool_low:d.melt_pool_low,MAX_LASER_POWER:d.MAX_LASER_POWER,connected:d.machine_connected??d.RT006,connection_state:d.connection_state??d.RT007,_live_connection:true});const pct=liveRuntimeData.progress_pct;if(pct!==undefined&&pct!==null){const p=Math.min(100,Math.max(0,Number(pct)));document.getElementById("progressBar").style.width=p+"%";document.getElementById("progressPct").textContent=p.toFixed(1)+"%";}renderLiveRuntimeGrid(liveRuntimeData);logEvent("runtime_update");break;}
         case "estimate_result":{const d=msg.data||{};estPowder.textContent=d.total_powder_g!=null?d.total_powder_g.toFixed(1)+"g":"—";estEfficiency.textContent=d.deposition_efficiency!=null?(d.deposition_efficiency*100).toFixed(1)+"%":"—";estEnergy.textContent=d.total_energy_wh!=null?d.total_energy_wh.toFixed(2):"—";logEvent("estimate_result");break;}
         case "snapshot":{const si=String(msg.slice_idx||"");let needInsert=false;Object.entries(msg.data||{}).forEach(([pid,param])=>{const row=normalizeParam(pid,param,si);const ex=document.getElementById(`row-${row.slice_idx}-${row.param_id}`);if(ex)updateCell(ex,".value",row.value);else needInsert=true;});if(needInsert)renderSnapshot(si,msg.data);else updateVisibility();logEvent("snapshot",`slice ${si}`);break;}
         case "slice_update":{const si=String(msg.slice_idx||"");Object.entries(msg.data||{}).forEach(([pid,param])=>{insertOrUpdateRow(normalizeParam(pid,param,si));});logEvent("slice_update",`slice ${si}`);break;}

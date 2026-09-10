@@ -157,6 +157,15 @@ def close_session(session_id, status):
         )
 
 
+def update_session_file_name(session_id: str, file_name: str):
+    """Persist the gcode file name on the active session row."""
+    with sqlite3.connect(DB_PATH) as conn:
+        conn.execute(
+            "UPDATE sessions SET file_name = ? WHERE session_id = ?",
+            (file_name, session_id),
+        )
+
+
 def update_session_total_layers(session_id: str, total_layers: int):
     with sqlite3.connect(DB_PATH) as conn:
         conn.execute(
@@ -291,6 +300,25 @@ def get_session_by_id(session_id: str) -> dict:
             "SELECT * FROM sessions WHERE session_id = ?", (session_id,)
         ).fetchone()
         return dict(row) if row else {}
+
+
+def get_running_sessions() -> list[dict]:
+    """Return the most recent running session per device, for restoring state after restart."""
+    with get_conn() as conn:
+        rows = conn.execute(
+            """
+            SELECT s1.*
+            FROM sessions s1
+            INNER JOIN (
+                SELECT device_id, MAX(started_at) AS max_start
+                FROM sessions
+                WHERE status = 'running'
+                GROUP BY device_id
+            ) s2 ON s1.device_id = s2.device_id AND s1.started_at = s2.max_start
+            WHERE s1.status = 'running'
+            """
+        ).fetchall()
+    return [dict(r) for r in rows]
 
 
 def get_runtime_latest(session_id):

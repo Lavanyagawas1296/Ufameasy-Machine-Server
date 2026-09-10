@@ -16,7 +16,9 @@ from server.db import (
     insert_runtime_log,
     insert_slice_data,
     register_device,
+    update_session_file_name,
     update_session_total_layers,
+    get_running_sessions,
 )
 from server.state_store import state
 from server.ws_manager import manager
@@ -109,6 +111,18 @@ def on_message(client, userdata, msg):
         if topic_parts[2:] == ["file", "update"]:
             data = json.loads(payload)
             file_name = data.get("file_name")
+
+            # Persist to DB so page reloads show the correct file name
+            session_id = _active_sessions.get(device_id)
+            if session_id and file_name and file_name.lower() != "unknown":
+                try:
+                    update_session_file_name(session_id, file_name)
+                except Exception as exc:
+                    print(f"[DB] update_session_file_name failed: {exc}")
+
+            # Store in state so WS /init can read it
+            if file_name:
+                state.update_parameter(device_id, "current_file", file_name)
 
             _broadcast({
                 "type": "file_update",
@@ -211,16 +225,46 @@ def on_message(client, userdata, msg):
 
         if topic_parts[2:] == ["runtime"]:
             data = json.loads(payload)
-            session_id = data.get("session_id")
-
-            try:
-                insert_runtime_log(session_id, data)
-            except Exception as exc:
-                print(f"[DB] runtime failed: {exc}")
+            session_id = data.get("session_id") or _active_sessions.get(device_id)
 
             for key, value in data.items():
                 state.update_parameter(device_id, key, value)
             state.update_parameter(device_id, "_session_id", session_id)
+
+            # Runtime messages contain only fast-changing values.  Persist the
+            # merged state so replay retains the machine/config values too.
+            runtime_record = state.get_parameters(device_id)
+            runtime_record["session_id"] = session_id
+            try:
+                insert_runtime_log(session_id, runtime_record)
+            except Exception as exc:
+                print(f"[DB] runtime failed: {exc}")
+
+            _broadcast({
+                "type": "runtime_update",
+                "device_id": device_id,
+                "session_id": session_id,
+                "data": data,
+            })
+            return
+
+        if topic_parts[2:] == ["machine", "config"]:
+            # UFAMeasy publishes Process Parameters separately from its
+            # high-rate runtime topic.  Treat them as live state and broadcast
+            # them through the same dashboard update channel.
+            data = json.loads(payload)
+            session_id = data.get("session_id") or _active_sessions.get(device_id)
+            for key, value in data.items():
+                state.update_parameter(device_id, key, value)
+            state.update_parameter(device_id, "_session_id", session_id)
+
+            runtime_record = state.get_parameters(device_id)
+            runtime_record["session_id"] = session_id
+            if session_id:
+                try:
+                    insert_runtime_log(session_id, runtime_record)
+                except Exception as exc:
+                    print(f"[DB] machine/config failed: {exc}")
 
             _broadcast({
                 "type": "runtime_update",
@@ -232,6 +276,11 @@ def on_message(client, userdata, msg):
 
         if topic_parts[2:] == ["runtime", "position"]:
             data = json.loads(payload)
+            # Make the latest axes available to API clients as well as live
+            # WebSocket viewers. Position uses its own high-rate MQTT topic.
+            for axis_key in ("xma", "xmr", "xwa", "xwr"):
+                if axis_key in data:
+                    state.update_parameter(device_id, axis_key, data[axis_key])
             _broadcast({
                 "type": "position_update",
                 "device_id": device_id,
@@ -322,20 +371,21 @@ client.on_message = on_message
 def start_mqtt():
     """
     Connect to the local MQTT broker and start the Paho network loop.
-
-    Returns:
-        None.
-
-    Side Effects:
-        Opens a broker connection and starts Paho's background loop thread.
-
-    Raises:
-        OSError: If the MQTT broker cannot be reached on localhost:1883.
     """
     global mqtt_event_loop
+
+    # Restore active sessions from DB so state survives server restarts
+    try:
+        for row in get_running_sessions():
+            did = row.get("device_id")
+            sid = row.get("session_id")
+            if did and sid and did not in _active_sessions:
+                _active_sessions[did] = sid
+                print(f"[SESSION] Restored session {sid} for device {did}")
+    except Exception as exc:
+        print(f"[SESSION] Could not restore sessions from DB: {exc}")
 
     print("Starting MQTT...")
     mqtt_event_loop = asyncio.get_event_loop()
     client.connect("localhost", 1883, 60)
-    # loop_start avoids blocking FastAPI startup while callbacks keep running.
     client.loop_start()

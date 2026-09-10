@@ -1,0 +1,6 @@
+[SESSION] Restored session ef3dbe7e-6824-4a6a-a1ea-b65e4913cc74 for device nidhi
+[SESSION] Restored session 8d8d8f63-c9b3-4680-9ff4-ae0fc9b8d56b for device device_001
+Starting MQTT...
+Connected to MQTT broker
+INFO:     192.168.31.237:52663 - "GET /devices/device_001/sessions HTTP/1.1" 200 OK
+INFO:     192.168.31.237:51475 - "GET /sessions/8d8d8f63-c9b3-4680-9ff4-ae0fc9b8d56b/replay HTTP/1.1" 200 OK

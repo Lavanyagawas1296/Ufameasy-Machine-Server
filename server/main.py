@@ -99,12 +99,21 @@ async def websocket_endpoint(websocket: WebSocket):
     await asyncio.sleep(0.1)
     try:
         sessions_data = {}
+        live_runtime = {}
         for device_id, session_id in _active_sessions.items():
-            sessions_data[device_id] = get_session_by_id(session_id)
+            row = get_session_by_id(session_id) or {}
+            # Overlay the live current_file from state (updated by file_update MQTT)
+            live_file = state.get_parameters(device_id).get("current_file")
+            if live_file and live_file.lower() != "unknown":
+                row = dict(row)
+                row["file_name"] = live_file
+            sessions_data[device_id] = row
+            live_runtime[device_id] = state.get_parameters(device_id)
         await websocket.send_text(json.dumps({
             "type": "init",
             "active_sessions": _active_sessions,
-            "sessions_data": sessions_data
+            "sessions_data": sessions_data,
+            "live_runtime": live_runtime,
         }))
     except Exception:
         pass
