@@ -1318,7 +1318,28 @@
       background: rgba(255,92,114,0.15);
     }
 
-    /* Responsive */
+    /* Mobile Bottom Navigation Bar (Hidden on desktop & tablet) */
+    .mobile-bottom-nav {
+      display: none;
+    }
+
+    /* Mobile Brand Logo in Topbar (Hidden on desktop & tablet) */
+    .mobile-brand-logo {
+      display: none;
+      align-items: center;
+      gap: 8px;
+    }
+    .mobile-brand-logo img {
+      width: 26px;
+      height: 26px;
+      filter: drop-shadow(0 0 6px rgba(37, 185, 240, 0.4));
+    }
+
+    /* ==========================================================================
+       RESPONSIVE BREAKPOINTS
+       ========================================================================== */
+
+    /* LAPTOP / SMALL DESKTOP (1025px - 1200px) */
     @media (max-width: 1200px) {
       .kpi-row { grid-template-columns: repeat(3, minmax(0, 1fr)); }
       .center-grid { grid-template-columns: 1fr; }
@@ -1329,20 +1350,480 @@
       .recordings-layout { grid-template-columns: 1fr; }
     }
 
-    @media (max-width: 768px) {
-      .app-shell { grid-template-columns: 1fr; }
-      .sidebar {
-        position: static;
-        height: auto;
-        flex-direction: row;
-        overflow-x: auto;
-        padding: 10px 14px;
+    /* TABLET / IPAD (769px - 1024px) */
+    @media (min-width: 769px) and (max-width: 1024px) {
+      .app-shell {
+        grid-template-columns: 82px minmax(0, 1fr);
       }
-      .side-nav { flex-direction: row; }
-      .side-footer { display: none; }
-      .kpi-row { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-      .topbar { padding: 0 14px; }
-      .view-page { padding: 14px; }
+      .sidebar {
+        padding: 16px 6px;
+        align-items: center;
+      }
+      .brand {
+        padding: 4px 0;
+        justify-content: center;
+      }
+      .brand > div {
+        display: none;
+      }
+      .side-nav {
+        width: 100%;
+        gap: 6px;
+      }
+      .side-nav button {
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        padding: 8px 4px;
+        gap: 4px;
+        text-align: center;
+        border-left: 0;
+        border-bottom: 2px solid transparent;
+        border-radius: 6px;
+      }
+      .side-nav button span {
+        font-size: 9.5px;
+        line-height: 1.15;
+        white-space: normal;
+        word-break: break-word;
+        text-align: center;
+        max-width: 72px;
+      }
+      .side-nav button.active {
+        border-left-color: transparent;
+        border-bottom-color: var(--accent);
+      }
+      .side-footer {
+        padding: 8px 4px;
+        text-align: center;
+      }
+      .side-footer .status-row {
+        justify-content: center;
+      }
+      .side-footer .status-row span:last-child {
+        display: none;
+      }
+      #sideMachineIp {
+        display: none;
+      }
+      .topbar {
+        padding: 0 16px;
+      }
+      .topbar-info-item {
+        display: none;
+      }
+      .view-page {
+        padding: 16px;
+      }
+      .kpi-row {
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 10px;
+      }
+      .center-grid {
+        grid-template-columns: 1fr;
+      }
+      .telemetry-row {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 10px;
+      }
+      .bottom-grid {
+        grid-template-columns: 1fr;
+      }
+      .diff-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
+      .trends-grid-lg {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    /* MOBILE PHONES (320px - 768px) */
+    @media (max-width: 768px) {
+      html, body {
+        overflow-x: hidden;
+        width: 100%;
+        max-width: 100vw;
+      }
+      .app-shell {
+        display: block;
+        width: 100%;
+        min-height: 100vh;
+      }
+      .sidebar {
+        display: none !important;
+      }
+      .workspace {
+        width: 100%;
+        min-width: 0;
+      }
+
+      /* Mobile Brand in Topbar */
+      .mobile-brand-logo {
+        display: flex;
+      }
+
+      /* Sticky Mobile Bottom Navigation Bar */
+      .mobile-bottom-nav {
+        display: grid;
+        grid-template-columns: repeat(5, 1fr);
+        position: fixed;
+        bottom: 0;
+        left: 0;
+        right: 0;
+        height: calc(56px + env(safe-area-inset-bottom, 0px));
+        padding-bottom: env(safe-area-inset-bottom, 0px);
+        background: rgba(7, 18, 32, 0.98);
+        backdrop-filter: blur(14px);
+        border-top: 1px solid var(--border);
+        box-shadow: 0 -4px 20px rgba(0, 0, 0, 0.45);
+        z-index: 1000;
+      }
+      .mobile-bottom-nav button {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        gap: 3px;
+        background: transparent;
+        border: 0;
+        color: var(--muted);
+        font-size: 10px;
+        font-weight: 600;
+        font-family: var(--font-ui);
+        cursor: pointer;
+        padding: 6px 0;
+        transition: all 0.15s ease;
+        position: relative;
+        -webkit-tap-highlight-color: transparent;
+      }
+      .mobile-bottom-nav button svg {
+        opacity: 0.7;
+        transition: all 0.15s ease;
+      }
+      .mobile-bottom-nav button:active {
+        transform: scale(0.94);
+      }
+      .mobile-bottom-nav button.active {
+        color: var(--accent);
+      }
+      .mobile-bottom-nav button.active svg {
+        opacity: 1;
+        stroke: var(--accent);
+      }
+      .mobile-bottom-nav button.active::before {
+        content: "";
+        position: absolute;
+        top: 0;
+        left: 20%;
+        right: 20%;
+        height: 2px;
+        background: var(--accent);
+        box-shadow: 0 0 8px var(--accent);
+        border-radius: 2px;
+      }
+
+      /* Topbar on Mobile */
+      .topbar {
+        height: 52px;
+        padding: 0 12px;
+        gap: 8px;
+        width: 100%;
+        box-sizing: border-box;
+      }
+      .topbar-left {
+        flex: 1;
+        min-width: 0;
+        gap: 8px;
+      }
+      .device-select-wrap {
+        flex: 1;
+        max-width: 170px;
+        min-width: 100px;
+        padding: 2px 6px;
+      }
+      select#deviceSelect {
+        font-size: 12px;
+        padding: 4px 2px;
+        width: 100%;
+      }
+      .topbar-status-badge {
+        padding: 3px 8px;
+        font-size: 11px;
+        flex-shrink: 0;
+      }
+      .topbar-right {
+        gap: 8px;
+        flex-shrink: 0;
+      }
+      .topbar-info-item {
+        display: none;
+      }
+      .topbar-time {
+        display: none;
+      }
+      .user-avatar {
+        width: 26px;
+        height: 26px;
+        font-size: 11px;
+      }
+
+      /* View Pages on Mobile */
+      .view-page {
+        padding: 12px 12px calc(74px + env(safe-area-inset-bottom, 0px));
+        width: 100%;
+        max-width: 100vw;
+        box-sizing: border-box;
+      }
+
+      /* KPI Cards */
+      .kpi-row {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 8px;
+        margin-bottom: 12px;
+      }
+      .kpi-card {
+        padding: 10px 12px;
+        min-height: 72px;
+      }
+      .kpi-header {
+        font-size: 10px;
+      }
+      .kpi-val {
+        font-size: 15px;
+        margin: 2px 0;
+      }
+      .kpi-sub {
+        font-size: 10px;
+      }
+
+      /* Center Grid (Camera + Machine Pos) */
+      .center-grid {
+        grid-template-columns: 1fr;
+        gap: 12px;
+        margin-bottom: 12px;
+      }
+      .camera-idle-view {
+        min-height: 220px;
+        padding: 20px 14px;
+      }
+      .idle-icon-ring {
+        width: 48px;
+        height: 48px;
+        margin-bottom: 10px;
+      }
+      .idle-title {
+        font-size: 14px;
+      }
+      .idle-desc {
+        font-size: 11px;
+        margin-bottom: 14px;
+      }
+
+      /* 5-Axis Machine Position */
+      .panel-body {
+        padding: 12px 14px;
+      }
+      .pos-5axis-grid {
+        grid-template-columns: 1fr 1fr;
+        column-gap: 12px;
+        row-gap: 8px;
+        margin-bottom: 12px;
+      }
+      .pos-axis-label {
+        font-size: 13px;
+      }
+      .pos-axis-val {
+        font-size: 14px;
+      }
+      .indicators-row {
+        gap: 10px;
+        font-size: 10px;
+        padding-top: 8px;
+      }
+
+      /* Equipment Status Grid */
+      .equip-grid {
+        grid-template-columns: repeat(5, minmax(0, 1fr));
+        gap: 4px;
+      }
+      .equip-item {
+        padding: 6px 2px;
+        gap: 4px;
+      }
+      .equip-icon {
+        width: 22px;
+        height: 22px;
+      }
+      .equip-icon svg {
+        width: 12px;
+        height: 12px;
+      }
+      .equip-name {
+        font-size: 9px;
+      }
+      .status-pill {
+        padding: 1px 4px;
+        font-size: 9px;
+      }
+
+      /* Telemetry Sparklines */
+      .telemetry-row {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 8px;
+        margin-bottom: 12px;
+      }
+      .telemetry-card {
+        padding: 10px 12px;
+      }
+      .telemetry-name {
+        font-size: 10px;
+      }
+      .telemetry-badge {
+        font-size: 11px;
+        padding: 1px 5px;
+      }
+      .telemetry-chart {
+        height: 42px;
+      }
+
+      /* Bottom Grid */
+      .bottom-grid {
+        grid-template-columns: 1fr;
+        gap: 12px;
+      }
+      .events-box {
+        height: 150px;
+        font-size: 11px;
+        padding: 8px 10px;
+      }
+      .live-params-box {
+        height: 160px;
+        padding: 8px 10px;
+      }
+      .live-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 6px;
+      }
+      .live-grid-item {
+        padding: 6px 8px;
+      }
+      .live-grid-item .k {
+        font-size: 9px;
+      }
+      .live-grid-item .v {
+        font-size: 11px;
+      }
+
+      /* Dedicated Subpages Common Headers */
+      .page-header {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 6px;
+        margin-bottom: 14px;
+        padding-bottom: 10px;
+      }
+      .page-header-text h1 {
+        font-size: 18px;
+      }
+
+      /* Tables & Toolbars */
+      .toolbar {
+        flex-direction: column;
+        align-items: stretch;
+        gap: 8px;
+        padding: 10px 12px;
+      }
+      .search {
+        min-width: 0;
+        max-width: 100%;
+        width: 100%;
+      }
+      select.filter-sel {
+        width: 100%;
+      }
+      .summary {
+        margin-left: 0;
+        text-align: right;
+      }
+      .table-wrap {
+        -webkit-overflow-scrolling: touch;
+      }
+
+      /* Machine Access Subpage */
+      .ip-row {
+        flex-direction: column;
+        align-items: stretch;
+        gap: 10px;
+        padding: 12px;
+      }
+      .ip-input {
+        width: 100%;
+        min-width: 0;
+      }
+      .ip-actions {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 8px;
+        width: 100%;
+      }
+      .ip-actions .action-btn {
+        justify-content: center;
+        padding: 8px 6px;
+        font-size: 12px;
+        white-space: nowrap;
+      }
+      .recordings-layout {
+        grid-template-columns: 1fr;
+      }
+
+      /* Previous Trends Subpage */
+      .diff-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 8px;
+        margin-bottom: 12px;
+      }
+      .diff-card {
+        padding: 10px 12px;
+      }
+      .diff-card .val {
+        font-size: 18px;
+      }
+      .trends-grid-lg {
+        grid-template-columns: 1fr;
+        gap: 12px;
+      }
+      .trend-card-lg .v {
+        font-size: 20px;
+      }
+
+      /* Toast Notification Position */
+      .toast {
+        bottom: calc(68px + env(safe-area-inset-bottom, 0px));
+        right: 14px;
+        left: 14px;
+        max-width: calc(100% - 28px);
+        box-sizing: border-box;
+      }
+    }
+
+    /* EXTRA COMPACT MOBILE (<= 380px, e.g. iPhone SE) */
+    @media (max-width: 380px) {
+      .pos-5axis-grid {
+        grid-template-columns: 1fr;
+        row-gap: 6px;
+      }
+      .equip-grid {
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+      }
+      .ip-actions {
+        grid-template-columns: 1fr;
+      }
+      .topbar-left {
+        gap: 4px;
+      }
+      .device-select-wrap {
+        max-width: 130px;
+      }
     }
   </style>
 </head>
@@ -1396,6 +1877,9 @@
     <!-- TOPBAR -->
     <header class="topbar">
       <div class="topbar-left">
+        <div class="mobile-brand-logo" title="UFAMeasy Machine Server">
+          <img src="/static/Unnati.svg" alt="UFAMeasy">
+        </div>
         <div class="device-select-wrap">
           <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>
           <select id="deviceSelect">
@@ -1911,6 +2395,30 @@
   </div>
 </div>
 
+<!-- MOBILE BOTTOM NAVIGATION (Active on mobile viewports) -->
+<nav class="mobile-bottom-nav" id="mobileBottomNav" aria-label="Mobile Navigation">
+  <button class="active" data-view="overview" type="button" onclick="switchTab('overview')">
+    <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>
+    <span>Dashboard</span>
+  </button>
+  <button data-view="params" type="button" onclick="switchTab('params')">
+    <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M9 5H7a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-2"/><rect x="9" y="3" width="6" height="4" rx="1"/><line x1="9" y1="12" x2="15" y2="12"/><line x1="9" y1="16" x2="13" y2="16"/></svg>
+    <span>Params</span>
+  </button>
+  <button data-view="history" type="button" onclick="switchTab('history')">
+    <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+    <span>History</span>
+  </button>
+  <button data-view="machineAccess" type="button" onclick="switchTab('machineAccess')">
+    <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><rect x="2" y="3" width="20" height="14" rx="2"/><path d="M8 21h8M12 17v4"/></svg>
+    <span>Access</span>
+  </button>
+  <button data-view="trends" type="button" onclick="switchTab('trends')">
+    <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+    <span>Trends</span>
+  </button>
+</nav>
+
 <div id="toast" class="toast" role="status" aria-live="polite"></div>
 
 <script>
@@ -2041,9 +2549,8 @@
       targetEl.style.display = 'block';
     }
 
-    document.querySelectorAll('.side-nav button').forEach(btn => btn.classList.remove('active'));
-    const activeBtn = document.querySelector(`.side-nav button[data-view="${name}"]`);
-    if (activeBtn) activeBtn.classList.add('active');
+    document.querySelectorAll('.side-nav button, .mobile-bottom-nav button').forEach(btn => btn.classList.remove('active'));
+    document.querySelectorAll(`.side-nav button[data-view="${name}"], .mobile-bottom-nav button[data-view="${name}"]`).forEach(btn => btn.classList.add('active'));
 
     if (name === 'trends') {
       renderPreviousTrends();
