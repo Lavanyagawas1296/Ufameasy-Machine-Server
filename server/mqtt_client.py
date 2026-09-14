@@ -168,13 +168,17 @@ def on_message(client, userdata, msg):
                         "session_id": session_id,
                         "data": {"total_layers": layer_count},
                     })
-                _broadcast({"type": "estimate_result", "data": {
-                    "total_time_fmt": format_duration(r["total_time_s"]),
-                    "total_powder_g": r["total_powder_g"],
-                    "deposition_efficiency": r["kpis"].get("deposition_efficiency", 0),
-                    "total_energy_wh": r["total_energy_wh"],
-                    "layer_count": layer_count,
-                }})
+                _broadcast({
+                    "type": "estimate_result",
+                    "device_id": device_id,
+                    "data": {
+                        "total_time_fmt": format_duration(r["total_time_s"]),
+                        "total_powder_g": r["total_powder_g"],
+                        "deposition_efficiency": r["kpis"].get("deposition_efficiency", 0),
+                        "total_energy_wh": r["total_energy_wh"],
+                        "layer_count": layer_count,
+                    }
+                })
 
             threading.Thread(target=_run, daemon=True).start()
             return

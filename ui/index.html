@@ -5,638 +5,3320 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>UFAMeasy Machine Server</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
   <style>
     :root {
-      --bg:#08111E; --panel:#0F1C2D; --panel2:#14263B; --border:#29415D;
-      --text:#E6F0FA; --muted:#8DA5BC; --green:#43D17B; --red:#FF6678; --yellow:#F5C451;
-      --accent:#35B7E8; --accent-soft:rgba(53,183,232,0.14); --accent-dark:#1689B8;
-      --success:#43D17B; --focus-ring:rgba(53,183,232,0.24);
-      --success-soft:rgba(67,209,123,0.14); --danger-soft:rgba(255,102,120,0.13);
-      --warning-soft:rgba(245,196,81,0.15);
-      --font-mono:"JetBrains Mono","Consolas",monospace;
-      --font-ui:"Inter","Segoe UI",Arial,sans-serif;
+      --bg: #060d17;
+      --panel: #0b1726;
+      --panel2: #102136;
+      --panel3: #142842;
+      --border: #172d47;
+      --border-light: #203c5d;
+      --text: #e8f2fc;
+      --muted: #829ab1;
+      --accent: #25b9f0;
+      --accent-soft: rgba(37, 185, 240, 0.12);
+      --accent-dark: #1281b3;
+      --green: #1fda86;
+      --green-soft: rgba(31, 218, 134, 0.14);
+      --red: #ff5c72;
+      --red-soft: rgba(255, 92, 114, 0.14);
+      --yellow: #f5b942;
+      --yellow-soft: rgba(245, 185, 66, 0.14);
+      --purple: #9d7cfd;
+      --font-mono: "JetBrains Mono", "SFMono-Regular", Consolas, monospace;
+      --font-ui: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      --shadow-sm: 0 2px 6px rgba(0,0,0,0.25);
+      --shadow-md: 0 6px 18px rgba(0,0,0,0.35);
     }
-    *{box-sizing:border-box;margin:0;padding:0;}
-    body{background:radial-gradient(circle at 85% -10%,#183554 0,#08111E 42%);color:var(--text);font-family:var(--font-ui);min-height:100vh;font-size:14px;line-height:1.5;}
-    .topbar{display:flex;align-items:center;gap:14px;padding:0 24px;height:56px;background:rgba(15,28,45,.96);border-bottom:1px solid var(--border);position:sticky;top:0;z-index:100;box-shadow:0 8px 24px rgba(0,0,0,.2);}
-    .brand{font-size:15px;font-weight:700;color:var(--accent);white-space:nowrap;display:flex;align-items:center;gap:8px;}
-    .brand span{color:var(--text);font-weight:500;}
-    .topbar-mid{flex:1;display:flex;align-items:center;gap:10px;}
-    select#deviceSelect{background:var(--panel2);color:var(--text);border:1px solid var(--border);border-radius:8px;padding:6px 12px;font-size:13px;font-family:var(--font-ui);min-width:180px;cursor:pointer;outline:none;}
-    select#deviceSelect:focus{border-color:var(--accent);box-shadow:0 0 0 3px var(--focus-ring);}
-    .topbar-right{display:flex;align-items:center;gap:14px;}
-    .conn-badge{display:flex;align-items:center;gap:7px;font-size:13px;color:var(--muted);}
-    .dot{width:9px;height:9px;border-radius:50%;background:var(--red);flex-shrink:0;}
-    .dot.on{background:var(--green);box-shadow:0 0 0 3px rgba(22,163,74,0.15);}
-    .runtime-panel{padding:16px 24px 12px;background:var(--bg);}
-    .runtime-row{display:flex;gap:10px;flex-wrap:wrap;align-items:stretch;}
-    .rt-card{background:linear-gradient(145deg,#14263B,#0F1C2D);border:1px solid var(--border);border-radius:8px;padding:12px 16px;min-width:130px;flex:1;box-shadow:0 5px 16px rgba(0,0,0,.16);}
-    .rt-card .label{font-size:10px;text-transform:uppercase;letter-spacing:0.08em;color:var(--muted);margin-bottom:6px;font-weight:700;}
-    .rt-card .val{font-family:var(--font-mono);font-size:18px;font-weight:700;color:var(--text);overflow-wrap:anywhere;}
-    .rt-card.wide{min-width:220px;} .rt-card.position-card{min-width:340px;flex:1.8;} .rt-card.progress-card{min-width:240px;}
-    .rt-card.status-card .label{font-weight:800;font-size:11px;color:var(--accent);}
-    .rt-card.status-card{border-color:rgba(53,183,232,0.3);}
-    .live-grid-item-label{color:var(--muted);font-size:11px;}
-    .live-grid-item-val{font-weight:600;margin-top:2px;}
-    .live-grid-item-val.bold-val{font-weight:800;color:var(--text);font-size:13px;}
-    .machine-pos-box{background:var(--panel2);border:1px solid var(--accent);border-radius:6px;padding:6px 8px;grid-column:1/-1;}
-    .machine-pos-label{color:var(--accent);font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:0.06em;}
-    .machine-pos-val{font-weight:700;margin-top:3px;white-space:pre-line;color:var(--text);}
-    .full-width{flex-basis:100%;} .stack-sm{margin-top:8px;}
-    .prog-bar{height:7px;border-radius:999px;background:var(--border);margin-top:8px;overflow:hidden;}
-    .prog-fill{height:100%;border-radius:999px;background:linear-gradient(90deg,var(--accent),#57E0B1);transition:width 0.4s;width:0%;}
-    .progress-text{font-family:var(--font-mono);font-size:15px;font-weight:600;color:var(--text);margin-top:6px;}
-    .pill{display:inline-block;padding:2px 10px;border-radius:999px;font-size:12px;font-weight:700;letter-spacing:0.04em;font-family:var(--font-mono);}
-    .pill.on{background:var(--success-soft);color:var(--green);border:1px solid rgba(22,163,74,0.3);}
-    .pill.off{background:var(--danger-soft);color:var(--red);border:1px solid rgba(220,38,38,0.25);}
-    .state-badge{display:inline-block;padding:3px 10px;border-radius:6px;font-size:12px;font-weight:600;font-family:var(--font-mono);background:var(--panel2);border:1px solid var(--border);color:var(--muted);}
-    .state-badge.connected{background:var(--success-soft);color:var(--green);border-color:rgba(22,163,74,0.3);}
-    .state-badge.disconnected{background:var(--danger-soft);color:var(--red);border-color:rgba(220,38,38,0.25);}
-    .live-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:8px;font-family:var(--font-mono);font-size:12px;}
-    /* TAB BAR */
-    .tab-bar{display:flex;gap:4px;padding:10px 24px;background:rgba(15,28,45,.9);border-bottom:1px solid var(--border);overflow-x:auto;}
-    .tab-btn{display:flex;align-items:center;gap:6px;padding:7px 16px;border-radius:8px;border:1px solid transparent;background:transparent;color:var(--muted);font-size:13px;font-weight:500;font-family:var(--font-ui);cursor:pointer;white-space:nowrap;transition:all 0.15s;}
-    .tab-btn:hover{background:var(--accent-soft);color:var(--accent);}
-    .tab-btn.active{background:var(--accent);color:#061321;font-weight:700;box-shadow:0 0 16px rgba(53,183,232,.25);}
-    .collapse{display:none;} .collapse.open{display:block;} .hidden{display:none!important;}
-    main{padding:0;}
-    .section-content{padding:20px 24px;}
-    /* PARAMS */
-    .toolbar{display:flex;align-items:center;gap:12px;margin-bottom:14px;}
-    .search{flex:1;max-width:380px;padding:8px 12px;background:var(--panel);border:1px solid var(--border);border-radius:8px;color:var(--text);font-size:13px;font-family:var(--font-ui);outline:none;}
-    select#sliceFilter{max-width:180px;padding:8px 12px;background:var(--panel);border:1px solid var(--border);border-radius:8px;color:var(--text);font-size:13px;font-family:var(--font-ui);outline:none;}
-    .search:focus,select#sliceFilter:focus{border-color:var(--accent);box-shadow:0 0 0 3px var(--focus-ring);}
-    .summary{color:var(--muted);font-size:13px;}
-    .table-wrap{border:1px solid var(--border);border-radius:8px;overflow:auto;max-height:400px;background:rgba(15,28,45,.9);}
-    .table-wrap.hidden{display:none;}
-    table{width:100%;border-collapse:collapse;min-width:680px;}
-    th,td{padding:9px 12px;border-bottom:1px solid var(--border);text-align:left;}
-    th{position:sticky;top:0;z-index:5;background:var(--panel2);color:var(--muted);font-size:11px;letter-spacing:0.07em;text-transform:uppercase;font-weight:600;}
-    td{font-size:13px;color:var(--text);}
-    tbody tr[data-key]:hover{background:var(--panel2);}
-    .domain-row th{position:static;background:rgba(53,183,232,.12);color:var(--accent);font-size:12px;text-transform:none;border-top:1px solid var(--border);padding:7px 12px;font-weight:600;}
-    .slice-header td{background:var(--panel2);color:var(--muted);font-size:12px;font-weight:600;}
-    .param-id,.value,.slice{font-family:var(--font-mono);}
-    .value{transition:background 0.8s;}
-    .value.flash{background:var(--warning-soft);color:var(--yellow);transition:background 0s;}
-    /* SESSIONS */
-    .sessions-area{padding:20px 24px;}
-    .session-list{display:flex;flex-direction:column;gap:8px;}
-    .session-item{background:var(--panel);border:1px solid var(--border);border-radius:10px;padding:12px 16px;font-size:13px;cursor:pointer;transition:border-color 0.15s,background 0.15s;}
-    .session-item:hover{border-color:var(--accent);background:var(--accent-soft);}
-    .session-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:5px;}
-    .session-meta{display:flex;gap:14px;font-size:11px;color:var(--muted);flex-wrap:wrap;}
-    .sid{font-family:var(--font-mono);font-size:10px;}
-    .session-item .sfile{font-family:var(--font-mono);flex:1;color:var(--text);font-weight:600;}
-    .session-status{padding:2px 8px;border-radius:999px;font-size:11px;font-weight:700;font-family:var(--font-mono);}
-    .session-status.active{background:var(--success-soft);color:var(--green);border:1px solid rgba(22,163,74,0.3);}
-    .session-status.ended{background:var(--panel2);color:var(--muted);border:1px solid var(--border);}
-    .no-sessions{color:var(--muted);font-size:13px;padding:8px 0;}
-    .session-duration{display:inline-block;padding:1px 8px;border-radius:6px;background:var(--accent-soft);color:var(--accent);font-size:11px;font-family:var(--font-mono);font-weight:600;margin-left:6px;}
-    /* MACHINE ACCESS */
-    .machine-access-area{padding:20px 24px;}
-    .ip-row{display:flex;align-items:center;gap:10px;margin-bottom:20px;padding:16px;background:var(--panel);border:1px solid var(--border);border-radius:10px;flex-wrap:wrap;}
-    .ip-row label{font-size:13px;font-weight:600;color:var(--text);white-space:nowrap;}
-    .ip-input{flex:1;min-width:180px;max-width:260px;padding:8px 12px;border:1px solid var(--border);border-radius:8px;font-size:13px;font-family:var(--font-mono);color:var(--text);background:var(--panel2);outline:none;}
-    .ip-input:focus{border-color:var(--accent);box-shadow:0 0 0 3px var(--focus-ring);}
-    .ip-actions{display:flex;gap:8px;flex-wrap:wrap;}
-    .action-btn{padding:8px 16px;border-radius:8px;border:1px solid var(--border);background:var(--panel);color:var(--text);font-size:13px;font-weight:500;font-family:var(--font-ui);cursor:pointer;transition:all 0.15s;display:flex;align-items:center;gap:6px;}
-    .action-btn:hover{border-color:var(--accent);color:var(--accent);background:var(--accent-soft);}
-    .action-btn.primary{background:var(--accent);border-color:var(--accent);color:#061321;font-weight:700;}
-    .action-btn.primary:hover{background:var(--accent-dark);}
-    .action-btn:disabled{opacity:0.5;cursor:not-allowed;}
-    /* RECORDINGS */
-    .recordings-layout{display:grid;grid-template-columns:minmax(240px,320px) minmax(0,1fr);gap:16px;align-items:start;}
-    .recordings-list{display:flex;flex-direction:column;gap:8px;}
-    .recording-item{background:var(--panel);border:1px solid var(--border);border-radius:8px;padding:10px 12px;cursor:pointer;transition:border-color 0.15s,background 0.15s;}
-    .recording-item:hover,.recording-item.active{border-color:var(--accent);background:var(--accent-soft);}
-    .recording-name{color:var(--text);font-family:var(--font-mono);font-size:12px;overflow-wrap:anywhere;font-weight:600;}
-    .recording-meta{display:flex;gap:10px;flex-wrap:wrap;margin-top:5px;color:var(--muted);font-size:11px;}
-    .recordings-status{color:var(--muted);font-size:13px;padding:8px 0;}
-    .recordings-player{width:100%;max-height:480px;background:#111;border:1px solid var(--border);border-radius:10px;display:block;}
-    .recording-head{display:flex;align-items:flex-start;gap:8px;}
-    .recording-head .recording-name{flex:1;min-width:0;}
-    .recording-delete{border:1px solid var(--border);border-radius:6px;background:var(--panel);color:var(--red);cursor:pointer;flex:0 0 auto;font-family:var(--font-ui);font-size:11px;padding:4px 8px;}
-    .recording-delete:hover{border-color:var(--red);background:var(--danger-soft);}
-    /* LOGS */
-    .logs-toolbar{display:flex;align-items:center;gap:10px;margin-bottom:14px;flex-wrap:wrap;}
-    .logs-toolbar .search{max-width:360px;}
-    .logs-filter{min-width:150px;padding:8px 12px;background:var(--panel);border:1px solid var(--border);border-radius:8px;color:var(--text);font-size:13px;font-family:var(--font-ui);outline:none;}
-    .logs-filter:focus{border-color:var(--accent);box-shadow:0 0 0 3px var(--focus-ring);}
-    .logs-status{color:var(--muted);font-size:13px;margin-bottom:8px;}
-    .logs-table-wrap{max-height:460px;}
-    .logs-table-wrap table{min-width:760px;}
-    /* CAMERA */
-    .camera-section{padding:0 24px 20px;}
-    .camera-collapsed-card{display:flex;align-items:center;gap:12px;padding:14px 18px;background:var(--panel);border:1px solid var(--border);border-radius:10px;}
-    .camera-collapsed-text{font-size:13px;color:var(--muted);flex:1;}
-    .camera-expanded-card{background:var(--panel);border:1px solid var(--border);border-radius:10px;overflow:hidden;}
-    .camera-head{display:flex;align-items:center;justify-content:space-between;padding:12px 16px;border-bottom:1px solid var(--border);}
-    .camera-head-title{font-size:13px;font-weight:600;color:var(--text);display:flex;align-items:center;gap:8px;}
-    .live-badge{display:inline-flex;align-items:center;gap:5px;padding:2px 8px;background:#DC2626;color:#fff;border-radius:999px;font-size:10px;font-weight:700;letter-spacing:0.05em;}
-    .live-badge::before{content:'';width:6px;height:6px;background:#fff;border-radius:50%;animation:blink 1s infinite;}
-    @keyframes blink{0%,100%{opacity:1;}50%{opacity:0.3;}}
-    .camera-frame{position:relative;width:100%;aspect-ratio:16/9;overflow:hidden;background:#0a0a0a;}
-    .camera-frame img{width:100%;height:100%;object-fit:contain;display:block;}
-    .camera-placeholder{position:absolute;inset:0;display:grid;place-items:center;color:#fff;background:#1a1a1a;text-align:center;font-size:13px;}
-    .camera-controls{display:flex;gap:8px;padding:12px 16px;border-top:1px solid var(--border);align-items:center;}
-    .camera-status-text{font-size:12px;color:var(--muted);flex:1;}
-    /* EVENTS */
-    .events-wrap{margin:0 24px 24px;background:rgba(15,28,45,.9);border:1px solid var(--border);border-radius:8px;overflow:hidden;}
-    .events-head{padding:10px 16px;font-size:11px;font-weight:700;letter-spacing:0.07em;text-transform:uppercase;color:var(--muted);border-bottom:1px solid var(--border);background:var(--panel2);}
-    .events-body{height:100px;overflow-y:auto;padding:8px 16px;font-family:var(--font-mono);font-size:12px;}
-    .events-list{list-style:none;display:flex;flex-direction:column-reverse;gap:4px;}
-    .events-list li{color:var(--muted);}
-    .events-list li span{color:var(--accent);margin-right:6px;}
-    /* TOAST */
-    .toast{position:fixed;right:18px;bottom:18px;z-index:200;max-width:min(360px,calc(100vw - 36px));padding:10px 16px;border:1px solid var(--border);border-radius:10px;background:var(--panel);color:var(--text);box-shadow:0 8px 24px rgba(27,111,232,0.12);font-size:13px;opacity:0;pointer-events:none;transform:translateY(8px);transition:opacity 0.18s,transform 0.18s;}
-    .toast.visible{opacity:1;transform:translateY(0);}
-    .toast.error{color:var(--red);border-color:var(--red);background:var(--danger-soft);}
-    .empty{display:none;padding:36px 16px;text-align:center;color:var(--muted);border:1px solid var(--border);border-radius:10px;background:var(--panel);}
-    .empty.visible{display:block;}
-    .toggle-btn{display:flex;align-items:center;gap:7px;background:var(--panel);border:1px solid var(--border);color:var(--text);border-radius:8px;padding:7px 14px;font-size:13px;cursor:pointer;font-family:var(--font-ui);transition:all 0.15s;}
-    .toggle-btn:hover{border-color:var(--accent);color:var(--accent);}
-    .toggle-btn.open,.toggle-btn.download-btn{background:var(--accent);border-color:var(--accent);color:#fff;}
-    .toggle-btn.download-btn:hover,.toggle-btn.open:hover{background:var(--accent-dark);}
-    .toggle-btn:disabled{cursor:not-allowed;opacity:0.5;}
-    .logo{filter:drop-shadow(0 0 7px rgba(53,183,232,.35));}
-    input::placeholder{color:#627B94;}
-    @media(max-width:700px){
-      .runtime-row,.recordings-layout{flex-direction:column;grid-template-columns:1fr;}
-      .topbar{flex-wrap:wrap;height:auto;padding:10px;}
-      .section-content,.machine-access-area,.sessions-area,.camera-section{padding-left:12px;padding-right:12px;}
-      .tab-bar,.events-wrap{padding-left:12px;padding-right:12px;}
-      .events-wrap{margin-left:12px;margin-right:12px;}
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      background: #060d17;
+      background-image: radial-gradient(circle at 80% -20%, #0f243d 0%, #060d17 65%);
+      color: var(--text);
+      font-family: var(--font-ui);
+      min-height: 100vh;
+      font-size: 13px;
+      line-height: 1.45;
+      overflow-x: hidden;
+    }
+
+    /* App Shell */
+    .app-shell {
+      display: grid;
+      grid-template-columns: 220px minmax(0, 1fr);
+      min-height: 100vh;
+    }
+
+    /* Sidebar */
+    .sidebar {
+      background: #071220;
+      border-right: 1px solid var(--border);
+      padding: 16px 12px;
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+      position: sticky;
+      top: 0;
+      height: 100vh;
+      z-index: 100;
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 4px 8px;
+    }
+
+    .brand img {
+      width: 28px;
+      height: 28px;
+      filter: drop-shadow(0 0 8px rgba(37,185,240,0.4));
+    }
+
+    .brand-title {
+      font-size: 15px;
+      font-weight: 800;
+      color: #fff;
+      letter-spacing: -0.02em;
+    }
+    .brand-title span { color: var(--accent); }
+    .brand-subtitle {
+      font-size: 10px;
+      color: var(--muted);
+      font-weight: 500;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+    }
+
+    .side-nav {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+
+    .side-nav button {
+      border: 0;
+      background: transparent;
+      color: #9ab0c7;
+      text-align: left;
+      border-radius: 6px;
+      padding: 10px 12px;
+      font: 600 13px var(--font-ui);
+      cursor: pointer;
+      transition: all 0.15s ease;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      border-left: 3px solid transparent;
+    }
+
+    .side-nav button svg {
+      opacity: 0.7;
+      flex-shrink: 0;
+      transition: opacity 0.15s;
+    }
+
+    .side-nav button:hover {
+      background: var(--panel2);
+      color: #fff;
+    }
+    .side-nav button:hover svg { opacity: 1; }
+
+    .side-nav button.active {
+      background: #113354;
+      color: #fff;
+      border-left-color: var(--accent);
+      box-shadow: inset 0 0 12px rgba(37,185,240,0.15);
+    }
+    .side-nav button.active svg {
+      opacity: 1;
+      stroke: var(--accent);
+    }
+
+    .side-footer {
+      margin-top: auto;
+      padding: 12px;
+      border-radius: 6px;
+      background: #081627;
+      border: 1px solid var(--border);
+      font-size: 11px;
+      color: var(--muted);
+    }
+
+    .side-footer .status-row {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-weight: 600;
+      color: var(--green);
+      margin-bottom: 2px;
+    }
+
+    .side-footer .pulse-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: var(--green);
+      box-shadow: 0 0 8px rgba(31, 218, 134, 0.7);
+      animation: pulse 2s infinite;
+    }
+
+    @keyframes pulse {
+      0%, 100% { opacity: 1; transform: scale(1); }
+      50% { opacity: 0.5; transform: scale(0.85); }
+    }
+
+    /* Workspace */
+    .workspace {
+      min-width: 0;
+      display: flex;
+      flex-direction: column;
+    }
+
+    /* Topbar */
+    .topbar {
+      height: 58px;
+      padding: 0 24px;
+      background: rgba(8, 19, 33, 0.94);
+      backdrop-filter: blur(10px);
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      position: sticky;
+      top: 0;
+      z-index: 90;
+    }
+
+    .topbar-left {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+    }
+
+    .device-select-wrap {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      background: var(--panel2);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 2px 10px 2px 8px;
+    }
+
+    .device-select-wrap svg {
+      opacity: 0.6;
+    }
+
+    select#deviceSelect {
+      background: transparent;
+      color: var(--text);
+      border: 0;
+      font-size: 13px;
+      font-weight: 600;
+      font-family: var(--font-ui);
+      cursor: pointer;
+      outline: none;
+      padding: 6px 4px;
+    }
+
+    select#deviceSelect option {
+      background: var(--panel2);
+      color: var(--text);
+    }
+
+    .topbar-status-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 7px;
+      padding: 4px 10px;
+      border-radius: 20px;
+      font-size: 12px;
+      font-weight: 600;
+      background: rgba(31, 218, 134, 0.1);
+      border: 1px solid rgba(31, 218, 134, 0.25);
+      color: var(--green);
+    }
+
+    .topbar-status-badge.disconnected {
+      background: rgba(255, 92, 114, 0.1);
+      border-color: rgba(255, 92, 114, 0.25);
+      color: var(--red);
+    }
+
+    .topbar-status-badge .dot {
+      width: 7px;
+      height: 7px;
+      border-radius: 50%;
+      background: currentColor;
+    }
+
+    .topbar-right {
+      display: flex;
+      align-items: center;
+      gap: 18px;
+    }
+
+    .topbar-info-item {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      color: var(--muted);
+      font-size: 12px;
+    }
+
+    .topbar-info-item strong {
+      color: var(--text);
+      font-family: var(--font-mono);
+      font-weight: 600;
+    }
+
+    .topbar-time {
+      font-family: var(--font-mono);
+      color: var(--muted);
+      font-size: 12px;
+      padding-left: 14px;
+      border-left: 1px solid var(--border);
+    }
+
+    .user-avatar {
+      width: 28px;
+      height: 28px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, #1c4d79, #0e273f);
+      border: 1px solid var(--border-light);
+      display: grid;
+      place-items: center;
+      font-weight: 700;
+      color: var(--accent);
+      font-size: 12px;
+    }
+
+    /* Page Views */
+    .view-page {
+      display: none;
+      padding: 20px 24px 36px;
+      max-width: 1560px;
+      margin: 0 auto;
+      width: 100%;
+    }
+
+    .view-page.active {
+      display: block;
+      animation: fadeIn 0.15s ease-out;
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(3px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    /* Top KPI Cards Row */
+    .kpi-row {
+      display: grid;
+      grid-template-columns: repeat(6, minmax(0, 1fr));
+      gap: 12px;
+      margin-bottom: 16px;
+    }
+
+    .kpi-card {
+      background: var(--panel);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 13px 14px;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      min-height: 84px;
+      transition: border-color 0.15s;
+    }
+
+    .kpi-card:hover {
+      border-color: var(--border-light);
+    }
+
+    .kpi-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      color: var(--muted);
+      font-size: 11px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+
+    .kpi-header svg {
+      opacity: 0.6;
+    }
+
+    .kpi-val {
+      font-family: var(--font-mono);
+      font-size: 18px;
+      font-weight: 700;
+      color: #fff;
+      margin: 4px 0 2px;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .kpi-sub {
+      font-size: 11px;
+      color: var(--muted);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    /* Progress bar */
+    .kpi-bar-wrap {
+      width: 100%;
+      height: 5px;
+      background: #14283f;
+      border-radius: 10px;
+      margin-top: 6px;
+      overflow: hidden;
+    }
+
+    .kpi-bar-fill {
+      height: 100%;
+      width: 0%;
+      background: linear-gradient(90deg, #25b9f0, #1fda86);
+      border-radius: 10px;
+      transition: width 0.3s ease;
+    }
+
+    /* Status Pills */
+    .status-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      padding: 2px 8px;
+      border-radius: 4px;
+      font-size: 10px;
+      font-weight: 700;
+      font-family: var(--font-mono);
+      letter-spacing: 0.05em;
+    }
+
+    .status-pill.on {
+      background: var(--green-soft);
+      color: var(--green);
+      border: 1px solid rgba(31, 218, 134, 0.3);
+    }
+
+    .status-pill.off {
+      background: var(--red-soft);
+      color: var(--red);
+      border: 1px solid rgba(255, 92, 114, 0.25);
+    }
+
+    /* Center Grid (Camera + Status Panels) */
+    .center-grid {
+      display: grid;
+      grid-template-columns: minmax(0, 1.45fr) minmax(360px, 1fr);
+      gap: 14px;
+      margin-bottom: 16px;
+    }
+
+    /* Camera Card */
+    .camera-card {
+      background: var(--panel);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .card-head {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 11px 16px;
+      border-bottom: 1px solid var(--border);
+      background: var(--panel2);
+    }
+
+    .card-title {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--text);
+    }
+
+    .card-title svg {
+      opacity: 0.7;
+    }
+
+    .live-indicator {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      padding: 2px 8px;
+      background: #c5283d;
+      color: #fff;
+      border-radius: 4px;
+      font-size: 10px;
+      font-weight: 700;
+      letter-spacing: 0.06em;
+    }
+
+    .live-indicator::before {
+      content: "";
+      width: 6px;
+      height: 6px;
+      background: #fff;
+      border-radius: 50%;
+      animation: pulse 1s infinite;
+    }
+
+    /* Camera Idle State */
+    .camera-idle-view {
+      min-height: 340px;
+      background: radial-gradient(circle at 50% 45%, #0f243b 0%, #081525 55%, #060d17 100%);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+      padding: 30px 20px;
+    }
+
+    .idle-icon-ring {
+      width: 64px;
+      height: 64px;
+      border: 1px dashed #204163;
+      border-radius: 50%;
+      display: grid;
+      place-items: center;
+      margin-bottom: 14px;
+      color: var(--muted);
+      background: rgba(16, 33, 54, 0.4);
+    }
+
+    .idle-title {
+      font-size: 16px;
+      font-weight: 700;
+      color: #fff;
+      margin-bottom: 6px;
+    }
+
+    .idle-desc {
+      font-size: 12px;
+      color: var(--muted);
+      max-width: 380px;
+      margin-bottom: 18px;
+      line-height: 1.5;
+    }
+
+    .action-btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 7px;
+      padding: 8px 16px;
+      border-radius: 6px;
+      font-size: 13px;
+      font-weight: 600;
+      font-family: var(--font-ui);
+      cursor: pointer;
+      transition: all 0.15s ease;
+      border: 1px solid var(--border-light);
+      background: var(--panel2);
+      color: var(--text);
+      text-decoration: none;
+    }
+
+    .action-btn:hover {
+      border-color: var(--accent);
+      color: #fff;
+      background: #152d47;
+    }
+
+    .action-btn.primary {
+      background: #1182b8;
+      border-color: #1598d6;
+      color: #fff;
+      box-shadow: 0 2px 8px rgba(21, 152, 214, 0.3);
+    }
+
+    .action-btn.primary:hover {
+      background: #0f73a3;
+      border-color: #17a2e4;
+    }
+
+    .action-btn.danger {
+      background: rgba(255, 92, 114, 0.15);
+      border-color: rgba(255, 92, 114, 0.3);
+      color: var(--red);
+    }
+
+    .action-btn.danger:hover {
+      background: rgba(255, 92, 114, 0.25);
+    }
+
+    /* Camera Live Frame */
+    .camera-frame {
+      position: relative;
+      width: 100%;
+      aspect-ratio: 16/9;
+      background: #040910;
+      overflow: hidden;
+    }
+
+    .camera-frame img {
+      width: 100%;
+      height: 100%;
+      object-fit: contain;
+      display: block;
+    }
+
+    .camera-placeholder {
+      position: absolute;
+      inset: 0;
+      display: grid;
+      place-items: center;
+      color: var(--muted);
+      background: radial-gradient(circle, #0e2034, #050b14);
+      font-size: 13px;
+    }
+
+    /* Camera Fullscreen / Maximize Styles */
+    .camera-card.is-fullscreen,
+    .camera-card:fullscreen,
+    .camera-card:-webkit-full-screen {
+      position: fixed !important;
+      inset: 0 !important;
+      width: 100vw !important;
+      height: 100vh !important;
+      z-index: 999999 !important;
+      background: #02060b !important;
+      border-radius: 0 !important;
+      margin: 0 !important;
+      display: flex !important;
+      flex-direction: column !important;
+      border: 0 !important;
+    }
+    .camera-card.is-fullscreen #cameraExpanded,
+    .camera-card:fullscreen #cameraExpanded,
+    .camera-card:-webkit-full-screen #cameraExpanded {
+      flex: 1 !important;
+      display: flex !important;
+      flex-direction: column !important;
+      height: 100% !important;
+    }
+    .camera-card.is-fullscreen .camera-frame,
+    .camera-card:fullscreen .camera-frame,
+    .camera-card:-webkit-full-screen .camera-frame {
+      flex: 1 !important;
+      aspect-ratio: auto !important;
+      height: calc(100vh - 52px) !important;
+      width: 100% !important;
+      background: #000 !important;
+    }
+    .camera-card.is-fullscreen .camera-frame img,
+    .camera-card:fullscreen .camera-frame img,
+    .camera-card:-webkit-full-screen .camera-frame img {
+      width: 100% !important;
+      height: 100% !important;
+      object-fit: contain !important;
+    }
+    .cam-overlay-btn {
+      position: absolute;
+      top: 10px;
+      right: 10px;
+      background: rgba(8, 23, 37, 0.75);
+      backdrop-filter: blur(4px);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      color: var(--text);
+      padding: 5px 10px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 11px;
+      font-family: var(--font-ui);
+      transition: all 0.15s ease;
+      z-index: 10;
+    }
+    .cam-overlay-btn:hover {
+      background: rgba(37, 185, 240, 0.25);
+      border-color: var(--accent);
+      color: #fff;
+    }
+
+    /* Right Side Stack */
+    .side-stack {
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+    }
+
+    .panel-card {
+      background: var(--panel);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      overflow: hidden;
+    }
+
+    .panel-body {
+      padding: 14px 16px;
+    }
+
+    /* 5-Axis Position Box (Matching media_1789274280799.png) */
+    .pos-header-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 14px;
+      padding-bottom: 8px;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .pos-conn-indicator {
+      display: inline-flex;
+      align-items: center;
+      gap: 7px;
+      font-size: 13px;
+      font-weight: 700;
+      color: var(--green);
+    }
+
+    .pos-conn-indicator .pos-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: var(--green);
+      box-shadow: 0 0 8px rgba(31, 218, 134, 0.6);
+    }
+
+    .pos-mode-select {
+      background: var(--panel2);
+      border: 1px solid var(--border-light);
+      border-radius: 5px;
+      color: var(--text);
+      font-family: var(--font-mono);
+      font-weight: 700;
+      font-size: 12px;
+      padding: 5px 12px;
+      cursor: pointer;
+      outline: none;
+    }
+
+    .pos-5axis-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      column-gap: 28px;
+      row-gap: 10px;
+      margin-bottom: 16px;
+      font-family: var(--font-mono);
+    }
+
+    .pos-axis-item {
+      display: flex;
+      align-items: baseline;
+      justify-content: space-between;
+    }
+
+    .pos-axis-label {
+      font-size: 16px;
+      font-weight: 800;
+      color: var(--accent);
+      letter-spacing: 0.05em;
+    }
+
+    .pos-axis-val {
+      font-size: 18px;
+      font-weight: 700;
+      color: #fff;
+      letter-spacing: 0.02em;
+    }
+
+    /* Indicators Row (Matching media_1789274280799.png) */
+    .indicators-row {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      padding-top: 10px;
+      border-top: 1px solid var(--border);
+      font-family: var(--font-mono);
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 0.06em;
+      color: var(--muted);
+      flex-wrap: wrap;
+    }
+
+    .ind-item {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .ind-dot {
+      width: 7px;
+      height: 7px;
+      border-radius: 50%;
+      background: #3a4d61;
+      transition: all 0.2s;
+    }
+
+    .ind-item.active {
+      color: #fff;
+    }
+
+    .ind-item.active .ind-dot {
+      background: var(--green);
+      box-shadow: 0 0 7px rgba(31, 218, 134, 0.8);
+    }
+
+    /* Key Equipment Status Grid */
+    .equip-grid {
+      display: grid;
+      grid-template-columns: repeat(5, minmax(0, 1fr));
+      gap: 8px;
+    }
+
+    .equip-item {
+      background: #091726;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 10px 6px;
+      text-align: center;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 6px;
+      min-width: 0;
+    }
+
+    .equip-icon {
+      width: 26px;
+      height: 26px;
+      border-radius: 6px;
+      display: grid;
+      place-items: center;
+      background: #0d2238;
+    }
+
+    .equip-name {
+      font-size: 10px;
+      color: var(--muted);
+      font-weight: 600;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      max-width: 100%;
+    }
+
+    /* Live Telemetry Sparklines Row */
+    .telemetry-row {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 12px;
+      margin-bottom: 16px;
+    }
+
+    .telemetry-card {
+      background: var(--panel);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 12px 14px;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+    }
+
+    .telemetry-card-head {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 8px;
+    }
+
+    .telemetry-name {
+      font-size: 11px;
+      font-weight: 600;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+    }
+
+    .telemetry-badge {
+      font-family: var(--font-mono);
+      font-size: 12px;
+      font-weight: 700;
+      color: #fff;
+      padding: 2px 7px;
+      border-radius: 4px;
+      background: #0e2238;
+      border: 1px solid var(--border-light);
+    }
+
+    .telemetry-chart {
+      width: 100%;
+      height: 52px;
+      display: block;
+    }
+
+    .telemetry-line {
+      fill: none;
+      stroke: var(--accent);
+      stroke-width: 2;
+      vector-effect: non-scaling-stroke;
+    }
+
+    .telemetry-gridline {
+      stroke: #172d47;
+      stroke-width: 1;
+    }
+
+    /* Bottom Row (Events Log + Live Parameters) */
+    .bottom-grid {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+      gap: 14px;
+    }
+
+    .events-box {
+      height: 200px;
+      overflow-y: auto;
+      padding: 10px 14px;
+      font-family: var(--font-mono);
+      font-size: 12px;
+      background: #081423;
+    }
+
+    .events-list {
+      list-style: none;
+      display: flex;
+      flex-direction: column-reverse;
+      gap: 6px;
+    }
+
+    .events-list li {
+      color: var(--muted);
+      display: flex;
+      gap: 8px;
+      line-height: 1.4;
+    }
+
+    .events-list li .ev-time {
+      color: var(--accent);
+      flex-shrink: 0;
+    }
+
+    .live-params-box {
+      height: 200px;
+      overflow-y: auto;
+      padding: 12px 14px;
+      background: #081423;
+    }
+
+    .live-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+      gap: 8px;
+      font-family: var(--font-mono);
+    }
+
+    .live-grid-item {
+      background: #0c1d30;
+      border: 1px solid #163250;
+      border-radius: 5px;
+      padding: 8px 10px;
+    }
+
+    .live-grid-item .k {
+      font-size: 10px;
+      color: var(--muted);
+      display: block;
+      margin-bottom: 2px;
+    }
+
+    .live-grid-item .v {
+      font-size: 13px;
+      font-weight: 700;
+      color: #fff;
+    }
+
+    /* Dedicated Subpages Common Header */
+    .page-header {
+      display: flex;
+      align-items: flex-end;
+      justify-content: space-between;
+      margin-bottom: 18px;
+      padding-bottom: 14px;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .page-header-text h1 {
+      font-size: 22px;
+      font-weight: 800;
+      color: #fff;
+      letter-spacing: -0.02em;
+    }
+
+    .page-header-text p {
+      font-size: 12px;
+      color: var(--muted);
+      margin-top: 3px;
+    }
+
+    .eyebrow {
+      color: var(--accent);
+      font: 700 10px var(--font-mono);
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      margin-bottom: 2px;
+    }
+
+    /* Table Toolbar */
+    .toolbar {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 12px 16px;
+      background: var(--panel2);
+      border: 1px solid var(--border);
+      border-bottom: 0;
+      border-radius: 8px 8px 0 0;
+      flex-wrap: wrap;
+    }
+
+    .search {
+      flex: 1;
+      min-width: 220px;
+      max-width: 360px;
+      padding: 8px 12px;
+      background: var(--panel);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      color: var(--text);
+      font-size: 13px;
+      outline: none;
+    }
+
+    .search:focus {
+      border-color: var(--accent);
+    }
+
+    select.filter-sel {
+      padding: 8px 12px;
+      background: var(--panel);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      color: var(--text);
+      font-size: 13px;
+      outline: none;
+      cursor: pointer;
+    }
+
+    .summary {
+      color: var(--muted);
+      font-size: 12px;
+      margin-left: auto;
+    }
+
+    /* Tables */
+    .table-wrap {
+      border: 1px solid var(--border);
+      border-radius: 0 0 8px 8px;
+      overflow: auto;
+      max-height: 480px;
+      background: var(--panel);
+    }
+
+    .table-wrap.hidden { display: none; }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      min-width: 700px;
+    }
+
+    th, td {
+      padding: 9px 14px;
+      border-bottom: 1px solid var(--border);
+      text-align: left;
+    }
+
+    th {
+      position: sticky;
+      top: 0;
+      background: var(--panel2);
+      color: var(--muted);
+      font-size: 11px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      z-index: 10;
+    }
+
+    tbody tr:hover {
+      background: rgba(37, 185, 240, 0.04);
+    }
+
+    .domain-row th {
+      background: rgba(37, 185, 240, 0.08);
+      color: var(--accent);
+      font-size: 12px;
+      text-transform: none;
+      padding: 8px 14px;
+    }
+
+    .param-id, .value, .slice {
+      font-family: var(--font-mono);
+    }
+
+    .empty {
+      display: none;
+      padding: 40px 20px;
+      text-align: center;
+      color: var(--muted);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      background: var(--panel);
+    }
+
+    .empty.visible { display: block; }
+
+    /* History Session List */
+    .session-list {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    .session-item {
+      background: var(--panel);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 14px 18px;
+      cursor: pointer;
+      transition: all 0.15s;
+    }
+
+    .session-item:hover {
+      border-color: var(--accent);
+      background: #0e2034;
+    }
+
+    .session-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 6px;
+    }
+
+    .sfile {
+      font-family: var(--font-mono);
+      font-size: 14px;
+      font-weight: 700;
+      color: #fff;
+    }
+
+    .session-meta {
+      display: flex;
+      gap: 16px;
+      color: var(--muted);
+      font-size: 12px;
+    }
+
+    /* Machine Access IP Row & Controls */
+    .ip-row {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 16px 20px;
+      background: var(--panel);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      margin-bottom: 16px;
+      flex-wrap: wrap;
+    }
+
+    .ip-input {
+      padding: 8px 12px;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      background: var(--panel2);
+      color: #fff;
+      font-family: var(--font-mono);
+      font-size: 13px;
+      width: 220px;
+      outline: none;
+    }
+
+    .ip-input:focus { border-color: var(--accent); }
+
+    .recordings-layout {
+      display: grid;
+      grid-template-columns: minmax(280px, 360px) minmax(0, 1fr);
+      gap: 16px;
+    }
+
+    .recording-card {
+      background: #091726;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 12px 14px;
+      cursor: pointer;
+      transition: all 0.15s;
+    }
+
+    .recording-card:hover, .recording-card.active {
+      border-color: var(--accent);
+      background: #0e2238;
+    }
+
+    .recording-title {
+      font-family: var(--font-mono);
+      font-weight: 700;
+      font-size: 12px;
+      color: #fff;
+      margin-bottom: 4px;
+      word-break: break-all;
+    }
+
+    .recording-meta {
+      display: flex;
+      gap: 10px;
+      font-size: 11px;
+      color: var(--muted);
+      margin-bottom: 8px;
+    }
+
+    .recording-actions {
+      display: flex;
+      gap: 8px;
+    }
+
+    .recordings-player {
+      width: 100%;
+      max-height: 480px;
+      background: #000;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+    }
+
+    /* Previous Trends Page */
+    .diff-grid {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 12px;
+      margin-bottom: 16px;
+    }
+
+    .diff-card {
+      background: var(--panel);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 14px 16px;
+    }
+
+    .diff-card .label {
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      color: var(--muted);
+      font-weight: 700;
+      margin-bottom: 6px;
+    }
+
+    .diff-card .val {
+      font-family: var(--font-mono);
+      font-size: 22px;
+      font-weight: 800;
+      color: #fff;
+    }
+
+    .diff-card .change {
+      font-size: 12px;
+      font-family: var(--font-mono);
+      margin-top: 4px;
+    }
+
+    .diff-card .change.up { color: var(--green); }
+    .diff-card .change.down { color: var(--red); }
+    .diff-card .change.flat { color: var(--muted); }
+
+    .trends-grid-lg {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 14px;
+      margin-bottom: 16px;
+    }
+
+    .trend-card-lg {
+      background: var(--panel);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 16px;
+    }
+
+    .trend-card-lg .head {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 6px;
+      font-size: 12px;
+      color: var(--muted);
+      font-weight: 600;
+    }
+
+    .trend-card-lg .v {
+      font-family: var(--font-mono);
+      font-size: 24px;
+      font-weight: 800;
+      color: var(--accent);
+      margin-bottom: 12px;
+    }
+
+    .chart-lg {
+      width: 100%;
+      height: 120px;
+      display: block;
+    }
+
+    /* Toast */
+    .toast {
+      position: fixed;
+      right: 20px;
+      bottom: 20px;
+      padding: 10px 16px;
+      border-radius: 6px;
+      background: var(--panel2);
+      border: 1px solid var(--border-light);
+      color: #fff;
+      font-size: 13px;
+      box-shadow: var(--shadow-md);
+      opacity: 0;
+      pointer-events: none;
+      transform: translateY(10px);
+      transition: all 0.2s;
+      z-index: 200;
+    }
+
+    .toast.visible {
+      opacity: 1;
+      transform: translateY(0);
+    }
+    .toast.error {
+      border-color: var(--red);
+      color: var(--red);
+      background: rgba(255,92,114,0.15);
+    }
+
+    /* Responsive */
+    @media (max-width: 1200px) {
+      .kpi-row { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+      .center-grid { grid-template-columns: 1fr; }
+      .telemetry-row { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+      .bottom-grid { grid-template-columns: 1fr; }
+      .trends-grid-lg { grid-template-columns: 1fr; }
+      .diff-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+      .recordings-layout { grid-template-columns: 1fr; }
+    }
+
+    @media (max-width: 768px) {
+      .app-shell { grid-template-columns: 1fr; }
+      .sidebar {
+        position: static;
+        height: auto;
+        flex-direction: row;
+        overflow-x: auto;
+        padding: 10px 14px;
+      }
+      .side-nav { flex-direction: row; }
+      .side-footer { display: none; }
+      .kpi-row { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+      .topbar { padding: 0 14px; }
+      .view-page { padding: 14px; }
     }
   </style>
-</head><body>
+</head>
+<body>
 
-<!-- TOPBAR -->
-<header class="topbar">
-  <div class="brand"><img src="\static\Unnati.svg" height="24" alt="logo">UFAMeasy <span>Machine Server</span></div>
-  <div class="topbar-mid">
-    <select id="deviceSelect"><option value="">-- select device --</option></select>
-  </div>
-  <div class="topbar-right">
-    <div class="conn-badge">
-      <span id="statusDot" class="dot"></span>
-      <span id="statusText">Disconnected</span>
-    </div>
-  </div>
-</header>
-
-<!-- RUNTIME CARDS -->
-<div class="runtime-panel">
-  <div class="runtime-row">
-    <div class="rt-card wide"><div class="label">Current File</div><div class="val" id="rtFile">&mdash;</div></div>
-    <div class="rt-card position-card"><div class="label">Machine Position</div><div class="val" id="rtPosition">&mdash;</div></div>
-    <div class="rt-card progress-card">
-      <div class="label">Print Progress</div>
-      <div class="stack-sm">
-        <div class="prog-bar"><div id="progressBar" class="prog-fill"></div></div>
-        <div id="progressPct" class="progress-text">&mdash;</div>
+<div class="app-shell">
+  <!-- SIDEBAR -->
+  <aside class="sidebar">
+    <div class="brand">
+      <img src="/static/Unnati.svg" alt="Logo">
+      <div>
+        <div class="brand-title">UFAM<span>easy</span></div>
+        <div class="brand-subtitle">Machine Server</div>
       </div>
     </div>
-    <div class="rt-card status-card"><div class="label">Gas</div><div id="rtGas"><span class="pill off">OFF</span></div></div>
-    <div class="rt-card status-card"><div class="label">Shielding Gas</div><div id="rtShieldingGas"><span class="pill off">OFF</span></div></div>
-    <div class="rt-card status-card"><div class="label">Powder</div><div id="rtPowder"><span class="pill off">OFF</span></div></div>
-    <div class="rt-card status-card"><div class="label">Light</div><div id="rtLight"><span class="pill off">OFF</span></div></div>
-    <div class="rt-card status-card"><div class="label">Laser</div><div id="rtLaser"><span class="pill off">OFF</span></div></div>
-    <div class="rt-card"><div class="label">Laser Power</div><div class="val" id="rtPower">&mdash;</div></div>
-    <div class="rt-card"><div class="label">Connection</div><div id="rtState"><span class="state-badge">&mdash;</span></div></div>
-    <div class="rt-card"><div class="label">Powder Usage</div><div class="val" id="est-powder">&mdash;</div></div>
-    <div class="rt-card"><div class="label">Dep. Efficiency</div><div class="val" id="est-efficiency">&mdash;</div></div>
-    <div class="rt-card"><div class="label">Energy (Wh)</div><div class="val" id="est-energy">&mdash;</div></div>
-    <div class="rt-card wide full-width"><div class="label">Live Runtime Parameters</div><div id="rtLiveGrid" class="live-grid"></div></div>
-  </div>
-</div>
 
-<!-- LIVE PROCESS MONITORING (camera - collapsed by default) -->
-<div class="camera-section">
-  <div id="cameraCollapsed" class="camera-collapsed-card">
-    <span style="font-size:18px">📷</span>
-    <span class="camera-collapsed-text">Live Process Monitoring &mdash; camera feed is inactive.</span>
-    <button class="action-btn primary" id="cameraLiveBtn" type="button">▶ Watch Live Stream</button>
-  </div>
-  <div id="cameraExpanded" class="camera-expanded-card hidden">
-    <div class="camera-head">
-      <div class="camera-head-title">
-        <span>Live Process Monitoring</span>
-        <span class="live-badge">LIVE</span>
+    <nav class="side-nav">
+      <button class="active" data-view="overview" type="button" onclick="switchTab('overview')">
+        <svg width="17" height="17" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>
+        <span>Dashboard</span>
+      </button>
+      <button data-view="params" type="button" onclick="switchTab('params')">
+        <svg width="17" height="17" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M9 5H7a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-2"/><rect x="9" y="3" width="6" height="4" rx="1"/><line x1="9" y1="12" x2="15" y2="12"/><line x1="9" y1="16" x2="13" y2="16"/></svg>
+        <span>Parameters</span>
+      </button>
+      <button data-view="history" type="button" onclick="switchTab('history')">
+        <svg width="17" height="17" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+        <span>History</span>
+      </button>
+      <button data-view="machineAccess" type="button" onclick="switchTab('machineAccess')">
+        <svg width="17" height="17" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><rect x="2" y="3" width="20" height="14" rx="2"/><path d="M8 21h8M12 17v4"/></svg>
+        <span>Machine Access</span>
+      </button>
+      <button data-view="trends" type="button" onclick="switchTab('trends')">
+        <svg width="17" height="17" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+        <span>Previous Trends</span>
+      </button>
+    </nav>
+
+    <div class="side-footer">
+      <div class="status-row">
+        <span class="pulse-dot"></span>
+        <span>Machine Online</span>
       </div>
-      <div style="display:flex;gap:8px;align-items:center;">
-        <span id="cameraStatus" class="camera-status-text"></span>
-        <button class="action-btn" id="cameraStopBtn" type="button">✕ Stop</button>
+      <div id="sideMachineIp">192.168.0.104:8000</div>
+    </div>
+  </aside>
+
+  <!-- WORKSPACE -->
+  <div class="workspace">
+    <!-- TOPBAR -->
+    <header class="topbar">
+      <div class="topbar-left">
+        <div class="device-select-wrap">
+          <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>
+          <select id="deviceSelect">
+            <option value="">-- select device --</option>
+          </select>
+        </div>
+
+        <div id="topbarStatusBadge" class="topbar-status-badge disconnected">
+          <span class="dot" id="statusDot"></span>
+          <span id="statusText">Disconnected</span>
+        </div>
       </div>
-    </div>
-    <div class="camera-frame">
-      <img id="cameraFeed" alt="Live machine camera feed" class="hidden">
-      <div id="cameraPlaceholder" class="camera-placeholder">Connecting to live feed&hellip;</div>
-    </div>
-    <div class="camera-controls">
-      <span id="cameraStatusBar" class="camera-status-text"></span>
-    </div>
-  </div>
-</div>
 
-<!-- TAB BAR -->
-<div class="tab-bar">
-  <button class="tab-btn active" id="btnParams" onclick="switchTab('params')"> Parameters</button>
-  <button class="tab-btn" id="btnSessions" onclick="switchTab('sessions')"> History</button>
-  <button class="tab-btn" id="btnMachineAccess" onclick="switchTab('machineAccess')"> Machine Access</button>
-</div>
+      <div class="topbar-right">
+        <div class="topbar-info-item">
+          <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+          <span>Current File:</span>
+          <strong id="topbarFile">—</strong>
+        </div>
 
-<main>
-  <!-- PARAMS SECTION -->
-  <div class="collapse open" id="secParams">
-    <div class="section-content">
+        <div class="topbar-time" id="topbarClock">-- : -- : --</div>
+        <div class="user-avatar" title="UFAM Server">U</div>
+      </div>
+    </header>
+
+    <!-- PAGE 1: OVERVIEW / DASHBOARD -->
+    <main class="view-page active" id="view-overview">
+      <!-- TOP KPI ROW -->
+      <div class="kpi-row">
+        <!-- Machine State -->
+        <div class="kpi-card">
+          <div class="kpi-header">
+            <span>Machine State</span>
+            <span id="rtState"><span class="status-pill off">IDLE</span></span>
+          </div>
+          <div class="kpi-val" id="rtStateVal">Idle</div>
+          <div class="kpi-sub" id="rtStateSub">No active print job</div>
+        </div>
+
+        <!-- Connection -->
+        <div class="kpi-card">
+          <div class="kpi-header">
+            <span>Connection</span>
+            <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>
+          </div>
+          <div class="kpi-val" id="kpiConnVal" style="color:var(--green);">Connected</div>
+          <div class="kpi-sub" id="kpiConnSub">WebSocket live</div>
+        </div>
+
+        <!-- Current File -->
+        <div class="kpi-card">
+          <div class="kpi-header">
+            <span>Current File</span>
+            <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M13 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"/><polyline points="13 2 13 9 20 9"/></svg>
+          </div>
+          <div class="kpi-val" id="rtFile">&mdash;</div>
+          <div class="kpi-sub" id="rtLayerText">Layer 0 / 0</div>
+        </div>
+
+        <!-- Build Progress -->
+        <div class="kpi-card">
+          <div class="kpi-header">
+            <span>Build Progress</span>
+            <span id="progressPct" style="font-family:var(--font-mono);font-weight:700;color:var(--accent);">0.0%</span>
+          </div>
+          <div class="kpi-bar-wrap">
+            <div id="progressBar" class="kpi-bar-fill"></div>
+          </div>
+          <div class="kpi-sub" style="margin-top:6px;">Process completion</div>
+        </div>
+
+        <!-- Laser Power -->
+        <div class="kpi-card">
+          <div class="kpi-header">
+            <span>Laser Power</span>
+            <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
+          </div>
+          <div class="kpi-val" id="rtPower">&mdash;</div>
+          <div class="kpi-sub">Rated output</div>
+        </div>
+
+        <!-- Energy (Wh) -->
+        <div class="kpi-card">
+          <div class="kpi-header">
+            <span>Energy / Powder</span>
+            <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M18 20V10M12 20V4M6 20v-6"/></svg>
+          </div>
+          <div class="kpi-val" id="est-energy">&mdash;</div>
+          <div class="kpi-sub"><span id="est-powder">&mdash;</span> &bull; <span id="est-efficiency">&mdash;</span></div>
+        </div>
+      </div>
+
+      <!-- CENTER SECTION (Camera + Machine Position & Equipment) -->
+      <div class="center-grid">
+        <!-- Live Process Card -->
+        <div class="camera-card" id="cameraCard">
+          <div class="card-head">
+            <div class="card-title">
+              <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>
+              <span>Live Process View</span>
+            </div>
+            <div style="display:flex;align-items:center;gap:8px;">
+              <span id="cameraLiveBadge" class="live-indicator" style="display:none;">LIVE</span>
+              <span id="cameraStatus" style="font-size:11px;color:var(--muted);"></span>
+              <button class="action-btn" id="cameraFullscreenBtn" type="button" style="display:none;padding:4px 10px;font-size:11px;" title="Maximize / Fullscreen live stream">
+                <svg id="camFsIcon" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3"/>
+                </svg>
+                <span id="camFsText">Maximize</span>
+              </button>
+              <button class="action-btn danger" id="cameraStopBtn" type="button" style="display:none;padding:4px 10px;font-size:11px;">✕ Stop Feed</button>
+            </div>
+          </div>
+
+          <!-- Collapsed / Idle View -->
+          <div id="cameraCollapsed" class="camera-idle-view">
+            <div class="idle-icon-ring">
+              <svg width="32" height="32" fill="none" stroke="currentColor" stroke-width="1.6" viewBox="0 0 24 24"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>
+            </div>
+            <div class="idle-title">No live process running</div>
+            <div class="idle-desc">Real-time machine monitoring camera feed (port 8765). Connect to visually monitor deposition or melt pool.</div>
+            <button class="action-btn primary" id="cameraLiveBtn" type="button">
+              <svg width="14" height="14" fill="currentColor" viewBox="0 0 24 24"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+              <span>Watch Live Stream</span>
+            </button>
+          </div>
+
+          <!-- Expanded Active Video Stream -->
+          <div id="cameraExpanded" style="display:none;">
+            <div class="camera-frame">
+              <img id="cameraFeed" alt="Live machine camera feed" style="display:none;">
+              <div id="cameraPlaceholder" class="camera-placeholder">Connecting to live feed stream&hellip;</div>
+              <button class="cam-overlay-btn" id="camOverlayFsBtn" type="button" title="Maximize Live Stream">
+                <svg id="camOverlayFsIcon" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3"/>
+                </svg>
+                <span id="camOverlayFsText">Maximize</span>
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Right Side Stack -->
+        <div class="side-stack">
+          <!-- 5-AXIS MACHINE POSITION (Matching media_1789274280799.png) -->
+          <div class="panel-card">
+            <div class="panel-body" style="padding:16px 18px;">
+              <div class="pos-header-row">
+                <div class="pos-conn-indicator">
+                  <span class="pos-dot" id="posConnDot"></span>
+                  <span id="posConnText">Connected</span>
+                </div>
+                <select id="posModeSelect" class="pos-mode-select">
+                  <option value="xma">MACH POS</option>
+                  <option value="xmr">REL POS</option>
+                  <option value="xwa">WORK POS</option>
+                  <option value="xwr">WORK REL</option>
+                </select>
+              </div>
+
+              <!-- 5 Positions: X, Z, C on left; Y, B on right -->
+              <div class="pos-5axis-grid">
+                <!-- Row 1: X & Y -->
+                <div class="pos-axis-item">
+                  <span class="pos-axis-label">X</span>
+                  <span class="pos-axis-val" id="axis-X">+000.000 mm</span>
+                </div>
+                <div class="pos-axis-item">
+                  <span class="pos-axis-label">Y</span>
+                  <span class="pos-axis-val" id="axis-Y">+000.000 mm</span>
+                </div>
+
+                <!-- Row 2: Z & B -->
+                <div class="pos-axis-item">
+                  <span class="pos-axis-label">Z</span>
+                  <span class="pos-axis-val" id="axis-Z">+000.000 mm</span>
+                </div>
+                <div class="pos-axis-item">
+                  <span class="pos-axis-label">B</span>
+                  <span class="pos-axis-val" id="axis-B">+000.000 mm</span>
+                </div>
+
+                <!-- Row 3: C -->
+                <div class="pos-axis-item">
+                  <span class="pos-axis-label">C</span>
+                  <span class="pos-axis-val" id="axis-C">+000.000 mm</span>
+                </div>
+              </div>
+
+              <!-- Status Indicators: LASER • POWDER • GAS • PF GAS -->
+              <div class="indicators-row">
+                <div class="ind-item" id="indLaser">
+                  <span class="ind-dot"></span>
+                  <span>LASER</span>
+                </div>
+                <div class="ind-item" id="indPowder">
+                  <span class="ind-dot"></span>
+                  <span>POWDER</span>
+                </div>
+                <div class="ind-item" id="indGas">
+                  <span class="ind-dot"></span>
+                  <span>GAS</span>
+                </div>
+                <div class="ind-item" id="indPfGas">
+                  <span class="ind-dot"></span>
+                  <span>PF GAS</span>
+                </div>
+              </div>
+              <div id="rtPosition" style="display:none;">&mdash;</div>
+            </div>
+          </div>
+
+          <!-- Key Equipment Status Pills -->
+          <div class="panel-card">
+            <div class="card-head">
+              <div class="card-title">
+                <svg width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+                <span>Equipment State</span>
+              </div>
+            </div>
+            <div class="panel-body">
+              <div class="equip-grid">
+                <!-- Laser -->
+                <div class="equip-item">
+                  <div class="equip-icon" style="color:var(--accent);">
+                    <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
+                  </div>
+                  <div class="equip-name">Laser</div>
+                  <div id="rtLaser"><span class="status-pill off">OFF</span></div>
+                </div>
+                <!-- Gas -->
+                <div class="equip-item">
+                  <div class="equip-icon" style="color:var(--green);">
+                    <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M12 2.69l5.66 5.66a8 8 0 1 1-11.31 0z"/></svg>
+                  </div>
+                  <div class="equip-name">Gas</div>
+                  <div id="rtGas"><span class="status-pill off">OFF</span></div>
+                </div>
+                <!-- Shield Gas -->
+                <div class="equip-item">
+                  <div class="equip-icon" style="color:var(--green);">
+                    <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+                  </div>
+                  <div class="equip-name">Shield Gas</div>
+                  <div id="rtShieldingGas"><span class="status-pill off">OFF</span></div>
+                </div>
+                <!-- Powder -->
+                <div class="equip-item">
+                  <div class="equip-icon" style="color:var(--yellow);">
+                    <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><circle cx="19" cy="6" r="2"/><circle cx="5" cy="18" r="2"/></svg>
+                  </div>
+                  <div class="equip-name">Powder</div>
+                  <div id="rtPowder"><span class="status-pill off">OFF</span></div>
+                </div>
+                <!-- Light -->
+                <div class="equip-item">
+                  <div class="equip-icon" style="color:#fce080;">
+                    <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><line x1="9" y1="18" x2="15" y2="18"/><line x1="10" y1="22" x2="14" y2="22"/><path d="M15.09 14c.18-.98.65-1.74 1.41-2.5A4.65 4.65 0 0 0 18 8 6 6 0 0 0 6 8c0 1 .23 2.23 1.5 3.5A4.61 4.61 0 0 1 8.91 14"/></svg>
+                  </div>
+                  <div class="equip-name">Light</div>
+                  <div id="rtLight"><span class="status-pill off">OFF</span></div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- KEY TELEMETRY SPARKLINES ROW -->
+      <div class="telemetry-row">
+        <!-- Laser Power % -->
+        <div class="telemetry-card">
+          <div class="telemetry-card-head">
+            <span class="telemetry-name">Laser Power</span>
+            <span id="trendLaserValue" class="telemetry-badge">No data</span>
+          </div>
+          <svg id="trendLaser" class="telemetry-chart" viewBox="0 0 200 52" preserveAspectRatio="none"></svg>
+        </div>
+
+        <!-- Melt Pool High -->
+        <div class="telemetry-card">
+          <div class="telemetry-card-head">
+            <span class="telemetry-name">Melt Pool High</span>
+            <span id="trendMeltValue" class="telemetry-badge">No data</span>
+          </div>
+          <svg id="trendMelt" class="telemetry-chart" viewBox="0 0 200 52" preserveAspectRatio="none"></svg>
+        </div>
+
+        <!-- Feed Override % -->
+        <div class="telemetry-card">
+          <div class="telemetry-card-head">
+            <span class="telemetry-name">Feed Override</span>
+            <span id="trendFeedValue" class="telemetry-badge">No data</span>
+          </div>
+          <svg id="trendFeed" class="telemetry-chart" viewBox="0 0 200 52" preserveAspectRatio="none"></svg>
+        </div>
+
+        <!-- Powder Feeder -->
+        <div class="telemetry-card">
+          <div class="telemetry-card-head">
+            <span class="telemetry-name">Powder Feeder</span>
+            <span id="trendPowderValue" class="telemetry-badge">Not published</span>
+          </div>
+          <svg id="trendPowder" class="telemetry-chart" viewBox="0 0 200 52" preserveAspectRatio="none"></svg>
+        </div>
+      </div>
+
+      <!-- BOTTOM ROW (Events Log + Live Parameters) -->
+      <div class="bottom-grid">
+        <!-- Events Log -->
+        <div class="panel-card">
+          <div class="card-head">
+            <div class="card-title">
+              <svg width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
+              <span>Recent Activity &amp; Events</span>
+            </div>
+            <span style="font-size:11px;color:var(--muted);" id="eventsCount">0 events</span>
+          </div>
+          <div class="events-box">
+            <ul id="eventsList" class="events-list"></ul>
+          </div>
+        </div>
+
+        <!-- Live Runtime Parameters -->
+        <div class="panel-card">
+          <div class="card-head">
+            <div class="card-title">
+              <svg width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><polygon points="12 2 2 7 12 12 22 7 12 2"/><polyline points="2 17 12 22 22 17"/><polyline points="2 12 12 17 22 12"/></svg>
+              <span>Live Runtime Parameters</span>
+            </div>
+            <span style="font-size:11px;color:var(--accent);">Live Telemetry</span>
+          </div>
+          <div class="live-params-box">
+            <div id="rtLiveGrid" class="live-grid"></div>
+          </div>
+        </div>
+      </div>
+    </main>
+
+    <!-- PAGE 2: PARAMETERS -->
+    <main class="view-page" id="view-params">
+      <div class="page-header">
+        <div class="page-header-text">
+          <div class="eyebrow">Snapshot Inspection</div>
+          <h1>Process Parameters</h1>
+          <p>Live snapshot data across all layers and slices</p>
+        </div>
+      </div>
+
       <div class="toolbar">
         <input id="searchInput" class="search" type="search" placeholder="Search Param ID or Field..." autocomplete="off">
-        <select id="sliceFilter"><option value="">All Slices</option></select>
+        <select id="sliceFilter" class="filter-sel"><option value="">All Slices</option></select>
         <span id="summary" class="summary">0 parameters</span>
       </div>
-      <div id="emptyState" class="empty">No snapshot data yet</div>
+
+      <div id="emptyState" class="empty visible">No snapshot data available for the current selection</div>
       <div id="tableWrap" class="table-wrap hidden">
         <table>
-          <thead><tr><th>Param ID</th><th>Field</th><th>Value</th><th>Unit</th><th>Domain</th><th>Slice</th></tr></thead>
+          <thead>
+            <tr><th>Param ID</th><th>Field</th><th>Value</th><th>Unit</th><th>Domain</th><th>Slice</th></tr>
+          </thead>
           <tbody id="tableBody"></tbody>
         </table>
       </div>
-    </div>
-  </div>
+    </main>
 
-  <!-- HISTORY SECTION -->
-  <div class="collapse" id="secSessions">
-    <div class="sessions-area">
-      <div id="sessionList" class="session-list">
-        <div class="no-sessions">Select a device to view session history.</div>
-      </div>
-    </div>
-  </div>
-
-  <!-- MACHINE ACCESS SECTION -->
-  <div class="collapse" id="secMachineAccess">
-    <div class="machine-access-area">
-      <div class="ip-row">
-        <label for="sharedIpInput">Machine IP</label>
-        <input id="sharedIpInput" class="ip-input" type="text" placeholder="e.g. 192.168.1.100" autocomplete="off">
-        <div class="ip-actions">
-          <button class="action-btn primary" id="maLiveStreamBtn" type="button">▶ Live Stream</button>
-          <button class="action-btn" id="maRecordingsBtn" type="button">🎬 View Recordings</button>
-          <button class="action-btn" id="maLogsBtn" type="button">📄 View Logs</button>
-          <button class="action-btn" id="maDownloadBtn" type="button">⬇ Download Log CSV</button>
+    <!-- PAGE 3: HISTORY -->
+    <main class="view-page" id="view-history">
+      <div class="page-header">
+        <div class="page-header-text">
+          <div class="eyebrow">Session Logs</div>
+          <h1>Session History</h1>
+          <p>Select a recorded machine session to inspect replay parameters and telemetry</p>
         </div>
+      </div>
+
+      <div id="sessionList" class="session-list">
+        <div class="empty visible">Select a device to view recorded session history.</div>
+      </div>
+    </main>
+
+    <!-- PAGE 4: MACHINE ACCESS -->
+    <main class="view-page" id="view-machineAccess">
+      <div class="page-header">
+        <div class="page-header-text">
+          <div class="eyebrow">Remote Connectivity</div>
+          <h1>Machine Access</h1>
+          <p>Access camera stream, video recordings, and diagnostic logs via machine IP</p>
+        </div>
+      </div>
+
+      <div class="ip-row">
+        <label for="sharedIpInput" style="font-weight:600;font-size:13px;">Machine IP</label>
+        <input id="sharedIpInput" class="ip-input" type="text" placeholder="e.g. 192.168.0.104" autocomplete="off">
+        <button class="action-btn primary" id="maLiveStreamBtn" type="button">▶ Live Stream</button>
+        <button class="action-btn" id="maRecordingsBtn" type="button">🎬 View Recordings</button>
+        <button class="action-btn" id="maLogsBtn" type="button">📄 View Logs</button>
+        <button class="action-btn" id="maDownloadBtn" type="button">⬇ Download Log CSV</button>
       </div>
 
       <!-- RECORDINGS SUB-SECTION -->
-      <div id="recordingsSection" class="hidden">
-        <div style="font-size:11px;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;color:var(--muted);margin-bottom:12px;">Recordings</div>
-        <div class="recordings-layout">
-          <div>
-            <div id="recordingsStatus" class="recordings-status">Enter a machine IP to view recordings.</div>
-            <div id="recordingsList" class="recordings-list"></div>
+      <div id="recordingsSection" class="panel-card" style="margin-bottom:16px;">
+        <div class="card-head">
+          <div class="card-title"><span>Video Recordings</span></div>
+          <span id="recordingsStatus" style="font-size:12px;color:var(--muted);">Click 'View Recordings' to fetch files.</span>
+        </div>
+        <div class="panel-body">
+          <div class="recordings-layout">
+            <div id="recordingsList" style="display:flex;flex-direction:column;gap:8px;max-height:480px;overflow-y:auto;">
+              <div style="color:var(--muted);font-size:12px;padding:12px 0;">No recordings loaded yet. Click 'View Recordings'.</div>
+            </div>
+            <div>
+              <video id="recordingsVideo" class="recordings-player" controls preload="metadata"></video>
+            </div>
           </div>
-          <video id="recordingsVideo" class="recordings-player" controls preload="metadata"></video>
         </div>
       </div>
 
-      <!-- LOGS SUB-SECTION -->
-      <div id="logsSection" class="hidden">
-        <div style="font-size:11px;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;color:var(--muted);margin-bottom:12px;">System Logs</div>
-        <div class="logs-toolbar">
-          <input id="logsSearchInput" class="search" type="search" placeholder="Search logs..." autocomplete="off">
-          <select id="logsCategoryFilter" class="logs-filter hidden"></select>
-          <select id="logsSeverityFilter" class="logs-filter hidden"></select>
-          <button class="toggle-btn download-btn" id="logsRefreshBtn" type="button">Refresh</button>
+      <!-- SYSTEM LOGS SUB-SECTION -->
+      <div id="logsSection" class="panel-card">
+        <div class="card-head">
+          <div class="card-title"><span>System Diagnostic Logs</span></div>
+          <span id="logsStatus" style="font-size:12px;color:var(--muted);">Click 'View Logs' to load diagnostic entries.</span>
         </div>
-        <div id="logsStatus" class="logs-status">Enter a machine IP to view logs.</div>
-        <div id="logsTableWrap" class="table-wrap logs-table-wrap hidden">
-          <table><thead id="logsTableHead"></thead><tbody id="logsTableBody"></tbody></table>
+        <div class="panel-body">
+          <div class="toolbar" style="border-radius:6px;border-bottom:1px solid var(--border);margin-bottom:12px;">
+            <input id="logsSearchInput" class="search" type="search" placeholder="Search diagnostic logs..." autocomplete="off">
+            <select id="logsCategoryFilter" class="filter-sel" style="display:none;"></select>
+            <select id="logsSeverityFilter" class="filter-sel" style="display:none;"></select>
+            <button class="action-btn primary" id="logsRefreshBtn" type="button">Refresh</button>
+          </div>
+          <div id="logsTableWrap" class="table-wrap" style="display:none;">
+            <table><thead id="logsTableHead"></thead><tbody id="logsTableBody"></tbody></table>
+          </div>
+          <div id="logsEmptyState" class="empty">No log records found</div>
         </div>
-        <div id="logsEmptyState" class="empty">No logs found</div>
       </div>
-    </div>
-  </div>
+    </main>
 
-  <!-- EVENTS LOG -->
-  <div class="events-wrap">
-    <div class="events-head">Activity Log</div>
-    <div class="events-body"><ul id="eventsList" class="events-list"></ul></div>
+    <!-- PAGE 5: PREVIOUS TRENDS -->
+    <main class="view-page" id="view-trends">
+      <div class="page-header">
+        <div class="page-header-text">
+          <div class="eyebrow">Visual Analytics</div>
+          <h1>Previous Trends &amp; Telemetry</h1>
+          <p>Comprehensive telemetry curves, live diffs, and multi-sensor overlay</p>
+        </div>
+      </div>
+
+      <!-- Metric Difference Cards -->
+      <div class="diff-grid">
+        <div class="diff-card">
+          <div class="label">Laser Power</div>
+          <div class="val" id="hLaserVal">--</div>
+          <div class="change flat" id="hLaserChg">Waiting for data</div>
+        </div>
+        <div class="diff-card">
+          <div class="label">Feed Override</div>
+          <div class="val" id="hFeedVal">--</div>
+          <div class="change flat" id="hFeedChg">Waiting for data</div>
+        </div>
+        <div class="diff-card">
+          <div class="label">Melt Pool High</div>
+          <div class="val" id="hMeltVal">--</div>
+          <div class="change flat" id="hMeltChg">Waiting for data</div>
+        </div>
+        <div class="diff-card">
+          <div class="label">Powder Delivery</div>
+          <div class="val" id="hPowderVal">--</div>
+          <div class="change flat" id="hPowderChg">Waiting for data</div>
+        </div>
+      </div>
+
+      <!-- 4 Large Telemetry Charts -->
+      <div class="trends-grid-lg">
+        <div class="trend-card-lg">
+          <div class="head"><span>Laser Power (%)</span><span style="color:var(--accent);">[LIVE]</span></div>
+          <div class="v" id="hLaserBig">--</div>
+          <svg id="hTrendLaser" class="chart-lg" viewBox="0 0 380 110" preserveAspectRatio="none"></svg>
+        </div>
+        <div class="trend-card-lg">
+          <div class="head"><span>Feed Override (%)</span><span style="color:var(--green);">[LIVE]</span></div>
+          <div class="v" id="hFeedBig" style="color:var(--green);">--</div>
+          <svg id="hTrendFeed" class="chart-lg" viewBox="0 0 380 110" preserveAspectRatio="none"></svg>
+        </div>
+        <div class="trend-card-lg">
+          <div class="head"><span>Melt Pool High</span><span style="color:var(--yellow);">[LIVE]</span></div>
+          <div class="v" id="hMeltBig" style="color:var(--yellow);">--</div>
+          <svg id="hTrendMelt" class="chart-lg" viewBox="0 0 380 110" preserveAspectRatio="none"></svg>
+        </div>
+        <div class="trend-card-lg">
+          <div class="head"><span>Powder Feeder Rate</span><span style="color:var(--muted);">[LIVE]</span></div>
+          <div class="v" id="hPowderBig" style="color:#fff;">--</div>
+          <svg id="hTrendPowder" class="chart-lg" viewBox="0 0 380 110" preserveAspectRatio="none"></svg>
+        </div>
+      </div>
+
+      <!-- Multi-Line Overlay -->
+      <div class="panel-card">
+        <div class="card-head">
+          <div class="card-title"><span>Telemetry Multi-Sensor Overlay</span></div>
+          <div style="display:flex;gap:16px;font-size:11px;">
+            <span style="color:var(--accent);font-weight:700;">&#9644; Laser Power</span>
+            <span style="color:var(--green);font-weight:700;">&#9644; Feed Override</span>
+            <span style="color:var(--yellow);font-weight:700;">&#9644; Melt Pool High</span>
+          </div>
+        </div>
+        <div class="panel-body" style="background:#081423;">
+          <svg id="hMultiTrend" style="width:100%;height:150px;display:block;" viewBox="0 0 600 130" preserveAspectRatio="none"></svg>
+        </div>
+      </div>
+    </main>
   </div>
-</main>
-<div id="toast" class="toast" role="status" aria-live="polite"></div><script>
-  // DOM refs
-  const tableBody=document.getElementById("tableBody"),tableWrap=document.getElementById("tableWrap"),emptyState=document.getElementById("emptyState");
-  const searchInput=document.getElementById("searchInput"),sliceFilter=document.getElementById("sliceFilter"),summary=document.getElementById("summary");
-  const statusDot=document.getElementById("statusDot"),statusText=document.getElementById("statusText"),eventsList=document.getElementById("eventsList");
-  const deviceSelect=document.getElementById("deviceSelect"),sessionList=document.getElementById("sessionList");
-  const recordingsList=document.getElementById("recordingsList"),recordingsStatus=document.getElementById("recordingsStatus"),recordingsVideo=document.getElementById("recordingsVideo");
-  const logsSearchInput=document.getElementById("logsSearchInput"),logsCategoryFilter=document.getElementById("logsCategoryFilter");
-  const logsSeverityFilter=document.getElementById("logsSeverityFilter"),logsRefreshBtn=document.getElementById("logsRefreshBtn");
-  const logsStatus=document.getElementById("logsStatus"),logsTableWrap=document.getElementById("logsTableWrap");
-  const logsTableHead=document.getElementById("logsTableHead"),logsTableBody=document.getElementById("logsTableBody"),logsEmptyState=document.getElementById("logsEmptyState");
-  const toast=document.getElementById("toast"),cameraFeed=document.getElementById("cameraFeed"),cameraPlaceholder=document.getElementById("cameraPlaceholder");
-  const cameraStatus=document.getElementById("cameraStatus"),cameraLiveBtn=document.getElementById("cameraLiveBtn");
-  const rtFile=document.getElementById("rtFile"),rtPosition=document.getElementById("rtPosition"),rtProgFill=document.getElementById("progressBar"),progressPct=document.getElementById("progressPct");
-  const rtGas=document.getElementById("rtGas"),rtShieldingGas=document.getElementById("rtShieldingGas"),rtLaser=document.getElementById("rtLaser"),rtPower=document.getElementById("rtPower"),rtState=document.getElementById("rtState");
-  const estPowder=document.getElementById("est-powder"),estEfficiency=document.getElementById("est-efficiency"),estEnergy=document.getElementById("est-energy");
+</div>
+
+<div id="toast" class="toast" role="status" aria-live="polite"></div>
+
+<script>
+  // DOM References
+  const tableBody = document.getElementById("tableBody");
+  const tableWrap = document.getElementById("tableWrap");
+  const emptyState = document.getElementById("emptyState");
+  const searchInput = document.getElementById("searchInput");
+  const sliceFilter = document.getElementById("sliceFilter");
+  const summary = document.getElementById("summary");
+  const statusDot = document.getElementById("statusDot");
+  const statusText = document.getElementById("statusText");
+  const topbarStatusBadge = document.getElementById("topbarStatusBadge");
+  const eventsList = document.getElementById("eventsList");
+  const eventsCount = document.getElementById("eventsCount");
+  const deviceSelect = document.getElementById("deviceSelect");
+  const sessionList = document.getElementById("sessionList");
+
+  // Machine Access DOM
+  const sharedIpInput = document.getElementById("sharedIpInput");
+  const recordingsSection = document.getElementById("recordingsSection");
+  const recordingsList = document.getElementById("recordingsList");
+  const recordingsStatus = document.getElementById("recordingsStatus");
+  const recordingsVideo = document.getElementById("recordingsVideo");
+  const logsSection = document.getElementById("logsSection");
+  const logsSearchInput = document.getElementById("logsSearchInput");
+  const logsCategoryFilter = document.getElementById("logsCategoryFilter");
+  const logsSeverityFilter = document.getElementById("logsSeverityFilter");
+  const logsRefreshBtn = document.getElementById("logsRefreshBtn");
+  const logsStatus = document.getElementById("logsStatus");
+  const logsTableWrap = document.getElementById("logsTableWrap");
+  const logsTableHead = document.getElementById("logsTableHead");
+  const logsTableBody = document.getElementById("logsTableBody");
+  const logsEmptyState = document.getElementById("logsEmptyState");
+  const toast = document.getElementById("toast");
+
+  // Camera DOM
+  const cameraFeed = document.getElementById("cameraFeed");
+  const cameraPlaceholder = document.getElementById("cameraPlaceholder");
+  const cameraStatus = document.getElementById("cameraStatus");
+  const cameraLiveBtn = document.getElementById("cameraLiveBtn");
+  const cameraStopBtn = document.getElementById("cameraStopBtn");
+  const cameraCollapsed = document.getElementById("cameraCollapsed");
+  const cameraExpanded = document.getElementById("cameraExpanded");
+  const cameraLiveBadge = document.getElementById("cameraLiveBadge");
+
+  // KPI & Machine Position DOM
+  const rtFile = document.getElementById("rtFile");
+  const topbarFile = document.getElementById("topbarFile");
+  const rtPosition = document.getElementById("rtPosition");
+  const posModeSelect = document.getElementById("posModeSelect");
+  const axisX = document.getElementById("axis-X");
+  const axisY = document.getElementById("axis-Y");
+  const axisZ = document.getElementById("axis-Z");
+  const axisB = document.getElementById("axis-B");
+  const axisC = document.getElementById("axis-C");
+  const indLaser = document.getElementById("indLaser");
+  const indPowder = document.getElementById("indPowder");
+  const indGas = document.getElementById("indGas");
+  const indPfGas = document.getElementById("indPfGas");
+  const posConnDot = document.getElementById("posConnDot");
+  const posConnText = document.getElementById("posConnText");
+
+  const progressBar = document.getElementById("progressBar");
+  const progressPct = document.getElementById("progressPct");
+  const rtLayerText = document.getElementById("rtLayerText");
+  const rtGas = document.getElementById("rtGas");
+  const rtShieldingGas = document.getElementById("rtShieldingGas");
+  const rtLaser = document.getElementById("rtLaser");
+  const rtPowder = document.getElementById("rtPowder");
+  const rtLight = document.getElementById("rtLight");
+  const rtPower = document.getElementById("rtPower");
+  const rtState = document.getElementById("rtState");
+  const rtStateVal = document.getElementById("rtStateVal");
+  const rtStateSub = document.getElementById("rtStateSub");
+  const estPowder = document.getElementById("est-powder");
+  const estEfficiency = document.getElementById("est-efficiency");
+  const estEnergy = document.getElementById("est-energy");
+  const kpiConnVal = document.getElementById("kpiConnVal");
+  const kpiConnSub = document.getElementById("kpiConnSub");
+  const topbarClock = document.getElementById("topbarClock");
 
   // State
-  const rowsByKey=new Map();
-  let socket=null,reconnectTimer=null,totalLayers=0,liveRuntimeData={};
-  let currentRecordingsIp="",currentLogsIp="",logsRows=[],logsColumns=[],logsCategoryColumn="",logsSeverityColumn="";
-  let toastTimer=null,devicesById=new Map(),currentMachineConnected=false;
-  let manualCameraIp="",currentCameraIp="",cameraFeedFailed=false;
+  const rowsByKey = new Map();
+  let socket = null, reconnectTimer = null, totalLayers = 0, liveRuntimeData = {};
+  let currentRecordingsIp = "", currentLogsIp = "", logsRows = [], logsColumns = [], logsCategoryColumn = "", logsSeverityColumn = "";
+  let toastTimer = null, devicesById = new Map(), currentMachineConnected = false;
+  let manualCameraIp = "", currentCameraIp = "";
+  let latestPositionSets = { xma: null, xmr: null, xwa: null, xwr: null };
+  let lastInitLiveRuntime = {}, lastInitSessionsData = {};
 
-  // ── Tab switching ──
-  function switchTab(name){
-    const tabs={params:"secParams",sessions:"secSessions",machineAccess:"secMachineAccess"};
-    const btns={params:"btnParams",sessions:"btnSessions",machineAccess:"btnMachineAccess"};
-    Object.values(tabs).forEach(id=>{const el=document.getElementById(id);if(el)el.classList.remove("open");});
-    Object.values(btns).forEach(id=>{const el=document.getElementById(id);if(el)el.classList.remove("active");});
-    const sec=document.getElementById(tabs[name]);if(sec)sec.classList.add("open");
-    const btn=document.getElementById(btns[name]);if(btn)btn.classList.add("active");
-  }
-  // Keep old openSection/toggleSection for internal use
-  function openSection(name){
-    if(name==="params"||name==="sessions")switchTab(name);
-    else if(name==="recordings"||name==="logs"){switchTab("machineAccess");
-      document.getElementById("recordingsSection").classList.toggle("hidden",name!=="recordings");
-      document.getElementById("logsSection").classList.toggle("hidden",name!=="logs");}
-  }
-  function toggleSection(name){openSection(name);}
+  const trendDefinitions = [
+    { chartId: "trendLaser", valueId: "trendLaserValue", suffix: "%", keys: ["laser_power_pct", "laser_power", "DS010"] },
+    { chartId: "trendMelt", valueId: "trendMeltValue", suffix: "", keys: ["melt_pool_high"] },
+    { chartId: "trendFeed", valueId: "trendFeedValue", suffix: "%", keys: ["feed_override_pct", "feed_override"] },
+    { chartId: "trendPowder", valueId: "trendPowderValue", suffix: "", keys: ["powder_feeder_rate", "powder_feed_rate", "powder_flow_rate"] }
+  ];
+  let trendHistory = Object.fromEntries(trendDefinitions.map(def => [def.chartId, []]));
 
-  // ── Shared IP + Machine Access buttons ──
-  function getSharedIp(){return (document.getElementById("sharedIpInput").value||"").trim();}
-  function requireIp(){const ip=getSharedIp();if(!ip){showToast("Enter a machine IP address first.",true);}return ip;}
+  // Live Clock
+  setInterval(() => {
+    const d = new Date();
+    topbarClock.textContent = d.toTimeString().split(' ')[0];
+  }, 1000);
 
-  document.getElementById("maLiveStreamBtn").addEventListener("click",async()=>{
-    const ip=requireIp();if(!ip)return;
-    const cleanIp=cleanMachineHost(ip);
-    if(!(await checkCameraAvailable(cleanIp))){showToast(`Camera not reachable at ${cleanIp}:8765`,true);return;}
-    manualCameraIp=cleanIp;currentCameraIp="";cameraFeedFailed=false;
-    document.getElementById("cameraCollapsed").classList.add("hidden");
-    document.getElementById("cameraExpanded").classList.remove("hidden");
-    updateCameraPanel();showToast(`Live stream started for ${cleanIp}.`);logEvent("camera_live_stream",cleanIp);
-  });
-  document.getElementById("maRecordingsBtn").addEventListener("click",()=>{
-    const ip=requireIp();if(!ip)return;
-    document.getElementById("recordingsSection").classList.remove("hidden");
-    document.getElementById("logsSection").classList.add("hidden");
-    viewRecordingsIp(ip);
-  });
-  document.getElementById("maLogsBtn").addEventListener("click",()=>{
-    const ip=requireIp();if(!ip)return;
-    document.getElementById("logsSection").classList.remove("hidden");
-    document.getElementById("recordingsSection").classList.add("hidden");
-    viewLogsIp(ip);
-  });
-  document.getElementById("maDownloadBtn").addEventListener("click",()=>{
-    const ip=requireIp();if(!ip)return;
-    const downloadUrl=new URL("/logs/fetch",window.location.origin);
-    downloadUrl.searchParams.set("ip",ip);
-    window.location.href=downloadUrl.href;
-  });
+  // Tab switching
+  function switchTab(name) {
+    const pageMap = {
+      overview: 'view-overview',
+      dashboard: 'view-overview',
+      params: 'view-params',
+      history: 'view-history',
+      sessions: 'view-history',
+      machineAccess: 'view-machineAccess',
+      trends: 'view-trends'
+    };
 
-  // Camera panel controls
-  document.getElementById("cameraLiveBtn").addEventListener("click",async()=>{
-    switchTab("machineAccess");
-    const ip=getSharedIp()||getSelectedMachineIp()||cleanMachineHost(location.hostname);
-    if(ip)document.getElementById("sharedIpInput").value=ip;
-    document.getElementById("maLiveStreamBtn").click();
-  });
-  document.getElementById("cameraStopBtn").addEventListener("click",()=>{
-    manualCameraIp="";currentCameraIp="";cameraFeedFailed=false;
-    cameraFeed.removeAttribute("src");
-    document.getElementById("cameraExpanded").classList.add("hidden");
-    document.getElementById("cameraCollapsed").classList.remove("hidden");
-    logEvent("camera_stopped");
-  });
+    const targetId = pageMap[name] || 'view-overview';
 
-  // ── Runtime helpers ──
-  function pill(on){return `<span class="pill ${on?'on':'off'}">${on?'ON':'OFF'}</span>`;}
-  function stateBadge(c){return `<span class="state-badge ${c?'connected':'disconnected'}">${c?'CONNECTED':'DISCONNECTED'}</span>`;}
-  function normalizeConnected(v){
-    if(typeof v==="boolean")return v;if(typeof v==="number")return v!==0;
-    if(typeof v==="string"){const s=v.trim().toLowerCase();if(["connected","online","true","1","yes"].includes(s))return true;if(["disconnected","offline","false","0","no"].includes(s))return false;}
-    return null;
+    document.querySelectorAll('.view-page').forEach(page => {
+      page.classList.remove('active');
+      page.style.display = 'none';
+    });
+
+    const targetEl = document.getElementById(targetId);
+    if (targetEl) {
+      targetEl.classList.add('active');
+      targetEl.style.display = 'block';
+    }
+
+    document.querySelectorAll('.side-nav button').forEach(btn => btn.classList.remove('active'));
+    const activeBtn = document.querySelector(`.side-nav button[data-view="${name}"]`);
+    if (activeBtn) activeBtn.classList.add('active');
+
+    if (name === 'trends') {
+      renderPreviousTrends();
+    }
   }
-  function normalizeBool(v){
-    if(v===null||v===undefined)return false;
-    if(typeof v==="boolean")return v;
-    if(typeof v==="number")return v!==0;
-    if(typeof v==="string"){const s=v.trim().toLowerCase();return ["true","1","yes","on","enabled"].includes(s);}
-    return Boolean(v);
+
+  function showToast(msg, isError = false) {
+    if (!toast) return;
+    toast.textContent = msg;
+    toast.className = 'toast visible' + (isError ? ' error' : '');
+    if (toastTimer) clearTimeout(toastTimer);
+    toastTimer = setTimeout(() => { toast.classList.remove('visible'); }, 3200);
   }
-  function formatAxis(v){const n=Number(v);return Number.isFinite(n)?n.toFixed(3):"—";}
-  function formatMachinePosition(value){
-    const axes=["X","Y","Z","A","B","C"];
-    const values=Array.isArray(value)?value:(value&&typeof value==="object"?axes.map((axis,i)=>value[axis]??value[axis.toLowerCase()]??value[i]):[]);
-    const rendered=values.slice(0,axes.length).map((value,index)=>`${axes[index]}: ${formatAxis(value)}`);
-    return rendered.length?rendered.join(" | "):"—";
+
+  let eventCounter = 0;
+  function logEvent(type, detail = '') {
+    if (!eventsList) return;
+    eventCounter++;
+    if (eventsCount) eventsCount.textContent = `${eventCounter} events`;
+    const li = document.createElement('li');
+    const time = new Date().toTimeString().split(' ')[0];
+    li.innerHTML = `<span class="ev-time">[${time}]</span> <span style="color:#fff;font-weight:600;">${type}</span> ${detail ? `<span style="color:var(--muted);">${detail}</span>` : ''}`;
+    eventsList.appendChild(li);
+    if (eventsList.children.length > 80) eventsList.removeChild(eventsList.firstChild);
   }
-  function updateMachinePosition(value){if(value!==undefined&&value!==null)rtPosition.textContent=formatMachinePosition(value);}
-  function formatLiveRuntimeValue(key,val){
-    if(key==="xma_live"){const axes=["X","Y","Z","A","B","C"];const arr=Array.isArray(val)?val:Object.values(val||{});return axes.slice(0,arr.length).map((k,i)=>`${k}: ${Number(arr[i]).toFixed(3)}`).join(" | ");}
-    if(val&&typeof val==="object"){return Object.entries(val).filter(([k])=>!["timestamp","source"].includes(k)).map(([k,v])=>`${k}:${typeof v==="number"?v.toFixed(3):v}`).join(" ");}
-    return typeof val==="number"?val.toFixed(3):val;
+
+  function pill(on) {
+    return `<span class="status-pill ${on ? 'on' : 'off'}">${on ? 'ON' : 'OFF'}</span>`;
   }
-  function renderLiveRuntimeGrid(data){
-    const grid=document.getElementById("rtLiveGrid");if(!grid)return;grid.innerHTML="";
-    const SKIP=new Set(["laser_enabled","gas_enabled","shielding_enabled","current_file","connection_state","laser_power_pct","machine_connected","progress_pct","remaining_time","time_remaining","remaining_seconds","DS028","xma","xmr","laser_on","session_id","id","powder_enabled","light_enabled"]);
-    Object.entries(data||{}).forEach(([key,val])=>{
-      if(SKIP.has(key))return;
-      const box=document.createElement("div");
-      box.style.cssText="background:var(--panel2);border:1px solid var(--border);border-radius:6px;padding:6px 8px;";
-      const kEl=document.createElement("span");kEl.style.color="var(--muted)";kEl.textContent=LABEL_MAP[key]||key;
-      const vEl=document.createElement("div");if(key==="xma_live")vEl.style.whiteSpace="pre-line";vEl.style.fontWeight="700";vEl.textContent=formatLiveRuntimeValue(key,val);
-      box.appendChild(kEl);box.appendChild(vEl);grid.appendChild(box);
+
+  function normalizeBool(val) {
+    if (val === null || val === undefined) return false;
+    if (typeof val === 'boolean') return val;
+    if (typeof val === 'number') return val !== 0;
+    if (typeof val === 'string') {
+      const s = val.trim().toLowerCase();
+      return ['true', '1', 'yes', 'on', 'enabled'].includes(s);
+    }
+    return Boolean(val);
+  }
+
+  function formatBytes(b) {
+    const n = Number(b);
+    if (!Number.isFinite(n)) return "size unknown";
+    if (n < 1024) return `${n} B`;
+    const u = ["KB", "MB", "GB"];
+    let v = n / 1024, i = 0;
+    while (v >= 1024 && i < u.length - 1) { v /= 1024; i++; }
+    return `${v.toFixed(v >= 10 ? 1 : 2)} ${u[i]}`;
+  }
+
+  function formatRecordingDate(v) {
+    if (!v) return "date unknown";
+    const d = new Date(v);
+    return Number.isNaN(d.getTime()) ? v : d.toLocaleString("en-GB", { hour12: false });
+  }
+
+  function encodeRecordingPath(p) {
+    return String(p || "").split("/").map(encodeURIComponent).join("/");
+  }
+
+  function setConn(connected) {
+    currentMachineConnected = connected;
+    if (statusDot && statusText) {
+      statusDot.className = 'dot ' + (connected ? 'on' : '');
+      statusText.textContent = connected ? 'Connected' : 'Disconnected';
+    }
+    if (topbarStatusBadge) {
+      topbarStatusBadge.className = 'topbar-status-badge ' + (connected ? '' : 'disconnected');
+    }
+    if (posConnText) posConnText.textContent = connected ? 'Connected' : 'Offline';
+    if (posConnDot) posConnDot.style.background = connected ? 'var(--green)' : 'var(--red)';
+    if (kpiConnVal) {
+      kpiConnVal.textContent = connected ? 'Connected' : 'Offline';
+      kpiConnVal.style.color = connected ? 'var(--green)' : 'var(--red)';
+    }
+    if (kpiConnSub) {
+      kpiConnSub.textContent = connected ? (deviceSelect.value ? `Device: ${deviceSelect.value}` : 'Server online') : 'Reconnecting...';
+    }
+  }
+
+  // Format 5 Axis Signed Display: +000.000 mm (Matching media_1789274280799.png)
+  function formatSignedAxis(val) {
+    const n = Number(val);
+    if (!Number.isFinite(n)) return "+000.000 mm";
+    const sign = n >= 0 ? "+" : "-";
+    const abs = Math.abs(n);
+    const intPart = Math.floor(abs).toString().padStart(3, "0");
+    const decPart = (abs % 1).toFixed(3).substring(2);
+    return `${sign}${intPart}.${decPart} mm`;
+  }
+
+  // 5-Axis update (X, Y, Z, B, C)
+  function update5AxisDisplay() {
+    const mode = posModeSelect ? posModeSelect.value : "xma";
+    const valObj = latestPositionSets[mode] || latestPositionSets["xma"];
+    if (!valObj) return;
+
+    let x = 0, y = 0, z = 0, b = 0, c = 0;
+
+    if (Array.isArray(valObj)) {
+      x = valObj[0] ?? 0;
+      y = valObj[1] ?? 0;
+      z = valObj[2] ?? 0;
+      if (valObj.length === 5) {
+        b = valObj[3] ?? 0;
+        c = valObj[4] ?? 0;
+      } else if (valObj.length >= 6) {
+        b = valObj[4] ?? 0;
+        c = valObj[5] ?? 0;
+      }
+    } else if (typeof valObj === 'object') {
+      x = valObj.X ?? valObj.x ?? 0;
+      y = valObj.Y ?? valObj.y ?? 0;
+      z = valObj.Z ?? valObj.z ?? 0;
+      b = valObj.B ?? valObj.b ?? 0;
+      c = valObj.C ?? valObj.c ?? 0;
+    }
+
+    if (axisX) axisX.textContent = formatSignedAxis(x);
+    if (axisY) axisY.textContent = formatSignedAxis(y);
+    if (axisZ) axisZ.textContent = formatSignedAxis(z);
+    if (axisB) axisB.textContent = formatSignedAxis(b);
+    if (axisC) axisC.textContent = formatSignedAxis(c);
+
+    if (rtPosition) rtPosition.textContent = `X: ${x} | Y: ${y} | Z: ${z} | B: ${b} | C: ${c}`;
+  }
+
+  posModeSelect?.addEventListener("change", update5AxisDisplay);
+
+  function updateMachinePosition(value, key = "xma") {
+    if (!value) return;
+    try {
+      latestPositionSets[key] = typeof value === 'string' ? JSON.parse(value) : value;
+    } catch(e) {
+      latestPositionSets[key] = value;
+    }
+    update5AxisDisplay();
+  }
+
+  // Update Runtime KPIs & Indicators
+  function updateRuntime(data = {}) {
+    if (data.current_file) {
+      const fn = String(data.current_file).trim();
+      if (fn && fn.toLowerCase() !== 'unknown') {
+        if (rtFile) rtFile.textContent = fn;
+        if (topbarFile) topbarFile.textContent = fn;
+      }
+    }
+    if (data.total_layers != null) totalLayers = Number(data.total_layers) || 0;
+    if (data.current_layer != null && rtLayerText) {
+      rtLayerText.textContent = `Layer ${data.current_layer} / ${totalLayers || '--'}`;
+    }
+
+    const isGas = normalizeBool(data.gas_enabled);
+    const isShield = normalizeBool(data.shielding_enabled);
+    const isLaser = normalizeBool(data.laser_enabled);
+    const isPowder = normalizeBool(data.powder_enabled);
+    const isLight = normalizeBool(data.light_enabled);
+
+    if (rtGas) rtGas.innerHTML = pill(isGas);
+    if (rtShieldingGas) rtShieldingGas.innerHTML = pill(isShield);
+    if (rtLaser) rtLaser.innerHTML = pill(isLaser);
+    if (rtPowder) rtPowder.innerHTML = pill(isPowder);
+    if (rtLight) rtLight.innerHTML = pill(isLight);
+
+    // 4 Indicators under position display (LASER • POWDER • GAS • PF GAS)
+    if (indLaser) indLaser.className = 'ind-item' + (isLaser ? ' active' : '');
+    if (indPowder) indPowder.className = 'ind-item' + (isPowder ? ' active' : '');
+    if (indGas) indGas.className = 'ind-item' + (isGas ? ' active' : '');
+    if (indPfGas) indPfGas.className = 'ind-item' + (isShield ? ' active' : '');
+
+    if (data.laser_power_pct != null && rtPower) {
+      const p = Number(data.laser_power_pct);
+      rtPower.textContent = Number.isFinite(p) ? `${p.toFixed(1)}%` : '—';
+    }
+
+    const isPrinting = isLaser || (data.current_layer != null && data.current_layer > 0);
+    if (rtState) rtState.innerHTML = `<span class="status-pill ${isPrinting ? 'on' : 'off'}">${isPrinting ? 'PRINTING' : 'IDLE'}</span>`;
+    if (rtStateVal) rtStateVal.textContent = isPrinting ? 'Printing' : 'Idle';
+    if (rtStateSub) rtStateSub.textContent = isPrinting ? 'Process active' : 'No active print job';
+
+    if (data.powder_usage != null && estPowder) estPowder.textContent = `${Number(data.powder_usage).toFixed(1)}g`;
+    if (data.deposition_efficiency != null && estEfficiency) estEfficiency.textContent = `${(Number(data.deposition_efficiency) * 100).toFixed(1)}%`;
+    if (data.energy != null && estEnergy) estEnergy.textContent = `${Number(data.energy).toFixed(2)} Wh`;
+  }
+
+  function clearRuntime() {
+    if (rtFile) rtFile.textContent = '—';
+    if (topbarFile) topbarFile.textContent = '—';
+    if (progressBar) progressBar.style.width = '0%';
+    if (progressPct) progressPct.textContent = '0.0%';
+    if (rtLayerText) rtLayerText.textContent = 'Layer 0 / 0';
+    if (rtGas) rtGas.innerHTML = pill(false);
+    if (rtShieldingGas) rtShieldingGas.innerHTML = pill(false);
+    if (rtLaser) rtLaser.innerHTML = pill(false);
+    if (rtPowder) rtPowder.innerHTML = pill(false);
+    if (rtLight) rtLight.innerHTML = pill(false);
+    if (rtPower) rtPower.textContent = '—';
+    if (rtState) rtState.innerHTML = '<span class="status-pill off">IDLE</span>';
+    if (rtStateVal) rtStateVal.textContent = 'Idle';
+    if (rtStateSub) rtStateSub.textContent = 'No active print job';
+    if (estPowder) estPowder.textContent = '—';
+    if (estEfficiency) estEfficiency.textContent = '—';
+    if (estEnergy) estEnergy.textContent = '—';
+
+    if (indLaser) indLaser.className = 'ind-item';
+    if (indPowder) indPowder.className = 'ind-item';
+    if (indGas) indGas.className = 'ind-item';
+    if (indPfGas) indPfGas.className = 'ind-item';
+  }
+
+  // Telemetry sparklines
+  function renderSparkline(svgId, valId, pts, suffix, emptyText) {
+    const svg = document.getElementById(svgId);
+    const valEl = document.getElementById(valId);
+    if (!svg) return;
+    if (!pts.length) {
+      if (valEl) valEl.textContent = emptyText || 'No data';
+      svg.innerHTML = '<line class="telemetry-gridline" x1="0" y1="42" x2="200" y2="42"></line><text x="100" y="28" text-anchor="middle" fill="#829ab1" font-size="10">Waiting for data</text>';
+      return;
+    }
+    const cur = pts[pts.length - 1];
+    if (valEl) valEl.textContent = cur.toFixed(1) + suffix;
+    const min = Math.min(...pts), max = Math.max(...pts), range = max - min || 1;
+    const coords = pts.map((p, i) => ((i / Math.max(pts.length - 1, 1) * 194 + 3).toFixed(1)) + ',' + (44 - ((p - min) / range) * 36).toFixed(1)).join(' ');
+    svg.innerHTML = '<line class="telemetry-gridline" x1="0" y1="44" x2="200" y2="44"></line><polyline class="telemetry-line" points="' + coords + '"></polyline>';
+  }
+
+  function recordTrendSample(data = {}) {
+    trendDefinitions.forEach(def => {
+      let val = null;
+      for (const k of def.keys) {
+        if (data[k] != null) {
+          const n = Number(data[k]);
+          if (Number.isFinite(n)) { val = n; break; }
+        }
+      }
+      if (val === null) return;
+      const history = trendHistory[def.chartId];
+      history.push(val);
+      if (history.length > 90) history.shift();
+      renderSparkline(def.chartId, def.valueId, history, def.suffix, def.chartId === 'trendPowder' ? 'Not published' : 'No data');
+    });
+
+    if (document.getElementById('view-trends').classList.contains('active')) {
+      renderPreviousTrends();
+    }
+  }
+
+  function resetTrendHistory() {
+    trendHistory = Object.fromEntries(trendDefinitions.map(def => [def.chartId, []]));
+    trendDefinitions.forEach(def => {
+      renderSparkline(def.chartId, def.valueId, [], def.suffix, def.chartId === 'trendPowder' ? 'Not published' : 'No data');
     });
   }
-  function latestRuntimeRecord(r){return Array.isArray(r)&&r.length?r[r.length-1]:null;}
-  function updateReplayRuntime(records,ss={}){
-    const replay=latestRuntimeRecord(records)||{},d={...replay};
-    // A reconnect can replay an older sparse runtime row.  Keep fresher live
-    // machine/config values instead of replacing them with database nulls.
-    Object.entries(liveRuntimeData).forEach(([key,value])=>{if(d[key]==null)d[key]=value;});
-    updateRuntime({current_layer:d.current_layer??d.RT005,total_layers:d.total_layers??d.PS011??ss.total_layers,current_file:d.current_file??d.file_name??d.RT013??ss.file_name,gas_enabled:d.gas_enabled??d.RT029,shielding_enabled:d.shielding_enabled,laser_enabled:d.laser_enabled??d.laser_on??d.RT027,laser_power_pct:d.laser_power_pct??d.laser_power??d.DS010,connected:d.machine_connected??d.connected??d.RT006,connection_state:d.connection_state??d.RT007,estimated_time:d.estimated_time??d.total_time_fmt,powder_usage:d.powder_usage??d.total_powder_g,deposition_efficiency:d.deposition_efficiency,energy:d.energy??d.total_energy_wh});
-    liveRuntimeData={...d,xma_live:(()=>{try{return JSON.parse(d.xma);}catch(e){return null;}})(),laser_enabled:d.laser_on,laser_power_pct:d.laser_power};
-    renderLiveRuntimeGrid(liveRuntimeData);
-  }
-  function updateRuntime(data){
-    if(!data)return;
-    // Current file — filter out placeholder values like "unknown"
-    if(data.current_file!==undefined){
-      const cf=String(data.current_file||"").trim();
-      rtFile.textContent=(cf&&cf.toLowerCase()!=="unknown")?cf:"—";
+
+  // Previous Trends Page Rendering
+  function renderPreviousTrends() {
+    const lPts = trendHistory['trendLaser'] || [];
+    const fPts = trendHistory['trendFeed'] || [];
+    const mPts = trendHistory['trendMelt'] || [];
+    const pPts = trendHistory['trendPowder'] || [];
+
+    const setBig = (id, bigId, pts, sfx) => {
+      const el = document.getElementById(id);
+      const bEl = document.getElementById(bigId);
+      if (!pts.length) {
+        if (el) el.textContent = '--';
+        if (bEl) bEl.textContent = '--';
+        return;
+      }
+      const c = pts[pts.length - 1].toFixed(1) + sfx;
+      if (el) el.textContent = c;
+      if (bEl) bEl.textContent = c;
+    };
+
+    setBig('hLaserVal', 'hLaserBig', lPts, '%');
+    setBig('hFeedVal', 'hFeedBig', fPts, '%');
+    setBig('hMeltVal', 'hMeltBig', mPts, '');
+    setBig('hPowderVal', 'hPowderBig', pPts, '');
+
+    const drawLg = (svgId, pts, strokeColor) => {
+      const svg = document.getElementById(svgId);
+      if (!svg) return;
+      if (!pts.length) {
+        svg.innerHTML = '<line x1="0" y1="55" x2="380" y2="55" stroke="#172d47"/><line x1="0" y1="95" x2="380" y2="95" stroke="#172d47"/><text x="190" y="60" text-anchor="middle" fill="#829ab1" font-size="11">Waiting for telemetry samples...</text>';
+        return;
+      }
+      const min = Math.min(...pts), max = Math.max(...pts), range = max - min || 1;
+      const coords = pts.map((p, i) => ((i / Math.max(pts.length - 1, 1) * 370 + 5).toFixed(1)) + ',' + (95 - ((p - min) / range) * 85).toFixed(1)).join(' ');
+      svg.innerHTML = '<line x1="0" y1="55" x2="380" y2="55" stroke="#172d47"/><line x1="0" y1="95" x2="380" y2="95" stroke="#172d47"/><polyline fill="none" stroke="' + strokeColor + '" stroke-width="2.2" vector-effect="non-scaling-stroke" points="' + coords + '"></polyline>';
+    };
+
+    drawLg('hTrendLaser', lPts, '#25b9f0');
+    drawLg('hTrendFeed', fPts, '#1fda86');
+    drawLg('hTrendMelt', mPts, '#f5b942');
+    drawLg('hTrendPowder', pPts, '#9d7cfd');
+
+    const mSvg = document.getElementById('hMultiTrend');
+    if (mSvg) {
+      if (!lPts.length && !fPts.length && !mPts.length) {
+        mSvg.innerHTML = '<line x1="0" y1="65" x2="600" y2="65" stroke="#172d47"/><text x="300" y="70" text-anchor="middle" fill="#829ab1" font-size="12">Live multi-sensor telemetry curve will appear during machine run</text>';
+      } else {
+        const makeCoords = (pts) => {
+          if (!pts.length) return '';
+          const min = Math.min(...pts), max = Math.max(...pts), range = max - min || 1;
+          return pts.map((p, i) => ((i / Math.max(pts.length - 1, 1) * 590 + 5).toFixed(1)) + ',' + (115 - ((p - min) / range) * 100).toFixed(1)).join(' ');
+        };
+        mSvg.innerHTML = '<line x1="0" y1="40" x2="600" y2="40" stroke="#172d47" stroke-dasharray="4"/><line x1="0" y1="85" x2="600" y2="85" stroke="#172d47" stroke-dasharray="4"/>' +
+          (lPts.length ? '<polyline fill="none" stroke="#25b9f0" stroke-width="2" points="' + makeCoords(lPts) + '"/>' : '') +
+          (fPts.length ? '<polyline fill="none" stroke="#1fda86" stroke-width="2" points="' + makeCoords(fPts) + '"/>' : '') +
+          (mPts.length ? '<polyline fill="none" stroke="#f5b942" stroke-width="2" points="' + makeCoords(mPts) + '"/>' : '');
+      }
     }
-    if(data.current_layer!==undefined){const pct=totalLayers>0?Math.min(100,(data.current_layer/totalLayers)*100):0;if(rtProgFill)rtProgFill.style.width=pct+"%";}
-    if(data.total_layers!==undefined)totalLayers=data.total_layers||0;
-    // Boolean status fields — normalizeBool so false/0/"false" correctly shows OFF
-    if(data.gas_enabled!==undefined)rtGas.innerHTML=pill(normalizeBool(data.gas_enabled));
-    if(data.shielding_enabled!==undefined)rtShieldingGas.innerHTML=pill(normalizeBool(data.shielding_enabled));
-    if(data.laser_enabled!==undefined)rtLaser.innerHTML=pill(normalizeBool(data.laser_enabled));
-    if(data.powder_enabled!==undefined)document.getElementById("rtPowder").innerHTML=pill(normalizeBool(data.powder_enabled));
-    if(data.light_enabled!==undefined)document.getElementById("rtLight").innerHTML=pill(normalizeBool(data.light_enabled));
-    if(data.laser_power_pct!==undefined){const lp=data.laser_power_pct;rtPower.textContent=lp!=null&&lp!==""?lp+"%":"—";}
-    const connected=normalizeConnected(data.connected),connectionState=normalizeConnected(data.connection_state),isConnected=connected??connectionState;
-    if(isConnected!==null){if(data._live_connection)currentMachineConnected=isConnected;rtState.innerHTML=stateBadge(isConnected);}
-    if(data.powder_usage!==undefined)estPowder.textContent=data.powder_usage!=null?data.powder_usage+"g":"-";
-    if(data.deposition_efficiency!==undefined)estEfficiency.textContent=data.deposition_efficiency!=null?(data.deposition_efficiency*100).toFixed(1)+"%":"-";
-    if(data.energy!==undefined)estEnergy.textContent=data.energy??"-";
   }
-  function clearRuntime(){
-    rtFile.textContent="—";rtPosition.textContent="—";rtPower.textContent="—";if(rtProgFill)rtProgFill.style.width="0%";if(progressPct)progressPct.textContent="—";
-    rtGas.innerHTML=pill(false);rtShieldingGas.innerHTML=pill(false);rtLaser.innerHTML=pill(false);
-    document.getElementById("rtPowder").innerHTML=pill(false);document.getElementById("rtLight").innerHTML=pill(false);
-    estPowder.textContent="—";estEfficiency.textContent="—";estEnergy.textContent="—";
-    liveRuntimeData={};renderLiveRuntimeGrid(liveRuntimeData);totalLayers=0;currentMachineConnected=false;
+
+  // Live Runtime Grid
+  function renderLiveRuntimeGrid(data = {}) {
+    const grid = document.getElementById('rtLiveGrid');
+    if (!grid) return;
+    grid.innerHTML = '';
+    const skip = new Set(['laser_enabled', 'gas_enabled', 'shielding_enabled', 'current_file', 'connection_state', 'laser_power_pct', 'machine_connected', 'progress_pct', 'remaining_time', 'time_remaining', 'remaining_seconds', 'DS028', 'xma', 'xmr', 'xwa', 'xwr', 'laser_on', 'session_id', 'id', 'powder_enabled', 'light_enabled']);
+    let count = 0;
+    Object.entries(data).forEach(([k, v]) => {
+      if (skip.has(k) || v == null) return;
+      count++;
+      const item = document.createElement('div');
+      item.className = 'live-grid-item';
+      const label = document.createElement('span');
+      label.className = 'k';
+      label.textContent = k;
+      const val = document.createElement('div');
+      val.className = 'v';
+      val.textContent = typeof v === 'number' ? v.toFixed(3) : (typeof v === 'object' ? JSON.stringify(v) : v);
+      item.appendChild(label);
+      item.appendChild(val);
+      grid.appendChild(item);
+    });
+    if (!count) {
+      grid.innerHTML = '<div style="color:var(--muted);font-size:12px;grid-column:1/-1;padding:12px;text-align:center;">No extra live runtime parameters published yet.</div>';
+    }
   }
-  // ── Devices ──
-  async function loadDevices(){try{const res=await fetch("/devices");const devs=await res.json();devicesById=new Map(devs.map(d=>[String(d.device_id),d]));devs.forEach(d=>{if(![...deviceSelect.options].some(o=>o.value===d.device_id)){const opt=document.createElement("option");opt.value=d.device_id;opt.textContent=d.device_id;deviceSelect.appendChild(opt);}});}catch(e){console.error("loadDevices",e);}}
-  function refreshSessions(){const id=deviceSelect.value;if(!id)return;deviceSelect.dispatchEvent(new CustomEvent("change",{detail:{auto:true}}));}
-  function cleanMachineHost(value){const raw=String(value||"").trim();if(!raw)return "";try{const url=new URL(raw.includes("://")?raw:`http://${raw}`);return url.hostname||"";}catch{return raw.replace(/^https?:\/\//i,"").split("/")[0].replace(/:\d+$/,"");}}
-  function isUsableMachineHost(v){const h=cleanMachineHost(v);return Boolean(h&&(h==="localhost"||/^(\d{1,3}\.){3}\d{1,3}$/.test(h)||/^[0-9a-f:]+$/i.test(h)&&h.includes(":")||h.includes(".")));}
-  function getSelectedMachineIp(){const id=deviceSelect.value;if(!id)return "";const device=devicesById.get(String(id))||{};const eh=cleanMachineHost(device.ip||device.host||device.broker_host||device.BrokerHost||device.mqtt_host||device.ftp_host);if(eh)return eh;if(device.name&&device.name!==id&&isUsableMachineHost(device.name))return cleanMachineHost(device.name);if(isUsableMachineHost(id))return cleanMachineHost(id);return isUsableMachineHost(location.hostname)?cleanMachineHost(location.hostname):"";}
 
-  // Camera
-  function cameraBaseUrl(){return manualCameraIp?`http://${manualCameraIp}:8765`:"";} 
-  function setCameraPlaceholder(msg){cameraPlaceholder.textContent=msg;cameraPlaceholder.classList.remove("hidden");cameraFeed.classList.add("hidden");}
-  function showCameraFeed(){cameraPlaceholder.classList.add("hidden");cameraFeed.classList.remove("hidden");}
-  function updateCameraPanel(){
-    const ip=manualCameraIp,baseUrl=cameraBaseUrl();
-    if(!ip){currentCameraIp="";cameraFeedFailed=false;cameraFeed.removeAttribute("src");setCameraPlaceholder("Click Live Stream to start.");if(cameraStatus)cameraStatus.textContent="";return;}
-    if(currentCameraIp!==ip){currentCameraIp=ip;cameraFeedFailed=false;cameraFeed.src=`${baseUrl}/video-feed`;setCameraPlaceholder("Connecting to live feed…");if(cameraStatus)cameraStatus.textContent=`Live stream: ${ip}`;}
-  }
-  async function checkCameraAvailable(ip){try{const res=await fetch(`/camera/check?ip=${encodeURIComponent(ip)}&port=8765`,{cache:"no-store"});const data=await res.json();return Boolean(res.ok&&data.available);}catch{return false;}}
-  async function openLiveStreamPrompt(){const suggestedIp=manualCameraIp||getSelectedMachineIp()||cleanMachineHost(location.hostname);const ip=prompt("Enter machine IP address",suggestedIp);if(!ip||!ip.trim())return;const cleanIp=cleanMachineHost(ip);if(!cleanIp){showToast("Enter a valid IP address.",true);return;}if(!(await checkCameraAvailable(cleanIp))){manualCameraIp="";currentCameraIp="";cameraFeedFailed=false;cameraFeed.removeAttribute("src");setCameraPlaceholder("Live feed unavailable");if(cameraStatus)cameraStatus.textContent=`Camera not reachable at ${cleanIp}:8765`;showToast(`Camera not reachable at ${cleanIp}:8765.`,true);logEvent("camera_unavailable",cleanIp);return;}manualCameraIp=cleanIp;currentCameraIp="";cameraFeedFailed=false;document.getElementById("cameraCollapsed").classList.add("hidden");document.getElementById("cameraExpanded").classList.remove("hidden");updateCameraPanel();showToast(`Live stream started for ${cleanIp}.`);logEvent("camera_live_stream",cleanIp);}
-  cameraFeed.addEventListener("load",()=>{if(cameraBaseUrl())showCameraFeed();});
-  cameraFeed.addEventListener("error",()=>{cameraFeedFailed=true;cameraFeed.removeAttribute("src");setCameraPlaceholder("Live feed unavailable");if(cameraStatus)cameraStatus.textContent="Live feed unavailable";});
+  // Parameters Table Rendering
+  function renderTable(rows = []) {
+    if (!tableBody) return;
+    tableBody.innerHTML = '';
+    rowsByKey.clear();
+    const slices = new Set();
 
-  // ── Recordings ──
-  function formatBytes(b){const n=Number(b);if(!Number.isFinite(n))return "size unknown";if(n<1024)return `${n} B`;const u=["KB","MB","GB"];let v=n/1024,i=0;while(v>=1024&&i<u.length-1){v/=1024;i++;}return `${v.toFixed(v>=10?1:2)} ${u[i]}`;}
-  function formatRecordingDate(v){if(!v)return "date unknown";const d=new Date(v);return Number.isNaN(d.getTime())?v:d.toLocaleString("en-GB",{hour12:false});}
-  function showToast(msg,isError=false){toast.textContent=msg;toast.classList.toggle("error",isError);toast.classList.add("visible");clearTimeout(toastTimer);toastTimer=setTimeout(()=>toast.classList.remove("visible"),2600);}
-  function encodeRecordingPath(p){return String(p||"").split("/").map(encodeURIComponent).join("/");}
-  function updateRecordingCount(){const c=recordingsList.querySelectorAll(".recording-item").length;recordingsStatus.textContent=c?`${c} recording${c===1?"":"s"} found.`:"No recordings found.";}
-  async function deleteRecording(item,ip,card){const rp=item.path||item.filename||"";if(!rp){showToast("Missing filename.",true);return;}try{const res=await fetch(`/recordings/${encodeRecordingPath(rp)}?ip=${encodeURIComponent(ip)}`,{method:"DELETE"});const data=await res.json().catch(()=>({}));if(!res.ok)throw new Error(data.detail||"Unable to delete");const wasActive=card.classList.contains("active");card.remove();if(wasActive){recordingsVideo.removeAttribute("src");recordingsVideo.load();}updateRecordingCount();showToast("Recording deleted.");logEvent("recording_deleted",item.filename||item.path||"");}catch(e){showToast(e.message||"Unable to delete.",true);}}
-  function renderRecordings(rows,ip){recordingsList.textContent="";recordingsVideo.removeAttribute("src");recordingsVideo.load();if(!rows.length){recordingsStatus.textContent="No recordings found.";return;}recordingsStatus.textContent=`${rows.length} recording${rows.length===1?"":"s"} found.`;rows.forEach(item=>{const div=document.createElement("div");div.className="recording-item";const hEl=document.createElement("div");hEl.className="recording-head";const nEl=document.createElement("div");nEl.className="recording-name";nEl.textContent=item.filename||item.path||"recording";const dBtn=document.createElement("button");dBtn.className="recording-delete";dBtn.type="button";dBtn.textContent="Delete";dBtn.addEventListener("click",async(e)=>{e.stopPropagation();dBtn.disabled=true;await deleteRecording(item,ip,div);dBtn.disabled=false;});hEl.appendChild(nEl);hEl.appendChild(dBtn);const mEl=document.createElement("div");mEl.className="recording-meta";[item.device_id||"device unknown",formatBytes(item.size),formatRecordingDate(item.modified_at)].forEach(t=>{const s=document.createElement("span");s.textContent=t;mEl.appendChild(s);});div.appendChild(hEl);div.appendChild(mEl);div.addEventListener("click",()=>{document.querySelectorAll(".recording-item").forEach(el=>el.classList.remove("active"));div.classList.add("active");recordingsVideo.src=`/recordings/download?ip=${encodeURIComponent(ip)}&file=${encodeURIComponent(item.path||item.filename||"")}`;recordingsVideo.play().catch(()=>{});});recordingsList.appendChild(div);});}
-  async function viewRecordingsIp(ip){currentRecordingsIp=ip;const selectedDevice=deviceSelect.value;const params=new URLSearchParams({ip});if(selectedDevice)params.set("device_id",selectedDevice);recordingsStatus.textContent="Loading recordings…";recordingsList.textContent="";recordingsVideo.removeAttribute("src");recordingsVideo.load();try{const res=await fetch(`/recordings?${params.toString()}`);const data=await res.json();if(!res.ok)throw new Error(data.detail||"Unable to list recordings");renderRecordings(data,ip);logEvent("recordings_loaded",selectedDevice||"all");}catch(e){recordingsStatus.textContent=e.message||"Unable to load recordings.";logEvent("recordings_error",recordingsStatus.textContent);}}
-  async function viewRecordings(){const ip=getSelectedMachineIp()||prompt("Enter machine IP address");if(!ip||!ip.trim())return;openSection("recordings");viewRecordingsIp(ip.trim());}
+    if (!rows.length) {
+      if (emptyState) emptyState.classList.add('visible');
+      if (tableWrap) tableWrap.classList.add('hidden');
+      if (summary) summary.textContent = '0 parameters';
+      return;
+    }
 
-  // ── Logs ──
-  function findLogColumn(names){const nn=names.map(n=>({name:n,normalized:String(n).toLowerCase().replace(/[\s_-]+/g,"")}));const m=nn.find(i=>["category","type"].includes(i.normalized));return m?m.name:"";}
-  function findSeverityColumn(names){const nn=names.map(n=>({name:n,normalized:String(n).toLowerCase().replace(/[\s_-]+/g,"")}));const m=nn.find(i=>["severity","level","priority"].includes(i.normalized));return m?m.name:"";}
-  function populateLogFilter(sel,col,label){sel.textContent="";if(!col){sel.classList.add("hidden");return;}const ao=document.createElement("option");ao.value="";ao.textContent=`All ${label}`;sel.appendChild(ao);[...new Set(logsRows.map(r=>r[col]).filter(Boolean))].sort((a,b)=>String(a).localeCompare(String(b))).forEach(v=>{const o=document.createElement("option");o.value=v;o.textContent=v;sel.appendChild(o);});sel.classList.remove("hidden");}
-  let logsRenderToken=0;
-  function renderLogsTable(rows){const token=++logsRenderToken;logsTableHead.textContent="";logsTableBody.textContent="";const hr=document.createElement("tr");logsColumns.forEach(c=>{const th=document.createElement("th");th.textContent=c;hr.appendChild(th);});logsTableHead.appendChild(hr);const appendBatch=start=>{if(token!==logsRenderToken)return;const f=document.createDocumentFragment(),end=Math.min(start+100,rows.length);for(let i=start;i<end;i++){const tr=document.createElement("tr"),row=rows[i];logsColumns.forEach(c=>{const td=document.createElement("td");td.textContent=row[c]??"";tr.appendChild(td);});f.appendChild(tr);}logsTableBody.appendChild(f);if(end<rows.length)requestAnimationFrame(()=>appendBatch(end));};appendBatch(0);}
-  function applyLogFilters(){const q=logsSearchInput.value.trim().toLowerCase(),cat=logsCategoryFilter.value,sev=logsSeverityFilter.value;const filtered=logsRows.filter(row=>{const ms=!q||logsColumns.some(c=>String(row[c]??"").toLowerCase().includes(q));const mc=!logsCategoryColumn||!cat||row[logsCategoryColumn]===cat;const msv=!logsSeverityColumn||!sev||row[logsSeverityColumn]===sev;return ms&&mc&&msv;});renderLogsTable(filtered);logsTableWrap.classList.toggle("hidden",filtered.length===0);logsEmptyState.classList.toggle("visible",filtered.length===0);logsStatus.textContent=`${filtered.length} of ${logsRows.length} log rows shown.`;}
-  function renderLogs(rows){logsRows=Array.isArray(rows)?rows:[];logsColumns=[...logsRows.reduce((s,r)=>{Object.keys(r||{}).forEach(k=>s.add(k));return s;},new Set())];logsCategoryColumn=findLogColumn(logsColumns);logsSeverityColumn=findSeverityColumn(logsColumns);populateLogFilter(logsCategoryFilter,logsCategoryColumn,"categories");populateLogFilter(logsSeverityFilter,logsSeverityColumn,"severities");if(!logsRows.length||!logsColumns.length){logsTableHead.textContent="";logsTableBody.textContent="";logsTableWrap.classList.add("hidden");logsEmptyState.classList.add("visible");logsStatus.textContent="No logs found.";return;}logsEmptyState.classList.remove("visible");applyLogFilters();}
-  async function viewLogsIp(ip){currentLogsIp=ip;logsStatus.textContent="Loading recent logs…";logsTableHead.textContent="";logsTableBody.textContent="";logsTableWrap.classList.add("hidden");logsEmptyState.classList.remove("visible");try{const res=await fetch(`/logs/view?ip=${encodeURIComponent(ip)}&limit=1000`);const data=await res.json();if(!res.ok)throw new Error(data.detail||"Unable to load logs");renderLogs(data.logs||[]);logEvent("logs_loaded",ip);}catch(e){logsStatus.textContent=e.message||"Unable to load logs.";logsEmptyState.classList.add("visible");showToast(logsStatus.textContent,true);logEvent("logs_error",logsStatus.textContent);}}
-  async function viewLogs(forcePrompt=false){let ip=currentLogsIp||currentRecordingsIp;if(forcePrompt||!ip){const v=prompt("Enter machine IP address",ip||"");if(!v||!v.trim())return;ip=v.trim();}currentLogsIp=ip;openSection("logs");viewLogsIp(ip);}
-  // ── Session list ──
-  async function fetchSessionDetails(sessionId,sessionSummary={}){if(!deviceSelect.value)return;try{const res=await fetch(`/sessions/${sessionId}/replay`);const data=await res.json();if(data.error){console.error(data.error);return;}const snapshots={};data.slices.forEach(slice=>{snapshots[String(slice.slice_index)]=slice.params_json;});const flattened=flattenSnapshots(snapshots);renderTable(flattened);switchTab("params");updateReplayRuntime(data.runtime,sessionSummary);logEvent("session_loaded",sessionId.slice(-8));}catch(e){console.error("fetchSessionDetails",e);}}
+    if (emptyState) emptyState.classList.remove('visible');
+    if (tableWrap) tableWrap.classList.remove('hidden');
+    if (summary) summary.textContent = `${rows.length} parameters`;
 
-  deviceSelect.addEventListener("change",async(e)=>{
-    const isAuto=e&&e.detail&&e.detail.auto;clearRuntime();const id=deviceSelect.value;
-    if(id)localStorage.setItem("ufameasy_selected_device",id);
-    if(!id){sessionList.innerHTML='<div class="no-sessions">Select a device to view session history.</div>';return;}
-    // Auto-fill shared IP from device
-    const autoIp=getSelectedMachineIp();if(autoIp&&!getSharedIp())document.getElementById("sharedIpInput").value=autoIp;
-    try{const res=await fetch(`/devices/${id}/sessions`);const rows=await res.json();
-      if(!rows.length){sessionList.innerHTML='<div class="no-sessions">No sessions recorded.</div>';return;}
-      sessionList.innerHTML="";
-      rows.forEach(s=>{
-        const div=document.createElement("div");div.className="session-item";
-        const rawStatus=s.status||"ended",hasEnded=Boolean(s.ended_at);
-        const status=hasEnded&&(rawStatus==="active"||rawStatus==="running")?"ended":rawStatus;
-        const statusCls=(!hasEnded&&(status==="active"||status==="running"))?"active":"ended";
-        // Compute duration
-        let durStr="";if(s.started_at&&s.ended_at){const ms=new Date(s.ended_at)-new Date(s.started_at);if(!isNaN(ms)){const m=Math.floor(ms/60000),sec=Math.floor((ms%60000)/1000);durStr=`<span class="session-duration">${m}m ${sec}s</span>`;}}
-        div.innerHTML=`<div class="session-header"><span class="sfile">${s.file_name||"&mdash;"}</span><div style="display:flex;align-items:center;gap:6px;"><span class="session-status ${statusCls}">${status}</span>${durStr}<button class="del-session-btn" data-sid="${s.session_id}" style="padding:2px 7px;border:1px solid var(--border);border-radius:6px;background:var(--panel);color:var(--red);font-size:11px;cursor:pointer;">🗑</button></div></div><div class="session-meta"><span>Start: ${s.started_at||"—"}</span><span>End: ${s.ended_at||"—"}</span><span>${s.total_layers!=null?s.total_layers+" layers":"layers unknown"}</span><span class="sid">ID: ${s.session_id||""}</span></div>`;
-        div.onclick=()=>fetchSessionDetails(s.session_id,s);
-        div.querySelector(".del-session-btn").addEventListener("click",async(e)=>{e.stopPropagation();if(!confirm("Delete this session and all its data?"))return;await fetch(`/sessions/${s.session_id}`,{method:"DELETE"});refreshSessions();});
-        sessionList.appendChild(div);
+    let currentDomain = null;
+    rows.forEach(r => {
+      if (r.slice_idx) slices.add(String(r.slice_idx));
+      if (r.domain && r.domain !== currentDomain) {
+        currentDomain = r.domain;
+        const dRow = document.createElement('tr');
+        dRow.className = 'domain-row';
+        dRow.innerHTML = `<th colspan="6">${currentDomain}</th>`;
+        tableBody.appendChild(dRow);
+      }
+
+      const tr = document.createElement('tr');
+      tr.id = `row-${r.slice_idx}-${r.param_id}`;
+      tr.setAttribute('data-key', `${r.slice_idx}-${r.param_id}`);
+      tr.innerHTML = `
+        <td class="param-id">${r.param_id || '—'}</td>
+        <td>${r.field_name || r.name || '—'}</td>
+        <td class="value">${r.value != null ? r.value : '—'}</td>
+        <td>${r.unit || '—'}</td>
+        <td>${r.domain || '—'}</td>
+        <td class="slice">${r.slice_idx != null ? r.slice_idx : '—'}</td>
+      `;
+      tableBody.appendChild(tr);
+      rowsByKey.set(`${r.slice_idx}-${r.param_id}`, tr);
+    });
+
+    if (sliceFilter) {
+      const cur = sliceFilter.value;
+      sliceFilter.innerHTML = '<option value="">All Slices</option>';
+      Array.from(slices).sort((a,b)=>Number(a)-Number(b)).forEach(s => {
+        const opt = document.createElement('option');
+        opt.value = s;
+        opt.textContent = `Slice ${s}`;
+        sliceFilter.appendChild(opt);
       });
-      if(!isAuto){const activeSession=rows.find(s=>!s.ended_at&&(s.status==="running"||s.status==="active"));if(activeSession)fetchSessionDetails(activeSession.session_id,activeSession);}
-    }catch(e){console.error("sessions fetch",e);}
+      sliceFilter.value = cur;
+    }
+  }
+
+  function flattenSnapshots(snapshots = {}) {
+    const rows = [];
+    Object.entries(snapshots).forEach(([sliceIdx, data]) => {
+      let params = data;
+      if (typeof data === 'string') {
+        try { params = JSON.parse(data); } catch(e) { params = {}; }
+      }
+      Object.entries(params || {}).forEach(([pid, p]) => {
+        rows.push({
+          slice_idx: sliceIdx,
+          param_id: pid,
+          field_name: p.field_name || p.name || pid,
+          value: p.value != null ? p.value : p,
+          unit: p.unit || '',
+          domain: p.domain || 'General'
+        });
+      });
+    });
+    return rows;
+  }
+
+  function updateTableVisibility() {
+    const q = (searchInput?.value || '').toLowerCase().trim();
+    const selSlice = sliceFilter?.value || '';
+    let visible = 0;
+
+    rowsByKey.forEach((tr) => {
+      const pid = tr.querySelector('.param-id')?.textContent.toLowerCase() || '';
+      const fld = tr.children[1]?.textContent.toLowerCase() || '';
+      const slc = tr.querySelector('.slice')?.textContent || '';
+
+      const matchQ = !q || pid.includes(q) || fld.includes(q);
+      const matchSlice = !selSlice || slc === selSlice;
+
+      if (matchQ && matchSlice) {
+        tr.style.display = '';
+        visible++;
+      } else {
+        tr.style.display = 'none';
+      }
+    });
+
+    if (summary) summary.textContent = `${visible} parameters`;
+  }
+
+  // Session replay fetch
+  async function fetchSessionDetails(sessionId, sessionSummary = {}, autoSwitch = true) {
+    if (!deviceSelect.value) return;
+    try {
+      const res = await fetch(`/sessions/${sessionId}/replay`);
+      const data = await res.json();
+      if (data.error) {
+        console.error(data.error);
+        return;
+      }
+      const snapshots = {};
+      (data.slices || []).forEach(s => {
+        snapshots[String(s.slice_index)] = s.params_json;
+      });
+      renderTable(flattenSnapshots(snapshots));
+      if (autoSwitch) switchTab("params");
+      if (data.runtime) {
+        updateRuntime({
+          current_file: sessionSummary.file_name,
+          total_layers: sessionSummary.total_layers
+        });
+      }
+      logEvent("session_loaded", sessionId.slice(-8));
+    } catch (e) {
+      console.error("fetchSessionDetails error", e);
+    }
+  }
+
+  // Fetch session list
+  async function refreshSessions() {
+    const devId = deviceSelect.value;
+    if (!devId) return;
+    try {
+      const res = await fetch(`/sessions?device_id=${encodeURIComponent(devId)}`);
+      const sessions = await res.json();
+      if (!sessionList) return;
+      sessionList.innerHTML = '';
+      if (!Array.isArray(sessions) || !sessions.length) {
+        sessionList.innerHTML = '<div class="empty visible">No recorded sessions for this device.</div>';
+        return;
+      }
+      sessions.forEach(s => {
+        const item = document.createElement('div');
+        item.className = 'session-item';
+        const start = s.start_time ? new Date(s.start_time).toLocaleString() : 'Unknown';
+        item.innerHTML = `
+          <div class="session-header">
+            <span class="sfile">${s.file_name || 'Unnamed G-code'}</span>
+            <span class="status-pill ${s.status === 'active' ? 'on' : 'off'}">${(s.status || 'ended').toUpperCase()}</span>
+          </div>
+          <div class="session-meta">
+            <span>ID: <strong style="font-family:var(--font-mono);">${(s.session_id || '').slice(-8)}</strong></span>
+            <span>Started: ${start}</span>
+            <span>Layers: <strong>${s.total_layers || '--'}</strong></span>
+          </div>
+        `;
+        item.addEventListener('click', () => {
+          fetchSessionDetails(s.session_id, s, true);
+        });
+        sessionList.appendChild(item);
+      });
+    } catch (e) {
+      console.error("refreshSessions error", e);
+    }
+  }
+
+  // Per-Device IP Management (Prevents device cross-talk)
+  function getDeviceIp(did) {
+    if (!did) did = deviceSelect.value;
+    if (!did) return "";
+    const d = devicesById.get(did);
+    if (d && typeof d === 'object') {
+      const ip = d.machine_ip || d.ip || d.host;
+      if (ip) return String(ip).trim();
+    }
+    const savedDevIp = localStorage.getItem(`ufameasy_machine_ip_${did}`);
+    if (savedDevIp && savedDevIp.trim()) return savedDevIp.trim();
+
+    // Default 192.168.0.104 ONLY applies to device_001
+    if (did === "device_001") {
+      const legacySaved = localStorage.getItem("ufameasy_machine_ip");
+      if (legacySaved && legacySaved.trim()) return legacySaved.trim();
+      const host = window.location.hostname;
+      if (host && host !== "localhost" && host !== "127.0.0.1") return host;
+      return "192.168.0.104";
+    }
+
+    // For any other device (e.g. nidhi), NEVER default to device_001's IP
+    return "";
+  }
+
+  function setDeviceIp(did, ip) {
+    if (!did) did = deviceSelect.value;
+    if (!did || !ip) return;
+    localStorage.setItem(`ufameasy_machine_ip_${did}`, ip.trim());
+    if (did === "device_001") {
+      localStorage.setItem("ufameasy_machine_ip", ip.trim());
+    }
+  }
+
+  function getSharedIp() {
+    const did = deviceSelect.value;
+    const v = sharedIpInput?.value?.trim();
+    if (v && did) {
+      setDeviceIp(did, v);
+      return v;
+    }
+    return getDeviceIp(did);
+  }
+
+  sharedIpInput?.addEventListener("change", () => {
+    const v = sharedIpInput.value.trim();
+    const did = deviceSelect.value;
+    if (v && did) {
+      setDeviceIp(did, v);
+    }
   });
 
-  // ── Params table ──
-  function rowKey(pid,si){return `${si}::${pid}`;}
-  function stringifyValue(v){if(v==null)return "";if(Array.isArray(v))return v.map((item,i)=>`${i}: ${stringifyValue(item)}`).join(", ");if(typeof v==="object")return Object.entries(v).map(([k,vv])=>`${k}: ${stringifyValue(vv)}`).join(", ");return String(v);}
-  const LABEL_MAP={"xma_live":"Machine Position","SR001":"Layer Thickness (mm)","SR002":"First Layer Thickness (mm)","SR003":"First Layer Feedrate (mm/min)","SR004":"Standoff Distance (mm)","SR005":"Spot Size (mm)","SR006":"Contour Pass","SR007":"Contour Bead Width (mm)","SR008":"Perimeter Feedrate (mm/min)","SR009":"Perimeter First","SR010":"Seam Style","SR011":"Seam X (mm)","SR012":"Seam Y (mm)","SR013":"Start Point Policy","SR014":"Fill Pattern","SR015":"Fill Angle (°)","SR016":"Infill Bead Width (mm)","SR017":"Infill Feedrate (mm/min)","SR018":"Solid Infill Feedrate (mm/min)","SR019":"Stepover (mm)","SR020":"Bead Overlap (%)","SR021":"Bottom Infill Pattern","SR022":"Deposition Feedrate (mm/min)","SR023":"Travel Feedrate (mm/min)","SR024":"Interlayer Dwell (s)","SR025":"Safe Distance (mm)","SR026":"Lead-in Distance (mm)","SR027":"Lead-in Radius (mm)","SR028":"Lead-out Distance (mm)","SR029":"Lead-out Radius (mm)","SR030":"Lead Feedrate (mm/min)","SR031":"Comments","DED001":"Laser Power (%)","DED002":"First Layer Laser Power (%)","DED003":"PWM Frequency (Hz)","DED004":"PWM Duty (%)","DED005":"Powder Flow Rate (gms/min)","DED006":"PF1","DED007":"PF2","DED008":"PF3","DED009":"PF4","DED010":"Pre Heat Source","DED011":"Pre Heat Temperature (°C)","DED012":"Laser ON Delay (s)","DED013":"Laser OFF Delay (s)","DED014":"Gas Delay (s)","PH001":"Header Gcode","PH002":"Footer Gcode","PH003":"Pre Layer Gcode","PH004":"Layer Gcode","PH005":"Post Layer Gcode","PH006":"Post-Process Script","PH007":"User Defined Script"};
-  function normalizeParam(paramId,param,sliceIdx){const d=param||{},v=d.value;return{param_id:String(d.param_id||paramId||""),field:LABEL_MAP[String(d.param_id||paramId||"")]||String(d.field||""),value:v==null?"":stringifyValue(v),unit:String(d.unit||""),domain:String(d.domain||"Uncategorized"),slice_idx:String(d.slice_idx||sliceIdx||"")};}
-  function flattenSnapshots(snapshots){const rows=[];Object.entries(snapshots||{}).forEach(([si,params])=>{Object.entries(params||{}).forEach(([pid,p])=>rows.push(normalizeParam(pid,p,si)));});return rows;}
-  function sortRows(rows){return rows.sort((a,b)=>{const d=a.domain.localeCompare(b.domain);if(d)return d;const s=a.slice_idx.localeCompare(b.slice_idx,undefined,{numeric:true});if(s)return s;return a.param_id.localeCompare(b.param_id,undefined,{numeric:true});});}
-  function createCell(text,cls){const td=document.createElement("td");td.textContent=text;if(cls)td.className=cls;return td;}
-  function createDataRow(row){const tr=document.createElement("tr");tr.id=`row-${row.slice_idx}-${row.param_id}`;tr.dataset.key=rowKey(row.param_id,row.slice_idx);tr.dataset.paramId=row.param_id.toLowerCase();tr.dataset.field=row.field.toLowerCase();tr.dataset.domain=row.domain;tr.dataset.slice=row.slice_idx;tr.appendChild(createCell(row.param_id,"param-id"));tr.appendChild(createCell(row.field,"field"));tr.appendChild(createCell(row.value,"value"));tr.appendChild(createCell(row.unit,"unit"));tr.appendChild(createCell(row.domain,"domain"));tr.appendChild(createCell(row.slice_idx,"slice"));return tr;}
-  function createDomainRow(domain){const tr=document.createElement("tr");tr.className="domain-row";tr.dataset.domainHeader=domain;const th=document.createElement("th");th.colSpan=6;th.textContent=domain;tr.appendChild(th);return tr;}
-  function createSliceHeaderRow(si){const tr=document.createElement("tr");tr.className="slice-header";tr.dataset.sliceHeader=si;const td=document.createElement("td");td.colSpan=6;td.textContent=`Slice ${si}`;tr.appendChild(td);return tr;}
-  function renderTable(rows){tableBody.textContent="";rowsByKey.clear();populateSliceFilter(rows);const sorted=sortRows(rows);let currentDomain=null,currentSlice=null;sorted.forEach(row=>{if(row.domain!==currentDomain){currentDomain=row.domain;currentSlice=null;tableBody.appendChild(createDomainRow(currentDomain));}if(row.slice_idx!==currentSlice){currentSlice=row.slice_idx;tableBody.appendChild(createSliceHeaderRow(currentSlice));}const tr=createDataRow(row);rowsByKey.set(rowKey(row.param_id,row.slice_idx),tr);tableBody.appendChild(tr);});updateVisibility();}
-  function syncSummary(){const n=Array.from(tableBody.querySelectorAll("tr[data-key]")).filter(r=>r.style.display!=="none").length;summary.textContent=`${n} parameter${n===1?"":"s"}`;}
-  function updateEmptyState(){const total=rowsByKey.size,hasVisible=Array.from(rowsByKey.values()).some(r=>r.style.display!=="none");emptyState.classList.toggle("visible",total===0||!hasVisible);emptyState.textContent=total===0?"No snapshot data yet":"No matching parameters";tableWrap.classList.toggle("hidden",total===0);}
-  function updateDomainHeaders(){tableBody.querySelectorAll("tr[data-domain-header]").forEach(h=>{const domain=h.dataset.domainHeader,vis=Array.from(rowsByKey.values()).filter(r=>r.dataset.domain===domain).some(r=>r.style.display!=="none");h.style.display=vis?"":"none";});}
-  function populateSliceFilter(rows){const selected=sliceFilter.value,slices=[...new Set(rows.map(r=>r.slice_idx).filter(Boolean))].sort((a,b)=>a.localeCompare(b,undefined,{numeric:true}));sliceFilter.innerHTML='<option value="">All Slices</option>';slices.forEach(slice=>{const opt=document.createElement("option");opt.value=slice;opt.textContent=`Slice ${slice}`;sliceFilter.appendChild(opt);});sliceFilter.value=slices.includes(selected)?selected:"";}
-  function ensureSliceOption(si){if(!si||[...sliceFilter.options].some(o=>o.value===si))return;const opt=document.createElement("option");opt.value=si;opt.textContent=`Slice ${si}`;sliceFilter.appendChild(opt);}
-  function updateSliceHeaders(){tableBody.querySelectorAll("tr[data-slice-header]").forEach(h=>{const slice=h.dataset.sliceHeader,vis=Array.from(rowsByKey.values()).filter(r=>r.dataset.slice===slice).some(r=>r.style.display!=="none");h.style.display=vis?"":"none";});}
-  function updateVisibility(){const q=searchInput.value.trim().toLowerCase(),selectedSlice=sliceFilter.value;rowsByKey.forEach(row=>{const ms=!q||row.dataset.paramId.startsWith(q)||row.dataset.field.includes(q),msl=!selectedSlice||row.dataset.slice===selectedSlice;row.style.display=(ms&&msl)?"":"none";});updateSliceHeaders();updateDomainHeaders();updateEmptyState();syncSummary();}
-  function flashCell(cell){cell.classList.remove("flash");void cell.offsetWidth;cell.classList.add("flash");setTimeout(()=>cell.classList.remove("flash"),500);}
-  function updateCell(row,sel,val){const cell=row.querySelector(sel);if(cell&&cell.textContent!==val){cell.textContent=val;flashCell(cell);}}
-  function compareRows(a,b){const d=a.domain.localeCompare(b.domain);if(d)return d;const p=a.param_id.localeCompare(b.param_id,undefined,{numeric:true});if(p)return p;return a.slice_idx.localeCompare(b.slice_idx,undefined,{numeric:true});}
-  function getRowData(tr){return{param_id:tr.children[0].textContent,field:tr.children[1].textContent,value:tr.children[2].textContent,unit:tr.children[3].textContent,domain:tr.children[4].textContent,slice_idx:tr.children[5].textContent};}
-  function ensureDomainHeader(domain){let h=Array.from(tableBody.querySelectorAll("tr[data-domain-header]")).find(x=>x.dataset.domainHeader===domain);if(h)return h;h=createDomainRow(domain);const next=Array.from(tableBody.querySelectorAll("tr[data-domain-header]")).find(x=>x.dataset.domainHeader.localeCompare(domain)>0);next?tableBody.insertBefore(h,next):tableBody.appendChild(h);return h;}
-  function insertNewRow(row){const tr=createDataRow(row);ensureSliceOption(row.slice_idx);const header=ensureDomainHeader(row.domain);let cursor=header.nextElementSibling;while(cursor&&!cursor.dataset.domainHeader){if(compareRows(row,getRowData(cursor))<0){tableBody.insertBefore(tr,cursor);rowsByKey.set(rowKey(row.param_id,row.slice_idx),tr);return tr;}cursor=cursor.nextElementSibling;}tableBody.insertBefore(tr,cursor);rowsByKey.set(rowKey(row.param_id,row.slice_idx),tr);return tr;}
-  function renderSnapshot(si,data){emptyState.classList.remove("visible");tableWrap.classList.remove("hidden");Object.entries(data||{}).forEach(([pid,param])=>{const row=normalizeParam(pid,param,si);if(!document.getElementById(`row-${row.slice_idx}-${row.param_id}`)){flashCell(insertNewRow(row).querySelector(".value"));}});updateVisibility();}
-  function insertOrUpdateRow(row){const key=rowKey(row.param_id,row.slice_idx),ex=rowsByKey.get(key);if(ex){updateCell(ex,".field",row.field);updateCell(ex,".value",row.value);updateCell(ex,".unit",row.unit);updateCell(ex,".domain",row.domain);updateCell(ex,".slice",row.slice_idx);updateVisibility();return;}flashCell(insertNewRow(row).querySelector(".value"));updateVisibility();}
-
-  // ── Events log ──
-  function logEvent(type,detail){const li=document.createElement("li");const ts=new Date().toLocaleString("en-GB",{hour12:false});li.innerHTML=`<span>${ts}</span>${type}${detail?" — "+detail:""}`;eventsList.prepend(li);while(eventsList.children.length>20)eventsList.lastElementChild.remove();}
-  function sessionIdSuffix(id){return id?` #${String(id).slice(-8)}`:"" ;}
-
-  // ── WebSocket ──
-  function setConn(on){statusDot.classList.toggle("on",on);statusText.textContent=on?"Connected":"Disconnected";}
-  function scheduleReconnect(){if(reconnectTimer)return;reconnectTimer=setTimeout(()=>{reconnectTimer=null;connectWS();},3000);}
-  function connectWS(){
-    if(socket&&(socket.readyState===WebSocket.OPEN||socket.readyState===WebSocket.CONNECTING))return;
-    const wsUrl=new URL("/ws",window.location.href);
-    wsUrl.protocol=window.location.protocol==="https:"?"wss:":"ws:";
-    socket=new WebSocket(wsUrl.href);
-    socket.onopen=async()=>{setConn(true);logEvent("WebSocket connected");};
-    socket.onmessage=(ev)=>{
-      let msg;try{msg=JSON.parse(ev.data);}catch{return;}
-      const selected=deviceSelect.value;
-      if(msg.type!=="init"&&(!selected||(msg.device_id&&msg.device_id!==selected)||(!msg.device_id&&!["estimate_result"].includes(msg.type))))return;
-      switch(msg.type){
-        case "init":{const sessions=msg.active_sessions||{},sessionsData=msg.sessions_data||{},liveRuntime=msg.live_runtime||{};Object.entries(sessions).forEach(([did])=>{if(![...deviceSelect.options].some(o=>o.value===did)){const o=document.createElement("option");o.value=did;o.textContent=did;deviceSelect.appendChild(o);}});const currentVal=deviceSelect.value,saved=localStorage.getItem("ufameasy_selected_device");if(!currentVal||!sessions[currentVal]){const preferred=(saved&&sessions[saved])?saved:null;if(preferred)deviceSelect.value=preferred;}const sel=deviceSelect.value;if(sel){const live=liveRuntime[sel]||{};liveRuntimeData={...liveRuntimeData,...live};if(sessionsData[sel]){const s=sessionsData[sel];updateRuntime({current_file:s.file_name,total_layers:s.total_layers,current_layer:0});}else{clearRuntime();}renderLiveRuntimeGrid(liveRuntimeData);refreshSessions();try{const sessionId=sessions[sel];if(sessionId&&sessionsData[sel])fetchSessionDetails(sessionId,sessionsData[sel]);}catch(e){console.error("AUTO-RESTORE failed",e);}}break;}
-        case "session_reset":tableBody.innerHTML="";rowsByKey.clear();emptyState.classList.add("visible");tableWrap.classList.add("hidden");clearRuntime();logEvent("session_reset");break;
-        case "session_start":updateRuntime({current_file:msg.file_name,total_layers:msg.total_layers,current_layer:0});refreshSessions();logEvent("session_start",`${msg.file_name||""}${sessionIdSuffix(msg.session_id)}`);break;
-        case "file_update":{const fn=String(msg.file_name||"").trim();if(fn&&fn.toLowerCase()!=="unknown"){rtFile.textContent=fn;logEvent("file_update",fn);}break;}
-        case "position_update":updateMachinePosition((msg.data||{}).xma);break;
-        case "session_end":currentMachineConnected=false;refreshSessions();logEvent("session_end",`${msg.status||""}${sessionIdSuffix(msg.session_id)}`);break;
-        case "runtime_update":{const d=msg.data||{};liveRuntimeData={...liveRuntimeData,...d};updateRuntime({current_layer:d.current_layer??d.RT005,total_layers:d.total_layers??d.PS011,current_file:d.current_file??d.RT013,gas_enabled:"gas_enabled" in d?d.gas_enabled:("RT029" in d?d.RT029:undefined),shielding_enabled:"shielding_enabled" in d?d.shielding_enabled:undefined,laser_enabled:"laser_enabled" in d?d.laser_enabled:("RT027" in d?d.RT027:("laser_on" in d?d.laser_on:undefined)),powder_enabled:"powder_enabled" in d?d.powder_enabled:("RT028" in d?d.RT028:undefined),light_enabled:"light_enabled" in d?d.light_enabled:("RT031" in d?d.RT031:undefined),laser_power_pct:d.laser_power_pct??d.DS010,melt_pool_high:d.melt_pool_high,melt_pool_low:d.melt_pool_low,MAX_LASER_POWER:d.MAX_LASER_POWER,connected:d.machine_connected??d.RT006,connection_state:d.connection_state??d.RT007,_live_connection:true});const pct=liveRuntimeData.progress_pct;if(pct!==undefined&&pct!==null){const p=Math.min(100,Math.max(0,Number(pct)));document.getElementById("progressBar").style.width=p+"%";document.getElementById("progressPct").textContent=p.toFixed(1)+"%";}renderLiveRuntimeGrid(liveRuntimeData);logEvent("runtime_update");break;}
-        case "estimate_result":{const d=msg.data||{};estPowder.textContent=d.total_powder_g!=null?d.total_powder_g.toFixed(1)+"g":"—";estEfficiency.textContent=d.deposition_efficiency!=null?(d.deposition_efficiency*100).toFixed(1)+"%":"—";estEnergy.textContent=d.total_energy_wh!=null?d.total_energy_wh.toFixed(2):"—";logEvent("estimate_result");break;}
-        case "snapshot":{const si=String(msg.slice_idx||"");let needInsert=false;Object.entries(msg.data||{}).forEach(([pid,param])=>{const row=normalizeParam(pid,param,si);const ex=document.getElementById(`row-${row.slice_idx}-${row.param_id}`);if(ex)updateCell(ex,".value",row.value);else needInsert=true;});if(needInsert)renderSnapshot(si,msg.data);else updateVisibility();logEvent("snapshot",`slice ${si}`);break;}
-        case "slice_update":{const si=String(msg.slice_idx||"");Object.entries(msg.data||{}).forEach(([pid,param])=>{insertOrUpdateRow(normalizeParam(pid,param,si));});logEvent("slice_update",`slice ${si}`);break;}
+  // Load devices
+  async function loadDevices() {
+    try {
+      const res = await fetch('/devices');
+      const devices = await res.json();
+      deviceSelect.innerHTML = '<option value="">-- select device --</option>';
+      if (Array.isArray(devices)) {
+        devices.forEach(d => {
+          const did = typeof d === 'string' ? d : d.device_id;
+          devicesById.set(did, d);
+          const opt = document.createElement('option');
+          opt.value = did;
+          opt.textContent = did;
+          deviceSelect.appendChild(opt);
+        });
       }
-    };
-    socket.onerror=()=>setConn(false);
-    socket.onclose=(event)=>{setConn(false);console.warn("WebSocket closed",event.code,event.reason||"No reason");scheduleReconnect();};
+      const saved = localStorage.getItem("ufameasy_selected_device");
+      if (saved && [...deviceSelect.options].some(o => o.value === saved)) {
+        deviceSelect.value = saved;
+      } else if (deviceSelect.options.length > 1) {
+        deviceSelect.value = deviceSelect.options[1].value;
+      }
+      if (deviceSelect.value) {
+        handleDeviceChange(deviceSelect.value);
+      }
+    } catch (e) {
+      console.error("loadDevices error", e);
+    }
   }
 
-  deviceSelect.addEventListener("change",()=>{const id=deviceSelect.value;const autoIp=getSelectedMachineIp();if(autoIp&&!getSharedIp())document.getElementById("sharedIpInput").value=autoIp;document.querySelector("#secParams")&&document.getElementById("secParams").classList.remove("open");});
-  searchInput.addEventListener("input",updateVisibility);
-  sliceFilter.addEventListener("change",updateVisibility);
-  logsSearchInput.addEventListener("input",applyLogFilters);
-  logsCategoryFilter.addEventListener("change",applyLogFilters);
-  logsSeverityFilter.addEventListener("change",applyLogFilters);
-  logsRefreshBtn.addEventListener("click",()=>viewLogsIp(currentLogsIp||getSharedIp()));
+  // Active Camera Device Tracker (Ensures device stream isolation)
+  let activeCameraDevice = "";
 
-  // Init
+  // Comprehensive device change handler (Strict Device Isolation)
+  async function handleDeviceChange(selectedDid) {
+    if (!selectedDid) {
+      stopCamera();
+      clearRuntime();
+      resetTrendHistory();
+      liveRuntimeData = {};
+      latestPositionSets = { xma: null, xmr: null, xwa: null, xwr: null };
+      update5AxisDisplay();
+      tableBody.innerHTML = "";
+      rowsByKey.clear();
+      if (emptyState) emptyState.classList.add("visible");
+      if (tableWrap) tableWrap.classList.add("hidden");
+      if (sessionList) sessionList.innerHTML = '<div class="no-sessions">Select a device to view session history.</div>';
+      return;
+    }
+
+    localStorage.setItem("ufameasy_selected_device", selectedDid);
+
+    // 1. CRITICAL: Stop previous device camera stream immediately!
+    stopCamera();
+
+    // 2. CRITICAL: Clear all prior runtime KPIs, positions & trends
+    clearRuntime();
+    resetTrendHistory();
+    liveRuntimeData = {};
+    latestPositionSets = { xma: null, xmr: null, xwa: null, xwr: null };
+    update5AxisDisplay();
+    if (kpiConnSub) kpiConnSub.textContent = `Device: ${selectedDid}`;
+
+    // 3. Clear parameters table
+    tableBody.innerHTML = "";
+    rowsByKey.clear();
+    if (emptyState) emptyState.classList.add("visible");
+    if (tableWrap) tableWrap.classList.add("hidden");
+
+    // 4. Update IP for selected device
+    const devIp = getDeviceIp(selectedDid);
+    if (sharedIpInput) {
+      sharedIpInput.value = devIp;
+      sharedIpInput.placeholder = devIp ? "e.g. 192.168.0.104" : `Enter IP for ${selectedDid} (e.g. 192.168.1.100)`;
+    }
+    const sideIp = document.getElementById("sideMachineIp");
+    if (sideIp) sideIp.textContent = devIp ? `${devIp}:8000` : "No IP configured";
+
+    const idleDesc = document.querySelector("#cameraCollapsed .idle-desc");
+    if (idleDesc) {
+      if (devIp) {
+        idleDesc.textContent = `Real-time machine monitoring camera feed for ${selectedDid} (${devIp}:8765). Connect to visually monitor deposition or melt pool.`;
+      } else {
+        idleDesc.textContent = `No camera IP configured for ${selectedDid}. Enter ${selectedDid}'s machine IP in Machine Access.`;
+      }
+    }
+
+    // 5. Fetch latest live parameters & positions for this device
+    try {
+      const res = await fetch(`/state?device_id=${encodeURIComponent(selectedDid)}`);
+      const stateData = await res.json();
+      if (stateData && !stateData.error && Object.keys(stateData).length > 0) {
+        liveRuntimeData = { ...stateData };
+        updateRuntime({
+          current_layer: stateData.current_layer ?? stateData.RT005,
+          total_layers: stateData.total_layers ?? stateData.PS011,
+          current_file: stateData.current_file ?? stateData.RT013,
+          gas_enabled: stateData.gas_enabled ?? stateData.RT029,
+          shielding_enabled: stateData.shielding_enabled,
+          laser_enabled: stateData.laser_enabled ?? stateData.RT027 ?? stateData.laser_on,
+          powder_enabled: stateData.powder_enabled ?? stateData.RT028,
+          light_enabled: stateData.light_enabled ?? stateData.RT031,
+          laser_power_pct: stateData.laser_power_pct ?? stateData.DS010 ?? stateData.laser_power,
+          connected: stateData.machine_connected ?? stateData.RT006,
+          connection_state: stateData.connection_state ?? stateData.RT007
+        });
+        if (stateData.xma) updateMachinePosition(stateData.xma, "xma");
+        if (stateData.xmr) updateMachinePosition(stateData.xmr, "xmr");
+        if (stateData.xwa) updateMachinePosition(stateData.xwa, "xwa");
+        if (stateData.xwr) updateMachinePosition(stateData.xwr, "xwr");
+        renderLiveRuntimeGrid(liveRuntimeData);
+        recordTrendSample(stateData);
+      } else {
+        // Device is idle/offline: keep clean zeroed state
+        clearRuntime();
+        renderLiveRuntimeGrid({});
+      }
+    } catch (e) {
+      console.error("Error fetching state for device", e);
+    }
+
+    // 6. Fetch snapshots for this device to populate Parameters table
+    try {
+      const snapRes = await fetch(`/snapshots?device_id=${encodeURIComponent(selectedDid)}`);
+      const snapData = await snapRes.json();
+      if (snapData && !snapData.error && Object.keys(snapData).length > 0) {
+        renderTable(flattenSnapshots(snapData));
+      } else {
+        tableBody.innerHTML = "";
+        rowsByKey.clear();
+        if (emptyState) emptyState.classList.add("visible");
+        if (tableWrap) tableWrap.classList.add("hidden");
+      }
+    } catch (e) {
+      console.error("Error fetching snapshots for device", e);
+    }
+
+    // 7. Refresh session list for this device
+    await refreshSessions();
+
+    logEvent("device_selected", selectedDid);
+  }
+
+  deviceSelect.addEventListener("change", () => {
+    handleDeviceChange(deviceSelect.value);
+  });
+
+  // Camera Fullscreen / Maximize Support
+  function isCameraFullscreen() {
+    const card = document.getElementById("cameraCard");
+    return Boolean(
+      document.fullscreenElement === card ||
+      document.webkitFullscreenElement === card ||
+      card?.classList.contains("is-fullscreen")
+    );
+  }
+
+  function updateFullscreenButtons(isFullscreen) {
+    const fsText = document.getElementById("camFsText");
+    const overlayFsText = document.getElementById("camOverlayFsText");
+    const compressPath = "M8 3v3a2 2 0 0 1-2 2H3m18 0h-3a2 2 0 0 1-2-2V3m0 18v-3a2 2 0 0 1 2-2h3M3 16h3a2 2 0 0 1 2 2v3";
+    const expandPath = "M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3";
+
+    if (fsText) fsText.textContent = isFullscreen ? "Minimize" : "Maximize";
+    if (overlayFsText) overlayFsText.textContent = isFullscreen ? "Minimize" : "Maximize";
+
+    const fsIcon = document.getElementById("camFsIcon");
+    const overlayIcon = document.getElementById("camOverlayFsIcon");
+    const d = isFullscreen ? compressPath : expandPath;
+    if (fsIcon) fsIcon.innerHTML = `<path d="${d}"/>`;
+    if (overlayIcon) overlayIcon.innerHTML = `<path d="${d}"/>`;
+  }
+
+  function toggleCameraFullscreen() {
+    const card = document.getElementById("cameraCard");
+    if (!card) return;
+
+    const entering = !isCameraFullscreen();
+    if (entering) {
+      card.classList.add("is-fullscreen");
+      updateFullscreenButtons(true);
+      if (card.requestFullscreen) {
+        card.requestFullscreen().catch(() => {});
+      } else if (card.webkitRequestFullscreen) {
+        card.webkitRequestFullscreen();
+      }
+    } else {
+      card.classList.remove("is-fullscreen");
+      updateFullscreenButtons(false);
+      if (document.fullscreenElement || document.webkitFullscreenElement) {
+        if (document.exitFullscreen) document.exitFullscreen().catch(() => {});
+        else if (document.webkitExitFullscreen) document.webkitExitFullscreen();
+      }
+    }
+  }
+
+  document.addEventListener("fullscreenchange", () => {
+    const card = document.getElementById("cameraCard");
+    const inFs = document.fullscreenElement === card;
+    if (!inFs && card) card.classList.remove("is-fullscreen");
+    updateFullscreenButtons(inFs);
+  });
+  document.addEventListener("webkitfullscreenchange", () => {
+    const card = document.getElementById("cameraCard");
+    const inFs = document.webkitFullscreenElement === card;
+    if (!inFs && card) card.classList.remove("is-fullscreen");
+    updateFullscreenButtons(inFs);
+  });
+  document.addEventListener("keydown", (e) => {
+    if (e.key === "Escape") {
+      const card = document.getElementById("cameraCard");
+      if (card && card.classList.contains("is-fullscreen")) {
+        card.classList.remove("is-fullscreen");
+        updateFullscreenButtons(false);
+      }
+    }
+  });
+
+  document.getElementById("cameraFullscreenBtn")?.addEventListener("click", toggleCameraFullscreen);
+  document.getElementById("camOverlayFsBtn")?.addEventListener("click", toggleCameraFullscreen);
+
+  // Camera Handlers (Port 8765 /video-feed)
+  async function checkCameraAvailable(ip, port = 8765, deviceId = null) {
+    try {
+      const didParam = deviceId ? `&device_id=${encodeURIComponent(deviceId)}` : '';
+      const res = await fetch(`/camera/check?ip=${encodeURIComponent(ip)}&port=${port}${didParam}`, { cache: "no-store" });
+      const data = await res.json();
+      return data;
+    } catch (e) {
+      return { available: false, error: e.message };
+    }
+  }
+
+  async function startCamera(ip) {
+    const currentDev = deviceSelect.value;
+    if (!ip) ip = getSharedIp();
+    if (!ip) {
+      showToast(`Please enter a Machine IP for ${currentDev || 'the selected device'} in Machine Access`, true);
+      switchTab("machineAccess");
+      const input = document.getElementById("sharedIpInput");
+      if (input) input.focus();
+      return;
+    }
+
+    activeCameraDevice = currentDev;
+    cameraCollapsed.style.display = "none";
+    cameraExpanded.style.display = "block";
+    cameraPlaceholder.style.display = "grid";
+    cameraPlaceholder.textContent = `Checking camera feed for ${currentDev || 'device'} at ${ip}:8765...`;
+    cameraStatus.textContent = `Connecting (${ip}:8765)`;
+
+    // Check device ownership and camera availability to prevent streaming wrong machine
+    const chk = await checkCameraAvailable(ip, 8765, currentDev);
+    if (!chk.available) {
+      cameraFeed.style.display = "none";
+      cameraPlaceholder.style.display = "grid";
+      if (chk.device_mismatch) {
+        cameraPlaceholder.innerHTML = `<div style="color:var(--red);font-weight:700;font-size:14px;margin-bottom:8px;">⚠️ Device Mismatch</div><div style="max-width:420px;margin:0 auto;color:var(--text);font-size:12px;">Camera feed at ${ip}:8765 is registered to <strong>'${chk.reported_device}'</strong>.<br>It cannot be streamed from <strong>'${currentDev}'</strong> dashboard.</div>`;
+        cameraStatus.textContent = `Mismatch (${chk.reported_device})`;
+        showToast(`Stream at ${ip} belongs to ${chk.reported_device}, not ${currentDev}!`, true);
+      } else {
+        cameraPlaceholder.textContent = `Unable to connect to camera feed for ${currentDev} at ${ip}:8765. Ensure camera service is running.`;
+        cameraStatus.textContent = "Feed offline";
+        showToast(`Camera stream unreachable at ${ip}:8765`, true);
+      }
+      return;
+    }
+
+    cameraLiveBadge.style.display = "inline-flex";
+    cameraStopBtn.style.display = "inline-flex";
+    const fsBtn = document.getElementById("cameraFullscreenBtn");
+    if (fsBtn) fsBtn.style.display = "inline-flex";
+
+    // Try port 8765 first (default machine camera server)
+    const streamUrl = `http://${ip}:8765/video-feed`;
+
+    cameraFeed.onload = () => {
+      // If user switched devices while stream was connecting, drop it
+      if (activeCameraDevice && deviceSelect.value && activeCameraDevice !== deviceSelect.value) {
+        stopCamera();
+        return;
+      }
+      cameraPlaceholder.style.display = "none";
+      cameraFeed.style.display = "block";
+      cameraStatus.textContent = `Connected (${ip}:8765) • ${currentDev || 'Active'}`;
+      showToast(`Camera feed connected for ${currentDev || 'machine'}`);
+    };
+
+    cameraFeed.onerror = () => {
+      // Fallback: try port 8080 if 8765 fails
+      if (!cameraFeed.src.includes(":8080")) {
+        cameraPlaceholder.textContent = `Trying fallback stream at ${ip}:8080...`;
+        cameraFeed.src = `http://${ip}:8080/video_feed`;
+        return;
+      }
+      cameraPlaceholder.style.display = "grid";
+      cameraPlaceholder.textContent = `Unable to connect to camera feed at ${ip}:8765 or 8080. Ensure the camera service is running.`;
+      cameraFeed.style.display = "none";
+      cameraStatus.textContent = "Feed offline";
+      showToast("Camera stream unreachable", true);
+    };
+
+    cameraFeed.src = streamUrl;
+  }
+
+  function stopCamera() {
+    const card = document.getElementById("cameraCard");
+    if (card && card.classList.contains("is-fullscreen")) {
+      card.classList.remove("is-fullscreen");
+      updateFullscreenButtons(false);
+    }
+    if (document.fullscreenElement === card && document.exitFullscreen) {
+      document.exitFullscreen().catch(() => {});
+    }
+
+    cameraFeed.src = "";
+    cameraFeed.style.display = "none";
+    cameraExpanded.style.display = "none";
+    cameraCollapsed.style.display = "flex";
+    cameraLiveBadge.style.display = "none";
+    cameraStopBtn.style.display = "none";
+    const fsBtn = document.getElementById("cameraFullscreenBtn");
+    if (fsBtn) fsBtn.style.display = "none";
+    cameraStatus.textContent = "";
+    activeCameraDevice = "";
+  }
+
+  cameraLiveBtn.addEventListener("click", () => startCamera());
+  cameraStopBtn.addEventListener("click", stopCamera);
+
+  // Machine Access Controls: Live Stream, Recordings, Logs, Download
+  document.getElementById("maLiveStreamBtn")?.addEventListener("click", () => {
+    const ip = getSharedIp();
+    if (!ip) { showToast("Enter Machine IP", true); return; }
+    startCamera(ip);
+    switchTab("overview");
+  });
+
+  // RECORDINGS: View, Play, Download, Delete
+  async function viewRecordingsIp(ip) {
+    if (!ip) ip = getSharedIp();
+    if (!ip) { showToast("Enter machine IP address", true); return; }
+    currentRecordingsIp = ip;
+    const selectedDevice = deviceSelect.value;
+    const params = new URLSearchParams({ ip });
+    if (selectedDevice) params.set("device_id", selectedDevice);
+
+    recordingsStatus.textContent = "Loading recordings from machine...";
+    recordingsList.innerHTML = '<div style="color:var(--muted);font-size:12px;padding:8px 0;">Connecting to machine FTP...</div>';
+    recordingsVideo.removeAttribute("src");
+    recordingsVideo.load();
+
+    try {
+      const res = await fetch(`/recordings?${params.toString()}`);
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.detail || "Unable to list recordings");
+      renderRecordings(data, ip);
+      logEvent("recordings_loaded", `${data.length} files`);
+    } catch (e) {
+      recordingsStatus.textContent = e.message || "Unable to load recordings.";
+      recordingsList.innerHTML = `<div style="color:var(--red);font-size:12px;padding:8px 0;">Error: ${recordingsStatus.textContent}</div>`;
+      showToast(recordingsStatus.textContent, true);
+    }
+  }
+
+  function renderRecordings(rows, ip) {
+    recordingsList.innerHTML = "";
+    if (!Array.isArray(rows) || !rows.length) {
+      recordingsStatus.textContent = "No recordings found.";
+      recordingsList.innerHTML = '<div style="color:var(--muted);font-size:12px;padding:8px 0;">No recordings found on machine.</div>';
+      return;
+    }
+
+    recordingsStatus.textContent = `${rows.length} recording${rows.length === 1 ? "" : "s"} found.`;
+
+    rows.forEach(item => {
+      const card = document.createElement("div");
+      card.className = "recording-card";
+      const filePath = item.path || item.filename || "";
+
+      card.innerHTML = `
+        <div class="recording-title">${item.filename || filePath}</div>
+        <div class="recording-meta">
+          <span>${item.device_id || "device"}</span>
+          <span>${formatBytes(item.size)}</span>
+          <span>${formatRecordingDate(item.modified_at)}</span>
+        </div>
+        <div class="recording-actions">
+          <button class="action-btn primary" type="button" style="padding:4px 10px;font-size:11px;" data-action="play">▶ Play</button>
+          <a href="/recordings/download?ip=${encodeURIComponent(ip)}&file=${encodeURIComponent(filePath)}&download=true" download class="action-btn" style="padding:4px 10px;font-size:11px;">⬇ Download</a>
+          <button class="action-btn danger" type="button" style="padding:4px 10px;font-size:11px;" data-action="delete">✕ Delete</button>
+        </div>
+      `;
+
+      card.querySelector('[data-action="play"]').addEventListener("click", (e) => {
+        e.stopPropagation();
+        document.querySelectorAll(".recording-card").forEach(c => c.classList.remove("active"));
+        card.classList.add("active");
+        recordingsVideo.src = `/recordings/download?ip=${encodeURIComponent(ip)}&file=${encodeURIComponent(filePath)}&download=false`;
+        recordingsVideo.play().catch(() => {});
+        showToast(`Playing ${item.filename || filePath}`);
+      });
+
+      card.querySelector('[data-action="delete"]').addEventListener("click", async (e) => {
+        e.stopPropagation();
+        if (!confirm(`Delete recording "${item.filename || filePath}"?`)) return;
+        try {
+          const dRes = await fetch(`/recordings/${encodeRecordingPath(filePath)}?ip=${encodeURIComponent(ip)}`, { method: "DELETE" });
+          if (!dRes.ok) throw new Error("Delete failed");
+          card.remove();
+          showToast("Recording deleted");
+          logEvent("recording_deleted", filePath);
+        } catch (err) {
+          showToast(err.message || "Failed to delete", true);
+        }
+      });
+
+      card.addEventListener("click", () => {
+        card.querySelector('[data-action="play"]').click();
+      });
+
+      recordingsList.appendChild(card);
+    });
+  }
+
+  document.getElementById("maRecordingsBtn")?.addEventListener("click", () => {
+    const ip = getSharedIp();
+    viewRecordingsIp(ip);
+  });
+
+  // LOGS: View, Filter, Refresh, Download CSV
+  async function viewLogsIp(ip) {
+    if (!ip) ip = getSharedIp();
+    if (!ip) { showToast("Enter machine IP address", true); return; }
+    currentLogsIp = ip;
+    logsStatus.textContent = "Loading logs from machine...";
+    logsTableHead.innerHTML = "";
+    logsTableBody.innerHTML = "";
+    logsTableWrap.style.display = "none";
+    logsEmptyState.classList.remove("visible");
+
+    try {
+      const res = await fetch(`/logs/view?ip=${encodeURIComponent(ip)}&limit=1000`);
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.detail || "Unable to load logs");
+      renderLogs(data.logs || []);
+      logEvent("logs_loaded", `${(data.logs || []).length} rows`);
+    } catch (e) {
+      logsStatus.textContent = e.message || "Unable to load logs.";
+      logsEmptyState.classList.add("visible");
+      logsEmptyState.textContent = logsStatus.textContent;
+      showToast(logsStatus.textContent, true);
+    }
+  }
+
+  function renderLogs(rows) {
+    logsRows = Array.isArray(rows) ? rows : [];
+    if (!logsRows.length) {
+      logsStatus.textContent = "No log records found on machine.";
+      logsEmptyState.classList.add("visible");
+      logsTableWrap.style.display = "none";
+      return;
+    }
+
+    logsStatus.textContent = `${logsRows.length} log records loaded.`;
+    logsEmptyState.classList.remove("visible");
+    logsTableWrap.style.display = "block";
+
+    // Extract columns
+    logsColumns = Object.keys(logsRows[0] || {});
+    renderLogsTable(logsRows);
+  }
+
+  function renderLogsTable(rows) {
+    logsTableHead.innerHTML = "";
+    logsTableBody.innerHTML = "";
+
+    const hr = document.createElement("tr");
+    logsColumns.forEach(col => {
+      const th = document.createElement("th");
+      th.textContent = col.toUpperCase();
+      hr.appendChild(th);
+    });
+    logsTableHead.appendChild(hr);
+
+    const f = document.createDocumentFragment();
+    const limit = Math.min(rows.length, 300);
+    for (let i = 0; i < limit; i++) {
+      const r = rows[i];
+      const tr = document.createElement("tr");
+      logsColumns.forEach(col => {
+        const td = document.createElement("td");
+        td.textContent = r[col] ?? "";
+        if (col === "severity") {
+          td.style.fontWeight = "700";
+          if (String(r[col]).toUpperCase() === "ERROR") td.style.color = "var(--red)";
+          else if (String(r[col]).toUpperCase() === "WARNING") td.style.color = "var(--yellow)";
+          else td.style.color = "var(--green)";
+        }
+        tr.appendChild(td);
+      });
+      f.appendChild(tr);
+    }
+    logsTableBody.appendChild(f);
+  }
+
+  function applyLogFilters() {
+    const q = (logsSearchInput?.value || "").toLowerCase().trim();
+    if (!q) {
+      renderLogsTable(logsRows);
+      return;
+    }
+    const filtered = logsRows.filter(r => {
+      return Object.values(r).some(v => String(v).toLowerCase().includes(q));
+    });
+    renderLogsTable(filtered);
+    logsStatus.textContent = `Showing ${Math.min(filtered.length, 300)} of ${filtered.length} matches (filtered).`;
+  }
+
+  logsSearchInput?.addEventListener("input", applyLogFilters);
+  logsRefreshBtn?.addEventListener("click", () => viewLogsIp(currentLogsIp || getSharedIp()));
+
+  document.getElementById("maLogsBtn")?.addEventListener("click", () => {
+    const ip = getSharedIp();
+    viewLogsIp(ip);
+  });
+
+  document.getElementById("maDownloadBtn")?.addEventListener("click", () => {
+    const ip = getSharedIp();
+    if (!ip) { showToast("Enter machine IP first", true); return; }
+    showToast("Downloading log CSV from machine...");
+    window.location.href = `/logs/fetch?ip=${encodeURIComponent(ip)}`;
+    logEvent("download_logs_csv", ip);
+  });
+
+  // WebSocket Connection
+  function connectWS() {
+    if (socket) {
+      try { socket.close(); } catch(e) {}
+    }
+    const wsUrl = new URL("/ws", window.location.href);
+    wsUrl.protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
+    socket = new WebSocket(wsUrl.href);
+
+    socket.onopen = () => {
+      setConn(true);
+      logEvent("WebSocket connected");
+    };
+
+    socket.onmessage = (ev) => {
+      let msg;
+      try { msg = JSON.parse(ev.data); } catch(e) { return; }
+      const selected = deviceSelect.value;
+
+      // STRICT DEVICE ISOLATION:
+      // Drop any message that does not belong to the currently selected device.
+      if (msg.type !== "init") {
+        if (!selected) return;
+        if (!msg.device_id || msg.device_id !== selected) {
+          return;
+        }
+      }
+
+      switch (msg.type) {
+        case "init": {
+          const sessions = msg.active_sessions || {};
+          lastInitSessionsData = msg.sessions_data || {};
+          lastInitLiveRuntime = msg.live_runtime || {};
+
+          Object.keys(sessions).forEach(did => {
+            if (![...deviceSelect.options].some(o => o.value === did)) {
+              const opt = document.createElement("option");
+              opt.value = did;
+              opt.textContent = did;
+              deviceSelect.appendChild(opt);
+            }
+          });
+
+          const currentVal = deviceSelect.value;
+          const saved = localStorage.getItem("ufameasy_selected_device");
+          if (!currentVal || !sessions[currentVal]) {
+            const preferred = (saved && sessions[saved]) ? saved : null;
+            if (preferred) deviceSelect.value = preferred;
+            else if (deviceSelect.options.length > 1) deviceSelect.value = deviceSelect.options[1].value;
+          }
+
+          const sel = deviceSelect.value;
+          if (sel) {
+            handleDeviceChange(sel);
+          }
+          break;
+        }
+
+        case "session_reset":
+          tableBody.innerHTML = "";
+          rowsByKey.clear();
+          if (emptyState) emptyState.classList.add("visible");
+          if (tableWrap) tableWrap.classList.add("hidden");
+          clearRuntime();
+          logEvent("session_reset");
+          break;
+
+        case "session_start":
+          resetTrendHistory();
+          updateRuntime({
+            current_file: msg.file_name,
+            total_layers: msg.total_layers,
+            current_layer: 0
+          });
+          refreshSessions();
+          logEvent("session_start", msg.file_name || "");
+          break;
+
+        case "file_update": {
+          const fn = String(msg.file_name || "").trim();
+          if (fn && fn.toLowerCase() !== "unknown") {
+            if (rtFile) rtFile.textContent = fn;
+            if (topbarFile) topbarFile.textContent = fn;
+            logEvent("file_update", fn);
+          }
+          break;
+        }
+
+        case "position_update": {
+          const pData = msg.data || {};
+          if (pData.xma) updateMachinePosition(pData.xma, "xma");
+          if (pData.xmr) updateMachinePosition(pData.xmr, "xmr");
+          if (pData.xwa) updateMachinePosition(pData.xwa, "xwa");
+          if (pData.xwr) updateMachinePosition(pData.xwr, "xwr");
+          break;
+        }
+
+        case "session_end":
+          refreshSessions();
+          logEvent("session_end", msg.status || "");
+          break;
+
+        case "runtime_update": {
+          const d = msg.data || {};
+          liveRuntimeData = { ...liveRuntimeData, ...d };
+          updateRuntime({
+            current_layer: d.current_layer ?? d.RT005,
+            total_layers: d.total_layers ?? d.PS011,
+            current_file: d.current_file ?? d.RT013,
+            gas_enabled: "gas_enabled" in d ? d.gas_enabled : d.RT029,
+            shielding_enabled: d.shielding_enabled,
+            laser_enabled: "laser_enabled" in d ? d.laser_enabled : ("RT027" in d ? d.RT027 : d.laser_on),
+            powder_enabled: "powder_enabled" in d ? d.powder_enabled : d.RT028,
+            light_enabled: "light_enabled" in d ? d.light_enabled : d.RT031,
+            laser_power_pct: d.laser_power_pct ?? d.DS010
+          });
+          const pct = liveRuntimeData.progress_pct;
+          if (pct != null) {
+            const p = Math.min(100, Math.max(0, Number(pct)));
+            if (progressBar) progressBar.style.width = `${p}%`;
+            if (progressPct) progressPct.textContent = `${p.toFixed(1)}%`;
+          }
+          renderLiveRuntimeGrid(liveRuntimeData);
+          recordTrendSample(d);
+          break;
+        }
+
+        case "estimate_result": {
+          const d = msg.data || {};
+          if (estPowder) estPowder.textContent = d.total_powder_g != null ? `${d.total_powder_g.toFixed(1)}g` : "—";
+          if (estEfficiency) estEfficiency.textContent = d.deposition_efficiency != null ? `${(d.deposition_efficiency * 100).toFixed(1)}%` : "—";
+          if (estEnergy) estEnergy.textContent = d.total_energy_wh != null ? `${d.total_energy_wh.toFixed(2)} Wh` : "—";
+          logEvent("estimate_result");
+          break;
+        }
+
+        case "snapshot": {
+          const si = String(msg.slice_idx || "");
+          let params = msg.data || {};
+          if (typeof params === 'string') {
+            try { params = JSON.parse(params); } catch(e) { params = {}; }
+          }
+          const rows = [];
+          Object.entries(params).forEach(([pid, p]) => {
+            rows.push({
+              slice_idx: si,
+              param_id: pid,
+              field_name: p.field_name || p.name || pid,
+              value: p.value != null ? p.value : p,
+              unit: p.unit || '',
+              domain: p.domain || 'General'
+            });
+          });
+          renderTable(rows);
+          logEvent("snapshot", `slice ${si}`);
+          break;
+        }
+      }
+    };
+
+    socket.onerror = () => setConn(false);
+    socket.onclose = () => {
+      setConn(false);
+      if (reconnectTimer) clearTimeout(reconnectTimer);
+      reconnectTimer = setTimeout(connectWS, 3000);
+    };
+  }
+
+  // Search & Filter listeners
+  searchInput?.addEventListener("input", updateTableVisibility);
+  sliceFilter?.addEventListener("change", updateTableVisibility);
+
+  // Initial Boot
+  resetTrendHistory();
   loadDevices();
   connectWS();
-  // Resize chart on window resize
 </script>
 </body>
 </html>

@@ -595,24 +595,60 @@ async def view_logs(ip: str, limit: int = 1000):
     return {"logs": rows}
 
 @router.get("/camera/check")
-async def check_camera(ip: str, port: int = 8765):
+async def check_camera(ip: str, port: int = 8765, device_id: str | None = None):
     ip = ip.strip()
     if not ip:
         raise HTTPException(status_code=400, detail="ip is required")
     if port < 1 or port > 65535:
-      raise HTTPException(status_code=400, detail="port must be between 1 and 65535")
+        raise HTTPException(status_code=400, detail="port must be between 1 and 65535")
 
     loop = asyncio.get_running_loop()
 
-    def _can_connect() -> bool:
+    def _check() -> dict:
         try:
             with socket.create_connection((ip, port), timeout=0.75):
-                return True
+                pass
         except OSError:
-            return False
+            return {"available": False, "ip": ip, "port": port, "error": "Camera port unreachable"}
 
-    available = await loop.run_in_executor(None, _can_connect)
-    return {"available": available, "ip": ip, "port": port}
+        # Probe camera /status to detect which device owns this camera
+        reported_dev = None
+        try:
+            import urllib.request
+            req = urllib.request.Request(f"http://{ip}:{port}/status", headers={"User-Agent": "UFAMeasy-Server"})
+            with urllib.request.urlopen(req, timeout=1.0) as res:
+                if res.status == 200:
+                    data = json.loads(res.read().decode("utf-8"))
+                    reported_dev = data.get("device_id")
+        except Exception:
+            pass
+
+        # If reported_dev is not returned but it is on localhost or 192.168.0.104, it belongs to device_001
+        if not reported_dev and (ip in ("127.0.0.1", "localhost", "192.168.0.104")):
+            reported_dev = "device_001"
+
+        # Verify device ownership to prevent streaming from another machine
+        if device_id and reported_dev:
+            req_clean = device_id.strip().lower()
+            rep_clean = reported_dev.strip().lower()
+            if req_clean != rep_clean:
+                return {
+                    "available": False,
+                    "ip": ip,
+                    "port": port,
+                    "device_mismatch": True,
+                    "reported_device": reported_dev,
+                    "error": f"Camera feed at {ip}:{port} is registered to '{reported_dev}', not '{device_id}'.",
+                }
+
+        return {
+            "available": True,
+            "ip": ip,
+            "port": port,
+            "device_id": reported_dev or device_id,
+        }
+
+    return await loop.run_in_executor(None, _check)
 
 @router.get("/recordings")
 async def get_recordings(ip: str, device_id: str | None = None):
@@ -676,10 +712,16 @@ async def delete_recording(filename: str, ip: str):
     return {"deleted": filename}
 
 @router.get("/sessions")
-def list_sessions():
+def list_sessions(device_id: str | None = None):
     conn = sqlite3.connect(DB_PATH)
     conn.row_factory = sqlite3.Row
-    rows = conn.execute("SELECT * FROM sessions ORDER BY started_at DESC").fetchall()
+    if device_id and device_id.strip():
+        rows = conn.execute(
+            "SELECT * FROM sessions WHERE device_id=? ORDER BY started_at DESC",
+            (device_id.strip(),)
+        ).fetchall()
+    else:
+        rows = conn.execute("SELECT * FROM sessions ORDER BY started_at DESC").fetchall()
     conn.close()
     return [dict(r) for r in rows]
 
