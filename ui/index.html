@@ -2845,10 +2845,13 @@
     const currentDev = deviceSelect.value;
     if (!ip) ip = getSharedIp();
     if (!ip) {
-      showToast(`Please enter a Machine IP for ${currentDev || 'the selected device'} in Machine Access`, true);
-      switchTab("machineAccess");
-      const input = document.getElementById("sharedIpInput");
-      if (input) input.focus();
+      cameraCollapsed.style.display = "none";
+      cameraExpanded.style.display = "block";
+      cameraFeed.style.display = "none";
+      cameraPlaceholder.style.display = "grid";
+      cameraPlaceholder.innerHTML = `<div style="font-size:15px;font-weight:600;color:var(--text);">No live streaming from this device</div>`;
+      cameraStatus.textContent = "Offline";
+      showToast("No live streaming from this device", true);
       return;
     }
 
@@ -2856,7 +2859,7 @@
     cameraCollapsed.style.display = "none";
     cameraExpanded.style.display = "block";
     cameraPlaceholder.style.display = "grid";
-    cameraPlaceholder.textContent = `Checking camera feed for ${currentDev || 'device'} at ${ip}:8765...`;
+    cameraPlaceholder.textContent = `Connecting to camera feed...`;
     cameraStatus.textContent = `Connecting (${ip}:8765)`;
 
     // Check device ownership and camera availability to prevent streaming wrong machine
@@ -2864,15 +2867,9 @@
     if (!chk.available) {
       cameraFeed.style.display = "none";
       cameraPlaceholder.style.display = "grid";
-      if (chk.device_mismatch) {
-        cameraPlaceholder.innerHTML = `<div style="color:var(--red);font-weight:700;font-size:14px;margin-bottom:8px;">⚠️ Device Mismatch</div><div style="max-width:420px;margin:0 auto;color:var(--text);font-size:12px;">Camera feed at ${ip}:8765 is registered to <strong>'${chk.reported_device}'</strong>.<br>It cannot be streamed from <strong>'${currentDev}'</strong> dashboard.</div>`;
-        cameraStatus.textContent = `Mismatch (${chk.reported_device})`;
-        showToast(`Stream at ${ip} belongs to ${chk.reported_device}, not ${currentDev}!`, true);
-      } else {
-        cameraPlaceholder.textContent = `Unable to connect to camera feed for ${currentDev} at ${ip}:8765. Ensure camera service is running.`;
-        cameraStatus.textContent = "Feed offline";
-        showToast(`Camera stream unreachable at ${ip}:8765`, true);
-      }
+      cameraPlaceholder.innerHTML = `<div style="font-size:15px;font-weight:600;color:var(--text);">No live streaming from this device</div>`;
+      cameraStatus.textContent = "Offline";
+      showToast("No live streaming from this device", true);
       return;
     }
 
@@ -2899,15 +2896,15 @@
     cameraFeed.onerror = () => {
       // Fallback: try port 8080 if 8765 fails
       if (!cameraFeed.src.includes(":8080")) {
-        cameraPlaceholder.textContent = `Trying fallback stream at ${ip}:8080...`;
+        cameraPlaceholder.textContent = `Connecting...`;
         cameraFeed.src = `http://${ip}:8080/video_feed`;
         return;
       }
       cameraPlaceholder.style.display = "grid";
-      cameraPlaceholder.textContent = `Unable to connect to camera feed at ${ip}:8765 or 8080. Ensure the camera service is running.`;
+      cameraPlaceholder.innerHTML = `<div style="font-size:15px;font-weight:600;color:var(--text);">No live streaming from this device</div>`;
       cameraFeed.style.display = "none";
-      cameraStatus.textContent = "Feed offline";
-      showToast("Camera stream unreachable", true);
+      cameraStatus.textContent = "Offline";
+      showToast("No live streaming from this device", true);
     };
 
     cameraFeed.src = streamUrl;

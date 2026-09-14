@@ -609,7 +609,7 @@ async def check_camera(ip: str, port: int = 8765, device_id: str | None = None):
             with socket.create_connection((ip, port), timeout=0.75):
                 pass
         except OSError:
-            return {"available": False, "ip": ip, "port": port, "error": "Camera port unreachable"}
+            return {"available": False, "ip": ip, "port": port, "error": "No live streaming from this device"}
 
         # Probe camera /status to detect which device owns this camera
         reported_dev = None
@@ -638,7 +638,7 @@ async def check_camera(ip: str, port: int = 8765, device_id: str | None = None):
                     "port": port,
                     "device_mismatch": True,
                     "reported_device": reported_dev,
-                    "error": f"Camera feed at {ip}:{port} is registered to '{reported_dev}', not '{device_id}'.",
+                    "error": "No live streaming from this device",
                 }
 
         return {
