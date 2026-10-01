@@ -1,0 +1,8 @@
+# Copy to streaming.local.ps1 and edit values ONCE for this edge laptop.
+# This local file is ignored by Git.
+$UFAMeasyMediaGateway = @{
+    DeviceId        = "device_001"
+    EdgeIp          = "192.168.0.106"
+    MediaMtxExe     = "C:\mediamtx.exe"
+    MediaMtxConfig  = "C:\UFAMeasy-Media\mediamtx.yml"
+}

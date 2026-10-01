@@ -573,7 +573,8 @@
       overflow: hidden;
     }
 
-    .camera-frame img {
+    .camera-frame img,
+    .camera-frame iframe {
       width: 100%;
       height: 100%;
       object-fit: contain;
@@ -624,8 +625,11 @@
       background: #000 !important;
     }
     .camera-card.is-fullscreen .camera-frame img,
+    .camera-card.is-fullscreen .camera-frame iframe,
     .camera-card:fullscreen .camera-frame img,
-    .camera-card:-webkit-full-screen .camera-frame img {
+    .camera-card:fullscreen .camera-frame iframe,
+    .camera-card:-webkit-full-screen .camera-frame img,
+    .camera-card:-webkit-full-screen .camera-frame iframe {
       width: 100% !important;
       height: 100% !important;
       object-fit: contain !important;
@@ -783,7 +787,7 @@
     /* Key Equipment Status Grid */
     .equip-grid {
       display: grid;
-      grid-template-columns: repeat(5, minmax(0, 1fr));
+      grid-template-columns: repeat(6, minmax(0, 1fr));
       gap: 8px;
     }
 
@@ -1103,13 +1107,11 @@
       border: 1px solid var(--border);
       border-radius: 8px;
       padding: 14px 18px;
-      cursor: pointer;
-      transition: all 0.15s;
+      transition: border-color 0.15s;
     }
 
     .session-item:hover {
       border-color: var(--accent);
-      background: #0e2034;
     }
 
     .session-header {
@@ -1131,7 +1133,108 @@
       gap: 16px;
       color: var(--muted);
       font-size: 12px;
+      flex-wrap: wrap;
     }
+
+    .session-view-btn {
+      margin-top: 10px;
+      padding: 5px 14px;
+      font-size: 12px;
+      font-weight: 600;
+      border-radius: 6px;
+      border: 1px solid var(--accent);
+      background: transparent;
+      color: var(--accent);
+      cursor: pointer;
+      transition: background 0.15s, color 0.15s;
+      font-family: var(--font-sans);
+    }
+    .session-view-btn:hover {
+      background: var(--accent);
+      color: #000;
+    }
+    .session-view-btn.active {
+      background: var(--accent);
+      color: #000;
+    }
+
+    /* History inline params panel */
+    .hist-params-panel {
+      display: none;
+      margin-top: 16px;
+      background: #07192b;
+      border: 1px solid var(--accent);
+      border-radius: 10px;
+      overflow: hidden;
+      animation: fadeSlideIn 0.2s ease;
+    }
+    .hist-params-panel.visible { display: block; }
+    @keyframes fadeSlideIn {
+      from { opacity: 0; transform: translateY(-6px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+    .hist-panel-head {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 12px 18px;
+      border-bottom: 1px solid var(--border);
+      background: #0b2033;
+    }
+    .hist-panel-title {
+      font-size: 13px;
+      font-weight: 700;
+      color: var(--accent);
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .hist-panel-close {
+      background: none;
+      border: none;
+      color: var(--muted);
+      font-size: 18px;
+      cursor: pointer;
+      line-height: 1;
+      padding: 2px 6px;
+      border-radius: 4px;
+      transition: color 0.15s;
+    }
+    .hist-panel-close:hover { color: #fff; }
+    .hist-panel-body {
+      padding: 12px 0;
+      max-height: 420px;
+      overflow-y: auto;
+    }
+    .hist-panel-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 12px;
+    }
+    .hist-panel-table th {
+      padding: 6px 14px;
+      text-align: left;
+      color: var(--muted);
+      font-weight: 600;
+      font-size: 11px;
+      border-bottom: 1px solid var(--border);
+      text-transform: uppercase;
+      letter-spacing: .04em;
+      position: sticky;
+      top: 0;
+      background: #07192b;
+      z-index: 1;
+    }
+    .hist-panel-table td {
+      padding: 5px 14px;
+      border-bottom: 1px solid #0d2438;
+      color: #c9d8e8;
+    }
+    .hist-panel-table tr:hover td { background: #0e2034; }
+    .hist-panel-table .hpt-id  { font-family: var(--font-mono); color: var(--accent); font-size: 11px; }
+    .hist-panel-table .hpt-val { font-family: var(--font-mono); font-weight: 700; color: #fff; }
+    .hist-panel-table .hpt-slice { font-family: var(--font-mono); color: var(--muted); font-size: 11px; }
+    .hist-panel-empty { padding: 24px; text-align: center; color: var(--muted); font-size: 13px; }
 
     /* Machine Access IP Row & Controls */
     .ip-row {
@@ -1316,6 +1419,124 @@
       border-color: var(--red);
       color: var(--red);
       background: rgba(255,92,114,0.15);
+    }
+
+    /* Control Panel Page Styles */
+    .control-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 16px;
+      margin-bottom: 16px;
+    }
+    @media (max-width: 900px) {
+      .control-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+    .cp-dropzone {
+      border: 2px dashed var(--border-light);
+      border-radius: 8px;
+      padding: 24px 16px;
+      text-align: center;
+      background: rgba(11, 23, 38, 0.5);
+      cursor: pointer;
+      transition: all 0.2s ease;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+    }
+    .cp-dropzone:hover, .cp-dropzone.dragover {
+      border-color: var(--accent);
+      background: rgba(37, 185, 240, 0.08);
+    }
+    .cp-dropzone-icon {
+      width: 44px;
+      height: 44px;
+      border-radius: 50%;
+      background: var(--panel2);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: var(--accent);
+    }
+    .cp-meta-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 10px;
+      margin-top: 14px;
+      font-family: var(--font-mono);
+    }
+    .cp-meta-item {
+      background: var(--panel2);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 10px 12px;
+    }
+    .cp-meta-item .lbl {
+      font-size: 10px;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      margin-bottom: 3px;
+    }
+    .cp-meta-item .val {
+      font-size: 13px;
+      font-weight: 700;
+      color: #fff;
+    }
+    .cp-actions-bar {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      flex-wrap: wrap;
+      margin-top: 18px;
+    }
+    .cp-btn {
+      padding: 10px 18px;
+      border-radius: 6px;
+      font-size: 13px;
+      font-weight: 700;
+      font-family: var(--font-ui);
+      border: 0;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      transition: all 0.15s ease;
+    }
+    .cp-btn:disabled {
+      opacity: 0.35;
+      cursor: not-allowed;
+      filter: grayscale(1);
+    }
+    .cp-btn-start { background: var(--green); color: #000; }
+    .cp-btn-start:hover:not(:disabled) { background: #26f296; transform: translateY(-1px); }
+    .cp-btn-pause { background: var(--yellow); color: #000; }
+    .cp-btn-pause:hover:not(:disabled) { background: #ffd066; transform: translateY(-1px); }
+    .cp-btn-resume { background: var(--accent); color: #000; }
+    .cp-btn-resume:hover:not(:disabled) { background: #45c5f3; transform: translateY(-1px); }
+    .cp-btn-abort { background: var(--red); color: #fff; }
+    .cp-btn-abort:hover:not(:disabled) { background: #ff7588; transform: translateY(-1px); }
+    .cp-btn-reset { background: var(--panel2); color: var(--text); border: 1px solid var(--border-light); }
+    .cp-btn-reset:hover:not(:disabled) { background: var(--border-light); }
+    .cp-progress-wrap {
+      margin-top: 16px;
+    }
+    .cp-cmd-badge {
+      display: inline-block;
+      font-family: var(--font-mono);
+      font-size: 12px;
+      color: var(--accent);
+      background: #081627;
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      padding: 5px 12px;
+      max-width: 100%;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
     }
 
     /* Mobile Bottom Navigation Bar (Hidden on desktop & tablet) */
@@ -1643,7 +1864,7 @@
 
       /* Equipment Status Grid */
       .equip-grid {
-        grid-template-columns: repeat(5, minmax(0, 1fr));
+        grid-template-columns: repeat(6, minmax(0, 1fr));
         gap: 4px;
       }
       .equip-item {
@@ -1845,6 +2066,10 @@
         <svg width="17" height="17" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>
         <span>Dashboard</span>
       </button>
+      <button data-view="controlPanel" type="button" onclick="switchTab('controlPanel')">
+        <svg width="17" height="17" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M4 21v-7m0-4V3m8 18v-9m0-4V3m8 18v-5m0-4V3M1 14h6m2-6h6m2 8h6"/></svg>
+        <span>Control Panel</span>
+      </button>
       <button data-view="params" type="button" onclick="switchTab('params')">
         <svg width="17" height="17" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M9 5H7a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-2"/><rect x="9" y="3" width="6" height="4" rx="1"/><line x1="9" y1="12" x2="15" y2="12"/><line x1="9" y1="16" x2="13" y2="16"/></svg>
         <span>Parameters</span>
@@ -2011,6 +2236,7 @@
           <div id="cameraExpanded" style="display:none;">
             <div class="camera-frame">
               <img id="cameraFeed" alt="Live machine camera feed" style="display:none;">
+              <iframe id="cameraWebRtc" title="Live machine camera stream" allow="autoplay; fullscreen" style="display:none;border:0;"></iframe>
               <div id="cameraPlaceholder" class="camera-placeholder">Connecting to live feed stream&hellip;</div>
               <button class="cam-overlay-btn" id="camOverlayFsBtn" type="button" title="Maximize Live Stream">
                 <svg id="camOverlayFsIcon" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -2118,13 +2344,14 @@
                   <div class="equip-name">Gas</div>
                   <div id="rtGas"><span class="status-pill off">OFF</span></div>
                 </div>
-                <!-- Shield Gas -->
+
+                <!-- PF Gas -->
                 <div class="equip-item">
-                  <div class="equip-icon" style="color:var(--green);">
-                    <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+                  <div class="equip-icon" style="color:#38bdf8;">
+                    <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M12 2.69l5.66 5.66a8 8 0 1 1-11.31 0z"/><line x1="12" y1="10" x2="12" y2="16"/><line x1="9" y1="13" x2="15" y2="13"/></svg>
                   </div>
-                  <div class="equip-name">Shield Gas</div>
-                  <div id="rtShieldingGas"><span class="status-pill off">OFF</span></div>
+                  <div class="equip-name">PF Gas</div>
+                  <div id="rtPfGas"><span class="status-pill off">OFF</span></div>
                 </div>
                 <!-- Powder -->
                 <div class="equip-item">
@@ -2219,6 +2446,157 @@
       </div>
     </main>
 
+    <!-- PAGE: CONTROL PANEL -->
+    <main class="view-page" id="view-controlPanel">
+      <div class="page-header">
+        <div class="page-header-text">
+          <div class="eyebrow">Machine Operation</div>
+          <h1>Control Panel</h1>
+          <p>Load G-code files, inspect toolpaths, and operate print jobs directly from the dashboard</p>
+        </div>
+        <div style="display:flex;align-items:center;gap:12px;">
+          <button class="action-btn" id="cpLoadSampleBtn" type="button" title="Load bundled sample test file">
+            <svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
+            <span>Load Sample (pf_gas_test.nc)</span>
+          </button>
+        </div>
+      </div>
+
+      <div class="control-grid">
+        <!-- Card 1: G-Code File Loader -->
+        <div class="panel-card">
+          <div class="card-head">
+            <div class="card-title">
+              <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="12" y1="18" x2="12" y2="12"/><line x1="9" y1="15" x2="15" y2="15"/></svg>
+              <span>G-Code File Source</span>
+            </div>
+            <span id="cpUploadStatus" style="font-size:11px;color:var(--muted);">No file loaded</span>
+          </div>
+          <div class="panel-body">
+            <!-- Dropzone -->
+            <div id="cpDropzone" class="cp-dropzone">
+              <input type="file" id="cpFileInput" accept=".gcode,.nc,.txt,.tap" style="display:none;">
+              <div class="cp-dropzone-icon">
+                <svg width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+              </div>
+              <div style="font-weight:700;font-size:13px;color:#fff;">Drag & drop G-code file here</div>
+              <div style="font-size:11px;color:var(--muted);">or click to browse from your computer (.gcode, .nc)</div>
+            </div>
+
+            <!-- Pre-flight Metadata -->
+            <div class="cp-meta-grid">
+              <div class="cp-meta-item">
+                <div class="lbl">Active File</div>
+                <div class="val" id="cpFileName" style="color:var(--accent);word-break:break-all;">&mdash;</div>
+              </div>
+              <div class="cp-meta-item">
+                <div class="lbl">File Size</div>
+                <div class="val" id="cpFileSize">&mdash;</div>
+              </div>
+              <div class="cp-meta-item">
+                <div class="lbl">Total Lines</div>
+                <div class="val" id="cpTotalLines">&mdash;</div>
+              </div>
+              <div class="cp-meta-item">
+                <div class="lbl">Est. Runtime</div>
+                <div class="val" id="cpEstDuration" style="color:var(--green);">&mdash;</div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Card 2: Job Execution & Telemetry -->
+        <div class="panel-card">
+          <div class="card-head">
+            <div class="card-title">
+              <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+              <span>Job Execution</span>
+            </div>
+            <span id="cpJobBadge"><span class="status-pill off">IDLE</span></span>
+          </div>
+          <div class="panel-body">
+            <!-- Progress Head -->
+            <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:8px;">
+              <div>
+                <span id="cpLineCounter" style="font-family:var(--font-mono);font-size:14px;font-weight:700;color:#fff;">Line 0 / 0</span>
+                <span id="cpElapsedText" style="font-size:11px;color:var(--muted);margin-left:12px;">Elapsed: 00:00:00</span>
+              </div>
+              <span id="cpProgressPct" style="font-family:var(--font-mono);font-size:22px;font-weight:800;color:var(--accent);">0.0%</span>
+            </div>
+
+            <!-- Progress Bar -->
+            <div class="kpi-bar-wrap" style="height:10px;">
+              <div id="cpProgressBar" class="kpi-bar-fill" style="width:0%;"></div>
+            </div>
+
+            <!-- Active G-Code line -->
+            <div style="margin-top:14px;">
+              <div style="font-size:10px;text-transform:uppercase;color:var(--muted);letter-spacing:0.05em;margin-bottom:4px;">Executing Command:</div>
+              <div id="cpCurrentCmd" class="cp-cmd-badge">Idle</div>
+            </div>
+
+            <!-- Controls Toolbar -->
+            <div class="cp-actions-bar">
+              <button id="cpStartBtn" class="cp-btn cp-btn-start" type="button" disabled>
+                <svg width="14" height="14" fill="currentColor" viewBox="0 0 24 24"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+                <span>Start</span>
+              </button>
+              <button id="cpPauseBtn" class="cp-btn cp-btn-pause" type="button" disabled>
+                <svg width="14" height="14" fill="currentColor" viewBox="0 0 24 24"><rect x="6" y="4" width="4" height="16"/><rect x="14" y="4" width="4" height="16"/></svg>
+                <span>Pause</span>
+              </button>
+              <button id="cpResumeBtn" class="cp-btn cp-btn-resume" type="button" disabled style="display:none;">
+                <svg width="14" height="14" fill="currentColor" viewBox="0 0 24 24"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+                <span>Resume</span>
+              </button>
+              <button id="cpAbortBtn" class="cp-btn cp-btn-abort" type="button" disabled>
+                <svg width="14" height="14" fill="currentColor" viewBox="0 0 24 24"><rect x="4" y="4" width="16" height="16" rx="2"/></svg>
+                <span>Abort</span>
+              </button>
+              <button id="cpResetBtn" class="cp-btn cp-btn-reset" type="button" disabled>
+                <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>
+                <span>Reset</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Dashboard Job Activity Log -->
+      <div class="panel-card" style="margin-bottom:20px;">
+        <div class="card-head" style="justify-content:space-between;">
+          <div class="card-title">
+            <svg width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><rect x="2" y="3" width="20" height="14" rx="2"/><path d="M8 21h8M12 17v4"/></svg>
+            <span>Dashboard Activity Log</span>
+          </div>
+          <div style="display:flex;align-items:center;gap:10px;">
+            <span id="dashboardActivityBadge" style="font-size:10px;text-transform:uppercase;color:var(--muted);letter-spacing:0.06em;">Waiting for events...</span>
+            <button class="action-btn" type="button" id="clearActivityLogBtn" title="Clear log" style="padding:3px 10px;font-size:11px;">Clear</button>
+          </div>
+        </div>
+        <div class="panel-body" style="padding:0;">
+          <div id="dashboardActivityLog" style="max-height:240px;overflow-y:auto;padding:12px 18px;display:flex;flex-direction:column;gap:8px;">
+            <div style="color:var(--muted);font-size:12px;font-style:italic;" id="dashActivityEmpty">No dashboard activity yet. Load or operate a job from the Control Panel to see events here.</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Docking Area for Manual Jogging in Next Phase -->
+      <div class="panel-card" style="opacity:0.85;margin-bottom:20px;">
+        <div class="card-head">
+          <div class="card-title">
+            <svg width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><polygon points="16.24 7.76 14.12 14.12 7.76 16.24 9.88 9.88 16.24 7.76"/></svg>
+            <span>Manual 5-Axis Motion & Jogging</span>
+          </div>
+          <span style="font-size:10px;text-transform:uppercase;color:var(--accent);letter-spacing:0.06em;font-weight:700;">Phase 2 Module</span>
+        </div>
+        <div class="panel-body" style="padding:16px 20px;color:var(--muted);font-size:12px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;">
+          <div>5-Axis Directional Jogpad (X, Y, Z, B, C), Feedrate Spinboxes, and MDI Single-Line G-code Console will dock directly here.</div>
+          <span class="status-pill off">READY FOR INTEGRATION</span>
+        </div>
+      </div>
+    </main>
+
     <!-- PAGE 2: PARAMETERS -->
     <main class="view-page" id="view-params">
       <div class="page-header">
@@ -2252,12 +2630,26 @@
         <div class="page-header-text">
           <div class="eyebrow">Session Logs</div>
           <h1>Session History</h1>
-          <p>Select a recorded machine session to inspect replay parameters and telemetry</p>
+          <p>Past run files — click <strong>View Params</strong> on any session to inspect its recorded parameters</p>
         </div>
       </div>
 
       <div id="sessionList" class="session-list">
         <div class="empty visible">Select a device to view recorded session history.</div>
+      </div>
+
+      <!-- Inline session params panel (shown below the selected session card) -->
+      <div id="histParamsPanel" class="hist-params-panel">
+        <div class="hist-panel-head">
+          <div class="hist-panel-title">
+            <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M9 5H7a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-2"/><rect x="9" y="3" width="6" height="4" rx="1"/></svg>
+            <span id="histPanelTitle">Session Parameters</span>
+          </div>
+          <button class="hist-panel-close" id="histPanelClose" title="Close">&times;</button>
+        </div>
+        <div class="hist-panel-body">
+          <div id="histPanelContent"></div>
+        </div>
       </div>
     </main>
 
@@ -2401,6 +2793,10 @@
     <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>
     <span>Dashboard</span>
   </button>
+  <button data-view="controlPanel" type="button" onclick="switchTab('controlPanel')">
+    <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M4 21v-7m0-4V3m8 18v-9m0-4V3m8 18v-5m0-4V3M1 14h6m2-6h6m2 8h6"/></svg>
+    <span>Control</span>
+  </button>
   <button data-view="params" type="button" onclick="switchTab('params')">
     <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M9 5H7a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-2"/><rect x="9" y="3" width="6" height="4" rx="1"/><line x1="9" y1="12" x2="15" y2="12"/><line x1="9" y1="16" x2="13" y2="16"/></svg>
     <span>Params</span>
@@ -2420,6 +2816,91 @@
 </nav>
 
 <div id="toast" class="toast" role="status" aria-live="polite"></div>
+
+<!-- IP Prompt Modal (shown when Live Stream is clicked with no IP) -->
+<div id="ipPromptOverlay" style="
+  display:none;position:fixed;inset:0;z-index:9999;
+  background:rgba(0,5,15,0.75);backdrop-filter:blur(4px);
+  align-items:center;justify-content:center;
+">
+  <div id="ipPromptBox" style="
+    background:linear-gradient(145deg,#0b1e30,#061525);
+    border:1px solid var(--accent);border-radius:14px;
+    padding:32px 30px 26px;width:380px;max-width:92vw;
+    box-shadow:0 24px 64px rgba(0,0,0,0.6),0 0 0 1px rgba(37,185,240,0.15);
+    animation:ipModalIn .22s cubic-bezier(.22,1,.36,1);
+  ">
+    <style>
+      @keyframes ipModalIn {
+        from { opacity:0; transform:scale(.93) translateY(-10px); }
+        to   { opacity:1; transform:scale(1) translateY(0); }
+      }
+      #ipPromptBox .ipm-title {
+        font-size:17px;font-weight:700;color:#fff;
+        margin-bottom:6px;display:flex;align-items:center;gap:10px;
+      }
+      #ipPromptBox .ipm-sub {
+        font-size:12px;color:var(--muted);margin-bottom:22px;line-height:1.5;
+      }
+      #ipPromptBox .ipm-label {
+        font-size:11px;font-weight:600;color:var(--muted);
+        text-transform:uppercase;letter-spacing:.06em;margin-bottom:7px;
+        display:block;
+      }
+      #ipPromptInput {
+        width:100%;box-sizing:border-box;
+        background:#07192b;border:1.5px solid var(--border);
+        border-radius:8px;padding:10px 14px;
+        font-size:14px;font-family:var(--font-mono);color:#fff;
+        outline:none;transition:border-color .15s;
+        letter-spacing:.04em;
+      }
+      #ipPromptInput:focus { border-color:var(--accent); }
+      #ipPromptInput::placeholder { color:#3a5570; }
+      .ipm-hint {
+        font-size:11px;color:var(--muted);margin-top:7px;
+      }
+      .ipm-btns {
+        display:flex;gap:10px;margin-top:22px;
+      }
+      #ipPromptStart {
+        flex:1;padding:10px 0;
+        background:var(--accent);color:#000;
+        border:none;border-radius:8px;
+        font-size:13px;font-weight:700;cursor:pointer;
+        transition:opacity .15s;
+        display:flex;align-items:center;justify-content:center;gap:7px;
+      }
+      #ipPromptStart:hover { opacity:.87; }
+      #ipPromptCancel {
+        padding:10px 18px;
+        background:transparent;color:var(--muted);
+        border:1px solid var(--border);border-radius:8px;
+        font-size:13px;font-weight:600;cursor:pointer;
+        transition:border-color .15s,color .15s;
+      }
+      #ipPromptCancel:hover { border-color:#fff;color:#fff; }
+    </style>
+
+    <div class="ipm-title">
+      <svg width="18" height="18" fill="none" stroke="var(--accent)" stroke-width="2" viewBox="0 0 24 24"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>
+      Enter Machine IP
+    </div>
+    <div class="ipm-sub">Provide the machine's IP address to start the live camera stream (port 8765).</div>
+
+    <label class="ipm-label" for="ipPromptInput">Machine IP Address</label>
+    <input id="ipPromptInput" type="text" placeholder="e.g. 192.168.0.104" autocomplete="off" spellcheck="false">
+    <div class="ipm-hint">This will be saved for the selected device.</div>
+
+    <div class="ipm-btns">
+      <button id="ipPromptStart" type="button">
+        <svg width="13" height="13" fill="currentColor" viewBox="0 0 24 24"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+        Start Live Stream
+      </button>
+      <button id="ipPromptCancel" type="button">Cancel</button>
+    </div>
+  </div>
+</div>
 
 <script>
   // DOM References
@@ -2457,6 +2938,7 @@
 
   // Camera DOM
   const cameraFeed = document.getElementById("cameraFeed");
+  const cameraWebRtc = document.getElementById("cameraWebRtc");
   const cameraPlaceholder = document.getElementById("cameraPlaceholder");
   const cameraStatus = document.getElementById("cameraStatus");
   const cameraLiveBtn = document.getElementById("cameraLiveBtn");
@@ -2486,7 +2968,7 @@
   const progressPct = document.getElementById("progressPct");
   const rtLayerText = document.getElementById("rtLayerText");
   const rtGas = document.getElementById("rtGas");
-  const rtShieldingGas = document.getElementById("rtShieldingGas");
+  const rtPfGas = document.getElementById("rtPfGas");
   const rtLaser = document.getElementById("rtLaser");
   const rtPowder = document.getElementById("rtPowder");
   const rtLight = document.getElementById("rtLight");
@@ -2500,6 +2982,28 @@
   const kpiConnVal = document.getElementById("kpiConnVal");
   const kpiConnSub = document.getElementById("kpiConnSub");
   const topbarClock = document.getElementById("topbarClock");
+
+  // Control Panel DOM
+  const cpDropzone = document.getElementById("cpDropzone");
+  const cpFileInput = document.getElementById("cpFileInput");
+  const cpLoadSampleBtn = document.getElementById("cpLoadSampleBtn");
+  const cpUploadStatus = document.getElementById("cpUploadStatus");
+  const cpFileName = document.getElementById("cpFileName");
+  const cpFileSize = document.getElementById("cpFileSize");
+  const cpTotalLines = document.getElementById("cpTotalLines");
+  const cpEstDuration = document.getElementById("cpEstDuration");
+  const cpJobBadge = document.getElementById("cpJobBadge");
+  const cpLineCounter = document.getElementById("cpLineCounter");
+  const cpElapsedText = document.getElementById("cpElapsedText");
+  const cpProgressPct = document.getElementById("cpProgressPct");
+  const cpProgressBar = document.getElementById("cpProgressBar");
+  const cpCurrentCmd = document.getElementById("cpCurrentCmd");
+  const cpStartBtn = document.getElementById("cpStartBtn");
+  const cpPauseBtn = document.getElementById("cpPauseBtn");
+  const cpResumeBtn = document.getElementById("cpResumeBtn");
+  const cpAbortBtn = document.getElementById("cpAbortBtn");
+  const cpResetBtn = document.getElementById("cpResetBtn");
+  let currentJobState = null;
 
   // State
   const rowsByKey = new Map();
@@ -2529,6 +3033,7 @@
     const pageMap = {
       overview: 'view-overview',
       dashboard: 'view-overview',
+      controlPanel: 'view-controlPanel',
       params: 'view-params',
       history: 'view-history',
       sessions: 'view-history',
@@ -2706,13 +3211,14 @@
     }
 
     const isGas = normalizeBool(data.gas_enabled);
-    const isShield = normalizeBool(data.shielding_enabled);
+    // PF Gas: prefer explicit pf_gas_on field; fall back to shielding_enabled if controller uses that
+    const isPfGas = normalizeBool(data.pf_gas_on != null ? data.pf_gas_on : data.shielding_enabled);
     const isLaser = normalizeBool(data.laser_enabled);
     const isPowder = normalizeBool(data.powder_enabled);
     const isLight = normalizeBool(data.light_enabled);
 
     if (rtGas) rtGas.innerHTML = pill(isGas);
-    if (rtShieldingGas) rtShieldingGas.innerHTML = pill(isShield);
+    if (rtPfGas) rtPfGas.innerHTML = pill(isPfGas);
     if (rtLaser) rtLaser.innerHTML = pill(isLaser);
     if (rtPowder) rtPowder.innerHTML = pill(isPowder);
     if (rtLight) rtLight.innerHTML = pill(isLight);
@@ -2721,7 +3227,7 @@
     if (indLaser) indLaser.className = 'ind-item' + (isLaser ? ' active' : '');
     if (indPowder) indPowder.className = 'ind-item' + (isPowder ? ' active' : '');
     if (indGas) indGas.className = 'ind-item' + (isGas ? ' active' : '');
-    if (indPfGas) indPfGas.className = 'ind-item' + (isShield ? ' active' : '');
+    if (indPfGas) indPfGas.className = 'ind-item' + (isPfGas ? ' active' : '');
 
     if (data.laser_power_pct != null && rtPower) {
       const p = Number(data.laser_power_pct);
@@ -2745,7 +3251,7 @@
     if (progressPct) progressPct.textContent = '0.0%';
     if (rtLayerText) rtLayerText.textContent = 'Layer 0 / 0';
     if (rtGas) rtGas.innerHTML = pill(false);
-    if (rtShieldingGas) rtShieldingGas.innerHTML = pill(false);
+    if (rtPfGas) rtPfGas.innerHTML = pill(false);
     if (rtLaser) rtLaser.innerHTML = pill(false);
     if (rtPowder) rtPowder.innerHTML = pill(false);
     if (rtLight) rtLight.innerHTML = pill(false);
@@ -2775,8 +3281,15 @@
     }
     const cur = pts[pts.length - 1];
     if (valEl) valEl.textContent = cur.toFixed(1) + suffix;
-    const min = Math.min(...pts), max = Math.max(...pts), range = max - min || 1;
-    const coords = pts.map((p, i) => ((i / Math.max(pts.length - 1, 1) * 194 + 3).toFixed(1)) + ',' + (44 - ((p - min) / range) * 36).toFixed(1)).join(' ');
+    const min = Math.min(...pts), max = Math.max(...pts), range = max - min;
+    let coords;
+    if (range === 0) {
+      // Constant value — draw a flat center line
+      const y = 26; // vertical center of 52-unit viewBox
+      coords = `3,${y} 197,${y}`;
+    } else {
+      coords = pts.map((p, i) => ((i / Math.max(pts.length - 1, 1) * 194 + 3).toFixed(1)) + ',' + (44 - ((p - min) / range) * 36).toFixed(1)).join(' ');
+    }
     svg.innerHTML = '<line class="telemetry-gridline" x1="0" y1="44" x2="200" y2="44"></line><polyline class="telemetry-line" points="' + coords + '"></polyline>';
   }
 
@@ -2840,8 +3353,20 @@
         svg.innerHTML = '<line x1="0" y1="55" x2="380" y2="55" stroke="#172d47"/><line x1="0" y1="95" x2="380" y2="95" stroke="#172d47"/><text x="190" y="60" text-anchor="middle" fill="#829ab1" font-size="11">Waiting for telemetry samples...</text>';
         return;
       }
-      const min = Math.min(...pts), max = Math.max(...pts), range = max - min || 1;
-      const coords = pts.map((p, i) => ((i / Math.max(pts.length - 1, 1) * 370 + 5).toFixed(1)) + ',' + (95 - ((p - min) / range) * 85).toFixed(1)).join(' ');
+      const min = Math.min(...pts), max = Math.max(...pts), range = max - min;
+      let coords;
+      if (range === 0) {
+        // Constant value — draw a flat line at vertical center (y=75 in 0-110 space)
+        const yFlat = 75;
+        const label = pts[pts.length - 1].toFixed(1);
+        coords = `5,${yFlat} 375,${yFlat}`;
+        svg.innerHTML = '<line x1="0" y1="55" x2="380" y2="55" stroke="#172d47"/>' +
+          '<line x1="0" y1="95" x2="380" y2="95" stroke="#172d47"/>' +
+          `<polyline fill="none" stroke="${strokeColor}" stroke-width="2.2" vector-effect="non-scaling-stroke" points="${coords}"/>` +
+          `<text x="190" y="${yFlat - 6}" text-anchor="middle" fill="${strokeColor}" font-size="10" opacity="0.75">constant ${label}</text>`;
+        return;
+      }
+      coords = pts.map((p, i) => ((i / Math.max(pts.length - 1, 1) * 370 + 5).toFixed(1)) + ',' + (95 - ((p - min) / range) * 85).toFixed(1)).join(' ');
       svg.innerHTML = '<line x1="0" y1="55" x2="380" y2="55" stroke="#172d47"/><line x1="0" y1="95" x2="380" y2="95" stroke="#172d47"/><polyline fill="none" stroke="' + strokeColor + '" stroke-width="2.2" vector-effect="non-scaling-stroke" points="' + coords + '"></polyline>';
     };
 
@@ -2857,7 +3382,11 @@
       } else {
         const makeCoords = (pts) => {
           if (!pts.length) return '';
-          const min = Math.min(...pts), max = Math.max(...pts), range = max - min || 1;
+          const min = Math.min(...pts), max = Math.max(...pts), range = max - min;
+          if (range === 0) {
+            // Flat line at vertical center
+            return `5,65 595,65`;
+          }
           return pts.map((p, i) => ((i / Math.max(pts.length - 1, 1) * 590 + 5).toFixed(1)) + ',' + (115 - ((p - min) / range) * 100).toFixed(1)).join(' ');
         };
         mSvg.innerHTML = '<line x1="0" y1="40" x2="600" y2="40" stroke="#172d47" stroke-dasharray="4"/><line x1="0" y1="85" x2="600" y2="85" stroke="#172d47" stroke-dasharray="4"/>' +
@@ -2873,7 +3402,7 @@
     const grid = document.getElementById('rtLiveGrid');
     if (!grid) return;
     grid.innerHTML = '';
-    const skip = new Set(['laser_enabled', 'gas_enabled', 'shielding_enabled', 'current_file', 'connection_state', 'laser_power_pct', 'machine_connected', 'progress_pct', 'remaining_time', 'time_remaining', 'remaining_seconds', 'DS028', 'xma', 'xmr', 'xwa', 'xwr', 'laser_on', 'session_id', 'id', 'powder_enabled', 'light_enabled']);
+    const skip = new Set(['laser_enabled', 'gas_enabled', 'shielding_enabled', 'pf_gas_on', 'current_file', 'connection_state', 'laser_power_pct', 'machine_connected', 'progress_pct', 'remaining_time', 'time_remaining', 'remaining_seconds', 'DS028', 'xma', 'xmr', 'xwa', 'xwr', 'laser_on', 'session_id', 'id', 'powder_enabled', 'light_enabled']);
     let count = 0;
     Object.entries(data).forEach(([k, v]) => {
       if (skip.has(k) || v == null) return;
@@ -2998,30 +3527,90 @@
   }
 
   // Session replay fetch
+  // Track which session's params panel is open
+  let histOpenSessionId = null;
+
+  // Close the inline history params panel
+  function closeHistPanel() {
+    const panel = document.getElementById('histParamsPanel');
+    if (panel) panel.classList.remove('visible');
+    // de-activate the button
+    document.querySelectorAll('.session-view-btn.active').forEach(b => b.classList.remove('active'));
+    histOpenSessionId = null;
+  }
+
+  document.getElementById('histPanelClose')?.addEventListener('click', closeHistPanel);
+
+  // Render session params inside the History page inline panel (no tab switch, no overview update)
   async function fetchSessionDetails(sessionId, sessionSummary = {}, autoSwitch = true) {
     if (!deviceSelect.value) return;
+
+    // If already open for this session, toggle closed
+    if (histOpenSessionId === sessionId) {
+      closeHistPanel();
+      return;
+    }
+
+    const panel = document.getElementById('histParamsPanel');
+    const panelTitle = document.getElementById('histPanelTitle');
+    const panelContent = document.getElementById('histPanelContent');
+    if (!panel || !panelTitle || !panelContent) return;
+
+    // Mark button active
+    document.querySelectorAll('.session-view-btn').forEach(b => {
+      b.classList.toggle('active', b.dataset.sid === sessionId);
+    });
+
+    panelTitle.textContent = `Params — ${sessionSummary.file_name || sessionId.slice(-8)}`;
+    panelContent.innerHTML = '<div class="hist-panel-empty">Loading parameters…</div>';
+    panel.classList.add('visible');
+
+    // Scroll the panel into view
+    panel.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+
+    histOpenSessionId = sessionId;
+
     try {
       const res = await fetch(`/sessions/${sessionId}/replay`);
       const data = await res.json();
       if (data.error) {
-        console.error(data.error);
+        panelContent.innerHTML = `<div class="hist-panel-empty" style="color:var(--red);">Error: ${data.error}</div>`;
         return;
       }
       const snapshots = {};
       (data.slices || []).forEach(s => {
         snapshots[String(s.slice_index)] = s.params_json;
       });
-      renderTable(flattenSnapshots(snapshots));
-      if (autoSwitch) switchTab("params");
-      if (data.runtime) {
-        updateRuntime({
-          current_file: sessionSummary.file_name,
-          total_layers: sessionSummary.total_layers
-        });
+      const rows = flattenSnapshots(snapshots);
+      if (!rows.length) {
+        panelContent.innerHTML = '<div class="hist-panel-empty">No parameter data recorded for this session.</div>';
+        return;
       }
-      logEvent("session_loaded", sessionId.slice(-8));
+      // Build an inline table in the history panel
+      let html = '<table class="hist-panel-table"><thead><tr>';
+      html += '<th>Param ID</th><th>Field</th><th>Value</th><th>Unit</th><th>Domain</th><th>Slice</th>';
+      html += '</tr></thead><tbody>';
+      let lastDomain = null;
+      rows.forEach(r => {
+        if (r.domain && r.domain !== lastDomain) {
+          lastDomain = r.domain;
+          html += `<tr><td colspan="6" style="padding:6px 14px;font-size:11px;font-weight:700;color:var(--accent);background:#0a1e30;text-transform:uppercase;letter-spacing:.06em;">${r.domain}</td></tr>`;
+        }
+        html += `<tr>
+          <td class="hpt-id">${r.param_id || '—'}</td>
+          <td>${r.field_name || r.name || '—'}</td>
+          <td class="hpt-val">${r.value != null ? r.value : '—'}</td>
+          <td style="color:var(--muted);font-size:11px;">${r.unit || '—'}</td>
+          <td style="color:var(--muted);font-size:11px;">${r.domain || '—'}</td>
+          <td class="hpt-slice">${r.slice_idx != null ? r.slice_idx : '—'}</td>
+        </tr>`;
+      });
+      html += '</tbody></table>';
+      panelContent.innerHTML = html;
+      logEvent('session_params_viewed', sessionId.slice(-8));
     } catch (e) {
-      console.error("fetchSessionDetails error", e);
+      panelContent.innerHTML = '<div class="hist-panel-empty" style="color:var(--red);">Failed to load session data.</div>';
+      console.error('fetchSessionDetails error', e);
     }
   }
 
@@ -3042,19 +3631,26 @@
         const item = document.createElement('div');
         item.className = 'session-item';
         const start = s.start_time ? new Date(s.start_time).toLocaleString() : 'Unknown';
+        const sid = s.session_id || '';
         item.innerHTML = `
           <div class="session-header">
             <span class="sfile">${s.file_name || 'Unnamed G-code'}</span>
             <span class="status-pill ${s.status === 'active' ? 'on' : 'off'}">${(s.status || 'ended').toUpperCase()}</span>
           </div>
           <div class="session-meta">
-            <span>ID: <strong style="font-family:var(--font-mono);">${(s.session_id || '').slice(-8)}</strong></span>
+            <span>ID: <strong style="font-family:var(--font-mono);">${sid.slice(-8)}</strong></span>
             <span>Started: ${start}</span>
             <span>Layers: <strong>${s.total_layers || '--'}</strong></span>
           </div>
+          <button class="session-view-btn" data-sid="${sid}">
+            <svg width="11" height="11" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" style="vertical-align:middle;margin-right:4px;"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+            View Params
+          </button>
         `;
-        item.addEventListener('click', () => {
-          fetchSessionDetails(s.session_id, s, true);
+        // Only the button triggers the params panel; clicking the card itself does nothing extra
+        item.querySelector('.session-view-btn').addEventListener('click', (e) => {
+          e.stopPropagation();
+          fetchSessionDetails(sid, s, false);
         });
         sessionList.appendChild(item);
       });
@@ -3157,6 +3753,7 @@
       liveRuntimeData = {};
       latestPositionSets = { xma: null, xmr: null, xwa: null, xwr: null };
       update5AxisDisplay();
+      updateControlPanelUI(null);
       tableBody.innerHTML = "";
       rowsByKey.clear();
       if (emptyState) emptyState.classList.add("visible");
@@ -3213,7 +3810,7 @@
           total_layers: stateData.total_layers ?? stateData.PS011,
           current_file: stateData.current_file ?? stateData.RT013,
           gas_enabled: stateData.gas_enabled ?? stateData.RT029,
-          shielding_enabled: stateData.shielding_enabled,
+          pf_gas_on: stateData.pf_gas_on ?? stateData.shielding_enabled,
           laser_enabled: stateData.laser_enabled ?? stateData.RT027 ?? stateData.laser_on,
           powder_enabled: stateData.powder_enabled ?? stateData.RT028,
           light_enabled: stateData.light_enabled ?? stateData.RT031,
@@ -3254,6 +3851,9 @@
 
     // 7. Refresh session list for this device
     await refreshSessions();
+
+    // 8. Fetch job status for this device
+    await fetchJobStatus(selectedDid);
 
     logEvent("device_selected", selectedDid);
   }
@@ -3336,7 +3936,7 @@
   document.getElementById("cameraFullscreenBtn")?.addEventListener("click", toggleCameraFullscreen);
   document.getElementById("camOverlayFsBtn")?.addEventListener("click", toggleCameraFullscreen);
 
-  // Camera Handlers (Port 8765 /video-feed)
+  // Camera Handlers. MediaMTX WebRTC is opt-in; MJPEG remains the fallback.
   async function checkCameraAvailable(ip, port = 8765, deviceId = null) {
     try {
       const didParam = deviceId ? `&device_id=${encodeURIComponent(deviceId)}` : '';
@@ -3350,15 +3950,11 @@
 
   async function startCamera(ip) {
     const currentDev = deviceSelect.value;
+    if (await startWebRtcCamera(currentDev)) return;
     if (!ip) ip = getSharedIp();
     if (!ip) {
-      cameraCollapsed.style.display = "none";
-      cameraExpanded.style.display = "block";
-      cameraFeed.style.display = "none";
-      cameraPlaceholder.style.display = "grid";
-      cameraPlaceholder.innerHTML = `<div style="font-size:15px;font-weight:600;color:var(--text);">No live streaming from this device</div>`;
-      cameraStatus.textContent = "Offline";
-      showToast("No live streaming from this device", true);
+      // No IP configured — show the IP prompt modal instead of an error
+      showIpPromptModal(() => startCamera());
       return;
     }
 
@@ -3417,6 +4013,40 @@
     cameraFeed.src = streamUrl;
   }
 
+  async function startWebRtcCamera(deviceId) {
+    if (!deviceId) return false;
+    let stream;
+    try {
+      const response = await fetch(`/api/media/devices/${encodeURIComponent(deviceId)}/playback`, { cache: "no-store" });
+      if (!response.ok) return false;
+      stream = await response.json();
+    } catch (_) {
+      return false;
+    }
+    if (!stream.enabled || stream.provider !== "webrtc" || !stream.webrtc_url) return false;
+
+    activeCameraDevice = deviceId;
+    cameraCollapsed.style.display = "none";
+    cameraExpanded.style.display = "block";
+    cameraPlaceholder.style.display = "grid";
+    cameraPlaceholder.textContent = "Connecting to secure WebRTC stream...";
+    cameraFeed.style.display = "none";
+    cameraWebRtc.style.display = "block";
+    cameraLiveBadge.style.display = "inline-flex";
+    cameraStopBtn.style.display = "inline-flex";
+    const fsBtn = document.getElementById("cameraFullscreenBtn");
+    if (fsBtn) fsBtn.style.display = "inline-flex";
+    cameraStatus.textContent = "Connecting (WebRTC)";
+    cameraWebRtc.onload = () => {
+      cameraPlaceholder.style.display = "none";
+      cameraStatus.textContent = `Connected (WebRTC) • ${deviceId}`;
+    };
+    // MediaMTX's WebRTC page handles ICE reconnects. The health value is
+    // deliberately informational: a camera can begin publishing after load.
+    cameraWebRtc.src = `${stream.webrtc_url}?autoplay=true&muted=true&playsInline=true`;
+    return true;
+  }
+
   function stopCamera() {
     const card = document.getElementById("cameraCard");
     if (card && card.classList.contains("is-fullscreen")) {
@@ -3429,6 +4059,8 @@
 
     cameraFeed.src = "";
     cameraFeed.style.display = "none";
+    cameraWebRtc.src = "";
+    cameraWebRtc.style.display = "none";
     cameraExpanded.style.display = "none";
     cameraCollapsed.style.display = "flex";
     cameraLiveBadge.style.display = "none";
@@ -3441,6 +4073,60 @@
 
   cameraLiveBtn.addEventListener("click", () => startCamera());
   cameraStopBtn.addEventListener("click", stopCamera);
+
+  // ── IP Prompt Modal ────────────────────────────────────────────────────────
+  const ipPromptOverlay = document.getElementById('ipPromptOverlay');
+  const ipPromptInput   = document.getElementById('ipPromptInput');
+  const ipPromptStart   = document.getElementById('ipPromptStart');
+  const ipPromptCancel  = document.getElementById('ipPromptCancel');
+  let _ipPromptCallback = null;
+
+  function showIpPromptModal(onConfirm) {
+    _ipPromptCallback = onConfirm;
+    // Pre-fill with any previously saved IP
+    const saved = getDeviceIp(deviceSelect.value);
+    ipPromptInput.value = saved || '';
+    ipPromptOverlay.style.display = 'flex';
+    setTimeout(() => ipPromptInput.focus(), 80);
+  }
+
+  function closeIpPromptModal() {
+    ipPromptOverlay.style.display = 'none';
+    _ipPromptCallback = null;
+  }
+
+  function submitIpPrompt() {
+    const ip = ipPromptInput.value.trim();
+    if (!ip) {
+      ipPromptInput.style.borderColor = 'var(--red)';
+      ipPromptInput.focus();
+      setTimeout(() => { ipPromptInput.style.borderColor = ''; }, 1200);
+      return;
+    }
+    // Save the IP for the current device
+    const did = deviceSelect.value;
+    if (did) setDeviceIp(did, ip);
+    // Also update the Machine Access IP field if present
+    if (sharedIpInput) sharedIpInput.value = ip;
+    closeIpPromptModal();
+    if (_ipPromptCallback) _ipPromptCallback();
+  }
+
+  ipPromptStart?.addEventListener('click', submitIpPrompt);
+  ipPromptCancel?.addEventListener('click', closeIpPromptModal);
+  // Close on overlay background click
+  ipPromptOverlay?.addEventListener('click', (e) => {
+    if (e.target === ipPromptOverlay) closeIpPromptModal();
+  });
+  // Close on Escape
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape' && ipPromptOverlay?.style.display === 'flex') closeIpPromptModal();
+  });
+  // Submit on Enter
+  ipPromptInput?.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') submitIpPrompt();
+  });
+  // ── End IP Prompt Modal ────────────────────────────────────────────────────
 
   // Machine Access Controls: Live Stream, Recordings, Logs, Download
   document.getElementById("maLiveStreamBtn")?.addEventListener("click", () => {
@@ -3647,6 +4333,336 @@
     logEvent("download_logs_csv", ip);
   });
 
+  // ── Control Panel (G-Code Upload, Sample & Machine Operation) ─────────────
+  function formatJobDuration(sec) {
+    if (sec == null || isNaN(sec) || sec < 0) return "--:--";
+    const s = Math.floor(sec);
+    const hrs = Math.floor(s / 3600);
+    const mins = Math.floor((s % 3600) / 60);
+    const secs = s % 60;
+    if (hrs > 0) {
+      return `${String(hrs).padStart(2, '0')}:${String(mins).padStart(2, '0')}:${String(secs).padStart(2, '0')}`;
+    }
+    return `${String(mins).padStart(2, '0')}:${String(secs).padStart(2, '0')}`;
+  }
+
+  function formatJobFileSize(bytes) {
+    if (bytes == null || isNaN(bytes) || bytes <= 0) return "—";
+    if (bytes < 1024) return bytes + " B";
+    if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + " KB";
+    return (bytes / (1024 * 1024)).toFixed(2) + " MB";
+  }
+
+  function updateControlPanelUI(job) {
+    if (!job) {
+      job = {
+        status: "idle",
+        file_name: "",
+        file_size: 0,
+        total_lines: 0,
+        current_line: 0,
+        elapsed_seconds: 0,
+        estimated_seconds: 0,
+        estimated_time_fmt: "—",
+        current_gcode: "Ready to run",
+        percentage: 0.0
+      };
+    }
+    currentJobState = job;
+
+    const fn = job.file_name || "";
+    if (cpFileName) cpFileName.textContent = fn || "—";
+    if (cpUploadStatus) {
+      cpUploadStatus.textContent = fn ? `Loaded: ${fn}` : "No file loaded";
+      cpUploadStatus.style.color = fn ? "var(--accent)" : "var(--muted)";
+    }
+    if (cpFileSize) cpFileSize.textContent = job.file_size ? formatJobFileSize(job.file_size) : "—";
+    if (cpTotalLines) cpTotalLines.textContent = job.total_lines != null ? job.total_lines : "—";
+    if (cpEstDuration) cpEstDuration.textContent = job.estimated_time_fmt || formatJobDuration(job.estimated_seconds);
+
+    const curLine = job.current_line || 0;
+    const totLines = job.total_lines || 0;
+    if (cpLineCounter) cpLineCounter.textContent = `Line ${curLine} / ${totLines}`;
+    if (cpElapsedText) cpElapsedText.textContent = `Elapsed: ${formatJobDuration(job.elapsed_seconds || 0)}`;
+
+    let pct = job.percentage != null ? Number(job.percentage) : 0;
+    if (totLines > 0 && curLine > 0) {
+      pct = Math.min(100, Math.max(0, (curLine / totLines) * 100));
+    }
+    if (cpProgressPct) cpProgressPct.textContent = `${pct.toFixed(1)}%`;
+    if (cpProgressBar) cpProgressBar.style.width = `${pct}%`;
+
+    const st = (job.status || "idle").toLowerCase();
+    if (cpCurrentCmd) {
+      if (job.error) {
+        cpCurrentCmd.textContent = `Error: ${job.error}`;
+        cpCurrentCmd.style.borderColor = "var(--red)";
+      } else {
+        cpCurrentCmd.textContent = job.current_gcode || (st === "running" ? "Processing..." : "Idle");
+        cpCurrentCmd.style.borderColor = "";
+      }
+    }
+
+    // Update Control Panel Status Badge
+    if (cpJobBadge) {
+      if (st === "running") {
+        cpJobBadge.innerHTML = '<span class="status-pill on">RUNNING</span>';
+      } else if (st === "paused") {
+        cpJobBadge.innerHTML = '<span class="status-pill" style="background:var(--yellow-soft);color:var(--yellow);border-color:var(--yellow);">PAUSED</span>';
+      } else if (st === "completed") {
+        cpJobBadge.innerHTML = '<span class="status-pill on" style="background:var(--green-soft);color:var(--green);border-color:var(--green);">COMPLETED</span>';
+      } else if (st === "aborted") {
+        cpJobBadge.innerHTML = '<span class="status-pill" style="background:var(--red-soft);color:var(--red);border-color:var(--red);">ABORTED</span>';
+      } else if (st === "error" || job.error) {
+        cpJobBadge.innerHTML = '<span class="status-pill off" style="color:var(--red);border-color:var(--red);background:var(--red-soft);">ERROR</span>';
+      } else if (st === "idle" && fn) {
+        cpJobBadge.innerHTML = '<span class="status-pill" style="background:var(--accent-soft);color:var(--accent);border-color:var(--accent);">READY</span>';
+      } else {
+        cpJobBadge.innerHTML = '<span class="status-pill off">IDLE</span>';
+      }
+    }
+
+    // Update Controls Toolbar Buttons
+    const hasFile = Boolean(fn && totLines > 0);
+    if (st === "running") {
+      if (cpStartBtn) { cpStartBtn.disabled = true; cpStartBtn.style.display = "inline-flex"; }
+      if (cpPauseBtn) { cpPauseBtn.disabled = false; cpPauseBtn.style.display = "inline-flex"; }
+      if (cpResumeBtn) { cpResumeBtn.disabled = true; cpResumeBtn.style.display = "none"; }
+      if (cpAbortBtn) cpAbortBtn.disabled = false;
+      if (cpResetBtn) cpResetBtn.disabled = true;
+    } else if (st === "paused") {
+      if (cpStartBtn) { cpStartBtn.disabled = true; cpStartBtn.style.display = "none"; }
+      if (cpPauseBtn) { cpPauseBtn.disabled = true; cpPauseBtn.style.display = "none"; }
+      if (cpResumeBtn) { cpResumeBtn.disabled = false; cpResumeBtn.style.display = "inline-flex"; }
+      if (cpAbortBtn) cpAbortBtn.disabled = false;
+      if (cpResetBtn) cpResetBtn.disabled = true;
+    } else if (st === "completed" || st === "aborted" || st === "error") {
+      if (cpStartBtn) { cpStartBtn.disabled = true; cpStartBtn.style.display = "inline-flex"; }
+      if (cpPauseBtn) { cpPauseBtn.disabled = true; cpPauseBtn.style.display = "inline-flex"; }
+      if (cpResumeBtn) { cpResumeBtn.disabled = true; cpResumeBtn.style.display = "none"; }
+      if (cpAbortBtn) cpAbortBtn.disabled = true;
+      if (cpResetBtn) cpResetBtn.disabled = false;
+    } else {
+      // idle or ready
+      if (cpStartBtn) { cpStartBtn.disabled = !hasFile; cpStartBtn.style.display = "inline-flex"; }
+      if (cpPauseBtn) { cpPauseBtn.disabled = true; cpPauseBtn.style.display = "inline-flex"; }
+      if (cpResumeBtn) { cpResumeBtn.disabled = true; cpResumeBtn.style.display = "none"; }
+      if (cpAbortBtn) cpAbortBtn.disabled = true;
+      if (cpResetBtn) cpResetBtn.disabled = !(curLine > 0 || pct > 0);
+    }
+
+    // Synchronize Overview Dashboard KPI Cards & Topbar
+    if (rtFile) rtFile.textContent = fn || "—";
+    if (topbarFile) topbarFile.textContent = fn || "—";
+    if (rtLayerText) rtLayerText.textContent = (totLines > 0) ? `Line ${curLine} / ${totLines}` : "Layer 0 / 0";
+    if (progressBar) progressBar.style.width = `${pct}%`;
+    if (progressPct) progressPct.textContent = `${pct.toFixed(1)}%`;
+
+    if (rtState && rtStateVal && rtStateSub) {
+      if (st === "running") {
+        rtState.innerHTML = '<span class="status-pill on">RUNNING</span>';
+        rtStateVal.textContent = "Running";
+        rtStateSub.textContent = fn ? `Executing ${fn}` : "Job in progress";
+      } else if (st === "paused") {
+        rtState.innerHTML = '<span class="status-pill" style="background:var(--yellow-soft);color:var(--yellow);">PAUSED</span>';
+        rtStateVal.textContent = "Paused";
+        rtStateSub.textContent = `Holding at line ${curLine}`;
+      } else if (st === "completed") {
+        rtState.innerHTML = '<span class="status-pill on" style="background:var(--green-soft);color:var(--green);">COMPLETED</span>';
+        rtStateVal.textContent = "Finished";
+        rtStateSub.textContent = "Print completed successfully";
+      } else if (st === "aborted") {
+        rtState.innerHTML = '<span class="status-pill" style="background:var(--red-soft);color:var(--red);">ABORTED</span>';
+        rtStateVal.textContent = "Aborted";
+        rtStateSub.textContent = "Job execution halted";
+      } else if (st === "error" || job.error) {
+        rtState.innerHTML = '<span class="status-pill off" style="color:var(--red);background:var(--red-soft);">ERROR</span>';
+        rtStateVal.textContent = "Error";
+        rtStateSub.textContent = job.error || "Machine reported error";
+      } else if (st === "idle" && fn) {
+        rtState.innerHTML = '<span class="status-pill" style="background:var(--accent-soft);color:var(--accent);">READY</span>';
+        rtStateVal.textContent = "Ready";
+        rtStateSub.textContent = `File ready: ${fn}`;
+      } else {
+        rtState.innerHTML = '<span class="status-pill off">IDLE</span>';
+        rtStateVal.textContent = "Idle";
+        rtStateSub.textContent = "No active print job";
+      }
+    }
+  }
+
+  async function fetchJobStatus(deviceId) {
+    if (!deviceId) return;
+    try {
+      const res = await fetch(`/api/devices/${encodeURIComponent(deviceId)}/job/status`);
+      if (res.ok) {
+        const data = await res.json();
+        updateControlPanelUI(data);
+      }
+    } catch (e) {
+      console.error("fetchJobStatus error:", e);
+    }
+  }
+
+  async function uploadJobFile(file) {
+    const did = deviceSelect.value;
+    if (!did) {
+      showToast("Please select a device from the topbar first", true);
+      return;
+    }
+    if (!file) {
+      showToast("No file selected", true);
+      return;
+    }
+
+    if (file.size === 0) {
+      showToast("File is empty (0 bytes). Please upload a valid G-code file.", true);
+      return;
+    }
+
+    const name = file.name || "";
+    const ext = name.split('.').pop().toLowerCase();
+    const validExts = ["gcode", "nc", "tap", "txt"];
+    if (!validExts.includes(ext)) {
+      showToast(`Unsupported file format '.${ext}'. Supported formats: .gcode, .nc, .tap, .txt`, true);
+      return;
+    }
+
+    const formData = new FormData();
+    formData.append("file", file);
+
+    if (cpUploadStatus) {
+      cpUploadStatus.textContent = "Uploading & validating G-code...";
+      cpUploadStatus.style.color = "var(--accent)";
+    }
+    try {
+      const res = await fetch(`/api/devices/${encodeURIComponent(did)}/job/upload`, {
+        method: "POST",
+        body: formData
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        const errMsg = data.detail || data.error || `Upload failed (HTTP ${res.status})`;
+        throw new Error(errMsg);
+      }
+      showToast(`Loaded ${data.job?.file_name || file.name} (${data.job?.total_lines || 0} lines)`);
+      updateControlPanelUI(data.job);
+      logEvent("gcode_uploaded", data.job?.file_name || file.name);
+    } catch (err) {
+      if (cpUploadStatus) {
+        cpUploadStatus.textContent = `Upload error: ${err.message}`;
+        cpUploadStatus.style.color = "var(--red)";
+      }
+      showToast(`Upload Error: ${err.message}`, true);
+    }
+  }
+
+  async function loadSampleJob() {
+    const did = deviceSelect.value;
+    if (!did) {
+      showToast("Please select a device from the topbar first", true);
+      return;
+    }
+    if (cpUploadStatus) {
+      cpUploadStatus.textContent = "Loading sample pf_gas_test.nc...";
+      cpUploadStatus.style.color = "var(--accent)";
+    }
+    try {
+      const res = await fetch(`/api/devices/${encodeURIComponent(did)}/job/load_sample`, {
+        method: "POST"
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        const errMsg = data.detail || data.error || "Failed to load sample file";
+        throw new Error(errMsg);
+      }
+      showToast(`Loaded sample pf_gas_test.nc (${data.job?.total_lines || 0} lines)`);
+      updateControlPanelUI(data.job);
+      logEvent("sample_job_loaded", "pf_gas_test.nc");
+    } catch (err) {
+      if (cpUploadStatus) {
+        cpUploadStatus.textContent = `Sample error: ${err.message}`;
+        cpUploadStatus.style.color = "var(--red)";
+      }
+      showToast(`Sample Error: ${err.message}`, true);
+    }
+  }
+
+  async function sendJobAction(action) {
+    const did = deviceSelect.value;
+    if (!did) {
+      showToast("Please select a device from the topbar first", true);
+      return;
+    }
+
+    if (action === "start") {
+      if (!currentJobState || !currentJobState.file_name || !currentJobState.total_lines) {
+        showToast("No G-code file loaded. Please drag & drop a file or click 'Load Sample' first.", true);
+        return;
+      }
+    }
+
+    try {
+      const res = await fetch(`/api/devices/${encodeURIComponent(did)}/job/action`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action })
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        const errMsg = data.detail || data.error || `Failed to execute ${action}`;
+        throw new Error(errMsg);
+      }
+      showToast(`Job action '${action.toUpperCase()}' triggered`);
+      if (data.job) {
+        updateControlPanelUI(data.job);
+      }
+      logEvent("job_action", action);
+    } catch (err) {
+      showToast(`Action Error: ${err.message}`, true);
+    }
+  }
+
+  // Wire Control Panel Event Listeners
+  cpDropzone?.addEventListener("click", () => cpFileInput?.click());
+  cpFileInput?.addEventListener("change", (e) => {
+    if (e.target.files && e.target.files[0]) {
+      uploadJobFile(e.target.files[0]);
+    }
+  });
+  cpDropzone?.addEventListener("dragover", (e) => {
+    e.preventDefault();
+    cpDropzone.classList.add("dragover");
+  });
+  cpDropzone?.addEventListener("dragleave", () => {
+    cpDropzone.classList.remove("dragover");
+  });
+  cpDropzone?.addEventListener("drop", (e) => {
+    e.preventDefault();
+    cpDropzone.classList.remove("dragover");
+    if (e.dataTransfer && e.dataTransfer.files && e.dataTransfer.files[0]) {
+      uploadJobFile(e.dataTransfer.files[0]);
+    }
+  });
+  cpLoadSampleBtn?.addEventListener("click", loadSampleJob);
+  cpStartBtn?.addEventListener("click", () => sendJobAction("start"));
+  cpPauseBtn?.addEventListener("click", () => sendJobAction("pause"));
+  cpResumeBtn?.addEventListener("click", () => sendJobAction("resume"));
+  cpAbortBtn?.addEventListener("click", () => sendJobAction("abort"));
+  cpResetBtn?.addEventListener("click", () => sendJobAction("reset"));
+
+  // Clear Dashboard Activity Log
+  document.getElementById("clearActivityLogBtn")?.addEventListener("click", () => {
+    const logEl = document.getElementById("dashboardActivityLog");
+    const emptyEl = document.getElementById("dashActivityEmpty");
+    const badge = document.getElementById("dashboardActivityBadge");
+    if (logEl) {
+      logEl.innerHTML = "";
+      if (emptyEl) { emptyEl.style.display = ""; logEl.appendChild(emptyEl); }
+    }
+    if (badge) { badge.textContent = "Waiting for events..."; badge.style.color = ""; }
+  });
+
   // WebSocket Connection
   function connectWS() {
     if (socket) {
@@ -3680,6 +4696,7 @@
           const sessions = msg.active_sessions || {};
           lastInitSessionsData = msg.sessions_data || {};
           lastInitLiveRuntime = msg.live_runtime || {};
+          const jobStates = msg.job_states || {};
 
           Object.keys(sessions).forEach(did => {
             if (![...deviceSelect.options].some(o => o.value === did)) {
@@ -3701,7 +4718,58 @@
           const sel = deviceSelect.value;
           if (sel) {
             handleDeviceChange(sel);
+            if (jobStates[sel]) {
+              updateControlPanelUI(jobStates[sel]);
+            }
           }
+          break;
+        }
+
+        case "dashboard_job_event": {
+          const ev = msg.event || "";
+          const fn = msg.file_name || "";
+          const evMap = {
+            loaded:  { icon: "📂", color: "var(--accent)",  label: "Job Loaded from Dashboard" },
+            started: { icon: "▶",  color: "var(--green)",   label: "Job Started from Dashboard" },
+            paused:  { icon: "⏸",  color: "var(--yellow)",  label: "Job Paused from Dashboard" },
+            resumed: { icon: "▶▶", color: "var(--green)",   label: "Job Resumed from Dashboard" },
+            aborted: { icon: "⛔",  color: "var(--red)",    label: "Job Aborted from Dashboard" },
+            reset:   { icon: "↺",  color: "var(--muted)",  label: "Job Reset from Dashboard" },
+          };
+          const info = evMap[ev] || { icon: "ℹ", color: "var(--muted)", label: `Dashboard: ${ev}` };
+          // Toast notification
+          showToast(`${info.icon} ${info.label}${fn ? ': ' + fn : ''}`, ev === 'aborted');
+          // Activity log entry
+          const logEl = document.getElementById('dashboardActivityLog');
+          const emptyEl = document.getElementById('dashActivityEmpty');
+          const badge = document.getElementById('dashboardActivityBadge');
+          if (logEl) {
+            if (emptyEl) emptyEl.style.display = 'none';
+            const entry = document.createElement('div');
+            const ts = new Date().toLocaleTimeString();
+            entry.style.cssText = 'display:flex;align-items:flex-start;gap:10px;padding:8px 10px;border-radius:8px;background:var(--surface);border:1px solid var(--border);';
+            entry.innerHTML = `
+              <span style="font-size:18px;line-height:1;">${info.icon}</span>
+              <div style="flex:1;min-width:0;">
+                <div style="font-weight:700;font-size:13px;color:${info.color};">${info.label}</div>
+                ${fn ? `<div style="font-size:11px;color:var(--muted);margin-top:2px;word-break:break-all;">File: <strong style="color:#fff;">${fn}</strong></div>` : ''}
+                <div style="font-size:10px;color:var(--muted);margin-top:3px;">${ts}</div>
+              </div>`;
+            logEl.insertBefore(entry, logEl.firstChild);
+            // Keep max 30 entries
+            while (logEl.children.length > 31) logEl.removeChild(logEl.lastChild);
+            if (badge) { badge.textContent = `Last: ${ts}`; badge.style.color = info.color; }
+          }
+          logEvent(`dashboard_${ev}`, fn);
+          break;
+        }
+
+        case "job_progress": {
+          const d = msg.data || {};
+          if (d.status === "error" || d.error) {
+            showToast("Machine Error: " + (d.error || "Execution error"), true);
+          }
+          updateControlPanelUI(d);
           break;
         }
 
@@ -3757,7 +4825,7 @@
             total_layers: d.total_layers ?? d.PS011,
             current_file: d.current_file ?? d.RT013,
             gas_enabled: "gas_enabled" in d ? d.gas_enabled : d.RT029,
-            shielding_enabled: d.shielding_enabled,
+            pf_gas_on: "pf_gas_on" in d ? d.pf_gas_on : ("shielding_enabled" in d ? d.shielding_enabled : undefined),
             laser_enabled: "laser_enabled" in d ? d.laser_enabled : ("RT027" in d ? d.RT027 : d.laser_on),
             powder_enabled: "powder_enabled" in d ? d.powder_enabled : d.RT028,
             light_enabled: "light_enabled" in d ? d.light_enabled : d.RT031,
@@ -3819,10 +4887,43 @@
   searchInput?.addEventListener("input", updateTableVisibility);
   sliceFilter?.addEventListener("change", updateTableVisibility);
 
+  // ── Periodic Equipment State Poll ───────────────────────────────────────
+  // The FreeCAD runtime MQTT topic only fires during active print jobs.
+  // Poll /state every 3 s so gas/PF-gas indicators stay live during idle.
+  let _equipPollTimer = null;
+
+  async function pollEquipmentState() {
+    const did = deviceSelect ? deviceSelect.value : null;
+    if (!did) return;
+    try {
+      const res = await fetch(`/state?device_id=${encodeURIComponent(did)}`);
+      const s = await res.json();
+      if (!s || s.error) return;
+      updateRuntime({
+        gas_enabled:     s.gas_enabled     ?? s.RT029,
+        pf_gas_on:       s.pf_gas_on       ?? s.shielding_enabled,
+        laser_enabled:   s.laser_enabled   ?? s.RT027 ?? s.laser_on,
+        powder_enabled:  s.powder_enabled  ?? s.RT028,
+        light_enabled:   s.light_enabled   ?? s.RT031,
+        laser_power_pct: s.laser_power_pct ?? s.DS010 ?? s.laser_power,
+      });
+    } catch (_) { /* silently ignore network errors */ }
+  }
+
+  function startEquipPoll() {
+    stopEquipPoll();
+    _equipPollTimer = setInterval(pollEquipmentState, 3000);
+  }
+
+  function stopEquipPoll() {
+    if (_equipPollTimer) { clearInterval(_equipPollTimer); _equipPollTimer = null; }
+  }
+
   // Initial Boot
   resetTrendHistory();
   loadDevices();
   connectWS();
+  startEquipPoll();
 </script>
 </body>
 </html>

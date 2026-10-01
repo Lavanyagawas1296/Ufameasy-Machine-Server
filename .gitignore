@@ -1,3 +1,6 @@
 __pycache__/
 *.pyc
 server/data/*.db
+media-devices.local.json
+.env
+streaming.local.ps1

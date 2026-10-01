@@ -292,6 +292,16 @@ def on_message(client, userdata, msg):
             })
             return
 
+        if topic_parts[2:] == ["job", "progress"]:
+            data = json.loads(payload)
+            updated = state.update_job_state(device_id, data)
+            _broadcast({
+                "type": "job_progress",
+                "device_id": device_id,
+                "data": updated,
+            })
+            return
+
         if len(topic_parts) == 4 and topic_parts[2] == "parameters":
             param_name = topic_parts[3]
 
@@ -393,3 +403,21 @@ def start_mqtt():
     mqtt_event_loop = asyncio.get_event_loop()
     client.connect("localhost", 1883, 60)
     client.loop_start()
+
+
+def publish_job_command(device_id: str, action: str, data: dict = None) -> bool:
+    """
+    Publish a remote job action command to the machine on ufameasy/{device_id}/cmd/job.
+    """
+    global client
+    try:
+        payload = {"action": action}
+        if data:
+            payload.update(data)
+        topic = f"ufameasy/{device_id}/cmd/job"
+        info = client.publish(topic, json.dumps(payload), qos=1)
+        return info.rc == mqtt.MQTT_ERR_SUCCESS
+    except Exception as exc:
+        print(f"[MQTT] publish_job_command failed for {device_id} ({action}): {exc}")
+        return False
+

@@ -24,8 +24,43 @@ class StateStore:
         """
         self.parameters = {}
         self.slice_snapshots = {}
+        self.job_states = {}
         self.events = []
         self.lock = Lock()
+
+    def get_job_state(self, device_id):
+        with self.lock:
+            return dict(self.job_states.get(device_id, {
+                "status": "idle",
+                "file_name": "",
+                "file_path": "",
+                "total_lines": 0,
+                "current_line": 0,
+                "elapsed_seconds": 0,
+                "estimated_seconds": 0,
+                "current_gcode": "",
+                "percentage": 0.0
+            }))
+
+    def update_job_state(self, device_id, update_dict):
+        with self.lock:
+            current = self.job_states.setdefault(device_id, {
+                "status": "idle",
+                "file_name": "",
+                "file_path": "",
+                "total_lines": 0,
+                "current_line": 0,
+                "elapsed_seconds": 0,
+                "estimated_seconds": 0,
+                "current_gcode": "",
+                "percentage": 0.0
+            })
+            current.update(update_dict)
+            if current["total_lines"] > 0:
+                current["percentage"] = round((current["current_line"] / current["total_lines"]) * 100, 1)
+            else:
+                current["percentage"] = 0.0
+            return dict(current)
 
     def update_parameter(self, device_id, key, value):
         """
