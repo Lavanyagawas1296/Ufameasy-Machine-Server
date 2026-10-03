@@ -22,6 +22,7 @@ from server.db import (
 )
 from server.state_store import state
 from server.ws_manager import manager
+from server.rmc_contract import ACK_SEGMENT, FILES_SEGMENT, STATE_SEGMENT
 
 
 mqtt_event_loop = None
@@ -107,6 +108,38 @@ def on_message(client, userdata, msg):
 
     if len(topic_parts) >= 3 and topic_parts[0] == "ufameasy":
         device_id = topic_parts[1]
+
+        if len(topic_parts) == 4 and topic_parts[2] == "rmc":
+            channel = topic_parts[3]
+            data = json.loads(payload)
+
+            if channel == STATE_SEGMENT:
+                updated = state.update_rmc_state(device_id, data)
+                _broadcast({
+                    "type": "rmc_state",
+                    "device_id": device_id,
+                    "data": updated,
+                })
+                return
+
+            if channel == FILES_SEGMENT:
+                if data.get("device_id", device_id) != device_id:
+                    raise ValueError("RMC files device_id does not match its topic")
+                files = state.update_rmc_files(device_id, data.get("files", []))
+                _broadcast({
+                    "type": "rmc_files",
+                    "device_id": device_id,
+                    "data": {"device_id": device_id, "files": files},
+                })
+                return
+
+            if channel == ACK_SEGMENT:
+                _broadcast({
+                    "type": "rmc_ack",
+                    "device_id": device_id,
+                    "data": data,
+                })
+                return
 
         if topic_parts[2:] == ["file", "update"]:
             data = json.loads(payload)
@@ -292,16 +325,6 @@ def on_message(client, userdata, msg):
             })
             return
 
-        if topic_parts[2:] == ["job", "progress"]:
-            data = json.loads(payload)
-            updated = state.update_job_state(device_id, data)
-            _broadcast({
-                "type": "job_progress",
-                "device_id": device_id,
-                "data": updated,
-            })
-            return
-
         if len(topic_parts) == 4 and topic_parts[2] == "parameters":
             param_name = topic_parts[3]
 
@@ -405,19 +428,4 @@ def start_mqtt():
     client.loop_start()
 
 
-def publish_job_command(device_id: str, action: str, data: dict = None) -> bool:
-    """
-    Publish a remote job action command to the machine on ufameasy/{device_id}/cmd/job.
-    """
-    global client
-    try:
-        payload = {"action": action}
-        if data:
-            payload.update(data)
-        topic = f"ufameasy/{device_id}/cmd/job"
-        info = client.publish(topic, json.dumps(payload), qos=1)
-        return info.rc == mqtt.MQTT_ERR_SUCCESS
-    except Exception as exc:
-        print(f"[MQTT] publish_job_command failed for {device_id} ({action}): {exc}")
-        return False
 

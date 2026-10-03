@@ -110,15 +110,19 @@ async def websocket_endpoint(websocket: WebSocket):
             sessions_data[device_id] = row
             live_runtime[device_id] = state.get_parameters(device_id)
 
-        all_known_devices = set(list(_active_sessions.keys()) + list(state.parameters.keys()) + list(state.job_states.keys()))
-        job_states = {did: state.get_job_state(did) for did in all_known_devices}
+        all_known_devices = set(
+            list(_active_sessions.keys()) + list(state.parameters.keys()) + list(state.rmc_states.keys())
+        )
+        rmc_states = {did: state.get_rmc_state(did) for did in all_known_devices}
+        rmc_files = {did: state.get_rmc_files(did) for did in all_known_devices}
 
         await websocket.send_text(json.dumps({
             "type": "init",
             "active_sessions": _active_sessions,
             "sessions_data": sessions_data,
             "live_runtime": live_runtime,
-            "job_states": job_states,
+            "rmc_states": rmc_states,
+            "rmc_files": rmc_files,
         }))
     except Exception:
         pass

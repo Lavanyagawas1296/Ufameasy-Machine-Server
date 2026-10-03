@@ -8,6 +8,8 @@ by both runtime code and small diagnostic scripts.
 """
 from threading import Lock
 
+from server.rmc_contract import JOB_STATES, default_state
+
 class StateStore:
     """
     Process-local storage for machine parameters and event history.
@@ -24,43 +26,40 @@ class StateStore:
         """
         self.parameters = {}
         self.slice_snapshots = {}
-        self.job_states = {}
+        self.rmc_states = {}
+        self.rmc_files = {}
         self.events = []
         self.lock = Lock()
 
-    def get_job_state(self, device_id):
+    def get_rmc_state(self, device_id):
         with self.lock:
-            return dict(self.job_states.get(device_id, {
-                "status": "idle",
-                "file_name": "",
-                "file_path": "",
-                "total_lines": 0,
-                "current_line": 0,
-                "elapsed_seconds": 0,
-                "estimated_seconds": 0,
-                "current_gcode": "",
-                "percentage": 0.0
-            }))
+            return dict(self.rmc_states.get(device_id, default_state(device_id)))
 
-    def update_job_state(self, device_id, update_dict):
+    def update_rmc_state(self, device_id, update_dict):
+        """Merge a schema-complete, machine-authoritative RMC state."""
         with self.lock:
-            current = self.job_states.setdefault(device_id, {
-                "status": "idle",
-                "file_name": "",
-                "file_path": "",
-                "total_lines": 0,
-                "current_line": 0,
-                "elapsed_seconds": 0,
-                "estimated_seconds": 0,
-                "current_gcode": "",
-                "percentage": 0.0
-            })
+            current = self.rmc_states.setdefault(device_id, default_state(device_id))
+            incoming_device_id = update_dict.get("device_id", device_id)
+            if incoming_device_id != device_id:
+                raise ValueError("RMC state device_id does not match its topic")
+            job_state = update_dict.get("job_state")
+            if job_state is not None and job_state not in JOB_STATES:
+                raise ValueError(f"unsupported RMC job_state: {job_state}")
             current.update(update_dict)
-            if current["total_lines"] > 0:
-                current["percentage"] = round((current["current_line"] / current["total_lines"]) * 100, 1)
-            else:
-                current["percentage"] = 0.0
+            current["device_id"] = device_id
             return dict(current)
+
+    def get_rmc_files(self, device_id):
+        with self.lock:
+            return list(self.rmc_files.get(device_id, []))
+
+    def update_rmc_files(self, device_id, files):
+        """Store the retained, machine-authoritative allowed file list."""
+        if not isinstance(files, list):
+            raise ValueError("RMC files payload must contain a list")
+        with self.lock:
+            self.rmc_files[device_id] = list(files)
+            return list(self.rmc_files[device_id])
 
     def update_parameter(self, device_id, key, value):
         """
