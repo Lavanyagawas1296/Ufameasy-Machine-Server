@@ -14,7 +14,8 @@ def get_conn():
 
 
 def init_db():
-    with sqlite3.connect(DB_PATH) as conn:
+    conn = sqlite3.connect(DB_PATH)
+    try:
         conn.execute(
             """
             CREATE TABLE IF NOT EXISTS param_snapshots (
@@ -107,11 +108,54 @@ def init_db():
             )
             """
         )
+        conn.execute(
+            """
+            CREATE TABLE IF NOT EXISTS rmc_commands (
+                cmd_id TEXT PRIMARY KEY,
+                device_id TEXT NOT NULL,
+                action TEXT NOT NULL,
+                params_json TEXT NOT NULL,
+                issued_by TEXT NOT NULL,
+                issued_at TEXT NOT NULL,
+                status TEXT NOT NULL,
+                reason_code TEXT,
+                updated_at TEXT NOT NULL
+            )
+            """
+        )
+        conn.execute(
+            """
+            CREATE TABLE IF NOT EXISTS rmc_command_history (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                cmd_id TEXT NOT NULL,
+                status TEXT NOT NULL,
+                reason_code TEXT,
+                message TEXT,
+                recorded_at TEXT NOT NULL,
+                FOREIGN KEY (cmd_id) REFERENCES rmc_commands (cmd_id)
+            )
+            """
+        )
+        conn.execute(
+            """
+            CREATE TABLE IF NOT EXISTS rmc_control_locks (
+                device_id TEXT PRIMARY KEY,
+                issued_by TEXT NOT NULL,
+                acquired_at TEXT NOT NULL,
+                touched_at TEXT NOT NULL
+            )
+            """
+        )
+        conn.commit()
+    finally:
+        conn.close()
 
 
 def register_device(device_id, name):
     now = datetime.now(timezone.utc).isoformat()
-    with sqlite3.connect(DB_PATH) as conn:
+    conn = None
+    try:
+        conn = sqlite3.connect(DB_PATH)
         conn.execute(
             """
             INSERT INTO devices (device_id, name, last_seen)
@@ -122,6 +166,10 @@ def register_device(device_id, name):
             """,
             (device_id, name, now),
         )
+        conn.commit()
+    finally:
+        if conn is not None:
+            conn.close()
 
 
 def create_session(session_id, device_id, file_name, total_layers):
@@ -345,3 +393,143 @@ def get_runtime_latest(session_id):
             (session_id,),
         ).fetchone()
     return dict(row) if row is not None else None
+
+
+def create_rmc_command(command: dict) -> None:
+    conn = None
+    now = datetime.now(timezone.utc).isoformat()
+    try:
+        conn = get_conn()
+        conn.execute(
+            """INSERT INTO rmc_commands
+               (cmd_id, device_id, action, params_json, issued_by, issued_at, status, reason_code, updated_at)
+               VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+            (command["cmd_id"], command["device_id"], command["action"],
+             json.dumps(command["params"], sort_keys=True), command["issued_by"],
+             command["issued_at"], "sent", None, now),
+        )
+        conn.execute(
+            "INSERT INTO rmc_command_history (cmd_id, status, reason_code, message, recorded_at) VALUES (?, ?, ?, ?, ?)",
+            (command["cmd_id"], "sent", None, "Command published", now),
+        )
+        conn.commit()
+    finally:
+        if conn is not None:
+            conn.close()
+
+
+def update_rmc_command(cmd_id: str, status: str, reason_code: str | None = None, message: str | None = None) -> bool:
+    conn = None
+    now = datetime.now(timezone.utc).isoformat()
+    try:
+        conn = get_conn()
+        changed = conn.execute(
+            "UPDATE rmc_commands SET status = ?, reason_code = ?, updated_at = ? WHERE cmd_id = ?",
+            (status, reason_code, now, cmd_id),
+        ).rowcount
+        if changed:
+            conn.execute(
+                "INSERT INTO rmc_command_history (cmd_id, status, reason_code, message, recorded_at) VALUES (?, ?, ?, ?, ?)",
+                (cmd_id, status, reason_code, message, now),
+            )
+        conn.commit()
+        return bool(changed)
+    finally:
+        if conn is not None:
+            conn.close()
+
+
+def get_rmc_command(cmd_id: str) -> dict | None:
+    conn = None
+    try:
+        conn = get_conn()
+        row = conn.execute("SELECT * FROM rmc_commands WHERE cmd_id = ?", (cmd_id,)).fetchone()
+        if row is None:
+            return None
+        result = dict(row)
+        result["params"] = json.loads(result.pop("params_json"))
+        history = conn.execute(
+            "SELECT status, reason_code, message, recorded_at FROM rmc_command_history WHERE cmd_id = ? ORDER BY id",
+            (cmd_id,),
+        ).fetchall()
+        result["history"] = [dict(item) for item in history]
+        return result
+    finally:
+        if conn is not None:
+            conn.close()
+
+
+def list_rmc_commands(device_id: str, limit: int = 50) -> list[dict]:
+    conn = None
+    try:
+        conn = get_conn()
+        rows = conn.execute(
+            "SELECT * FROM rmc_commands WHERE device_id = ? ORDER BY issued_at DESC LIMIT ?",
+            (device_id, limit),
+        ).fetchall()
+        return [{**dict(row), "params": json.loads(row["params_json"])} for row in rows]
+    finally:
+        if conn is not None:
+            conn.close()
+
+
+def mark_rmc_inflight_unknown() -> int:
+    conn = None
+    now = datetime.now(timezone.utc).isoformat()
+    try:
+        conn = get_conn()
+        rows = conn.execute(
+            "SELECT cmd_id FROM rmc_commands WHERE status IN ('sent', 'received', 'accepted')"
+        ).fetchall()
+        for row in rows:
+            cmd_id = row["cmd_id"]
+            conn.execute(
+                "UPDATE rmc_commands SET status = 'unknown', updated_at = ? WHERE cmd_id = ?", (now, cmd_id)
+            )
+            conn.execute(
+                "INSERT INTO rmc_command_history (cmd_id, status, reason_code, message, recorded_at) VALUES (?, ?, ?, ?, ?)",
+                (cmd_id, "unknown", None, "Server restarted while command was in flight", now),
+            )
+        conn.commit()
+        return len(rows)
+    finally:
+        if conn is not None:
+            conn.close()
+
+
+def get_rmc_lock(device_id: str) -> dict | None:
+    conn = None
+    try:
+        conn = get_conn()
+        row = conn.execute("SELECT * FROM rmc_control_locks WHERE device_id = ?", (device_id,)).fetchone()
+        return dict(row) if row else None
+    finally:
+        if conn is not None:
+            conn.close()
+
+
+def upsert_rmc_lock(device_id: str, issued_by: str) -> None:
+    conn = None
+    now = datetime.now(timezone.utc).isoformat()
+    try:
+        conn = get_conn()
+        conn.execute(
+            """INSERT INTO rmc_control_locks (device_id, issued_by, acquired_at, touched_at) VALUES (?, ?, ?, ?)
+               ON CONFLICT(device_id) DO UPDATE SET issued_by = excluded.issued_by, touched_at = excluded.touched_at""",
+            (device_id, issued_by, now, now),
+        )
+        conn.commit()
+    finally:
+        if conn is not None:
+            conn.close()
+
+
+def delete_rmc_lock(device_id: str) -> None:
+    conn = None
+    try:
+        conn = get_conn()
+        conn.execute("DELETE FROM rmc_control_locks WHERE device_id = ?", (device_id,))
+        conn.commit()
+    finally:
+        if conn is not None:
+            conn.close()

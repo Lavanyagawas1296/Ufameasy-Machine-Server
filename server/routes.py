@@ -23,13 +23,20 @@ from datetime import datetime, timezone
 from pathlib import Path
 from fastapi.responses import FileResponse
 
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, Body, Depends, Header, HTTPException
 from fastapi.responses import Response, StreamingResponse
 from server.state_store import state
 from server.db import get_sessions_by_device, get_runtime_latest
 from server.media_gateway import health as media_health, stream_for, stream_provider
+from server import db
+from server.rmc_auth import Principal, require_role, resolve_principal
+from server.rmc_service import rmc_service
 
 router = APIRouter()
+
+
+def _rmc_principal(authorization: str | None = Header(default=None)) -> Principal:
+    return resolve_principal(authorization)
 
 REMOTE_LOG_PATH = "ufameasy_sys.csv"
 FTP_PORT = 2121
@@ -781,5 +788,51 @@ def get_session_replay(session_id: str):
         }
     except Exception as e:
         return {"error": str(e)}, 500
+
+
+# ---------------------------------------------------------------------------
+# Remote Machine Control API
+# ---------------------------------------------------------------------------
+
+@router.post("/api/devices/{device_id}/commands")
+def issue_rmc_command(device_id: str, body: dict = Body(...), principal: Principal = Depends(_rmc_principal)):
+    require_role(principal, "operator", "admin")
+    return rmc_service.issue_command(device_id, body, principal.name)
+
+
+@router.get("/api/devices/{device_id}/commands/{cmd_id}")
+def get_rmc_command(device_id: str, cmd_id: str, principal: Principal = Depends(_rmc_principal)):
+    command = db.get_rmc_command(cmd_id)
+    if command is None or command["device_id"] != device_id:
+        raise HTTPException(status_code=404, detail="Command not found")
+    return command
+
+
+@router.get("/api/devices/{device_id}/commands")
+def list_rmc_commands(device_id: str, limit: int = 50, principal: Principal = Depends(_rmc_principal)):
+    return db.list_rmc_commands(device_id, max(1, min(limit, 100)))
+
+
+@router.post("/api/devices/{device_id}/lock")
+def acquire_rmc_lock(device_id: str, body: dict = Body(default={}), principal: Principal = Depends(_rmc_principal)):
+    require_role(principal, "operator", "admin")
+    override = bool(body.get("override", False))
+    if override:
+        require_role(principal, "admin")
+    return rmc_service.acquire_lock(device_id, principal.name, admin_override=override)
+
+
+@router.delete("/api/devices/{device_id}/lock")
+def release_rmc_lock(device_id: str, override: bool = False, principal: Principal = Depends(_rmc_principal)):
+    require_role(principal, "operator", "admin")
+    if override:
+        require_role(principal, "admin")
+    rmc_service.release_lock(device_id, principal.name, admin_override=override)
+    return {"released": True}
+
+
+@router.get("/api/devices/{device_id}/lock")
+def get_rmc_lock(device_id: str, principal: Principal = Depends(_rmc_principal)):
+    return rmc_service.get_lock(device_id) or {"device_id": device_id, "issued_by": None}
 
 

@@ -115,6 +115,7 @@ def on_message(client, userdata, msg):
 
             if channel == STATE_SEGMENT:
                 updated = state.update_rmc_state(device_id, data)
+                register_device(device_id, device_id)
                 _broadcast({
                     "type": "rmc_state",
                     "device_id": device_id,
@@ -134,6 +135,8 @@ def on_message(client, userdata, msg):
                 return
 
             if channel == ACK_SEGMENT:
+                from server.rmc_service import rmc_service
+                rmc_service.handle_ack(device_id, data)
                 _broadcast({
                     "type": "rmc_ack",
                     "device_id": device_id,
@@ -426,6 +429,17 @@ def start_mqtt():
     mqtt_event_loop = asyncio.get_event_loop()
     client.connect("localhost", 1883, 60)
     client.loop_start()
+
+
+def publish_rmc_command(device_id: str, command: dict) -> bool:
+    """Publish exactly one non-retained, device-scoped RMC command."""
+    try:
+        topic = f"ufameasy/{device_id}/rmc/cmd"
+        info = client.publish(topic, json.dumps(command), qos=1, retain=False)
+        return info.rc == mqtt.MQTT_ERR_SUCCESS
+    except Exception as exc:
+        print(f"[MQTT] publish_rmc_command failed for {device_id}: {exc}")
+        return False
 
 
 

@@ -15,6 +15,8 @@ from server.mqtt_client import start_mqtt
 from server.routes import router
 from server.ws_manager import manager
 from server.db import init_db
+from server.db import mark_rmc_inflight_unknown
+from server.rmc_auth import resolve_principal
 
 
 @asynccontextmanager
@@ -33,6 +35,7 @@ async def lifespan(app: FastAPI):
     """
     # MQTT must start before requests are served so API reads see live updates.
     init_db()
+    mark_rmc_inflight_unknown()
     start_mqtt()
     yield
 
@@ -95,6 +98,13 @@ async def websocket_endpoint(websocket: WebSocket):
     from server.mqtt_client import _active_sessions
     from server.db import get_session_by_id
     import json, asyncio
+    try:
+        resolve_principal(websocket.headers.get("authorization") or (
+            f"Bearer {websocket.query_params['token']}" if websocket.query_params.get("token") else None
+        ))
+    except Exception:
+        await websocket.close(code=1008)
+        return
     await manager.connect(websocket)
     await asyncio.sleep(0.1)
     try:
