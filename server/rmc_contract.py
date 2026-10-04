@@ -9,6 +9,7 @@ because the workbench and machine server are separate deployments.
 from __future__ import annotations
 
 from copy import deepcopy
+import os
 
 RMC_TOPIC_SEGMENT = "rmc"
 CMD_SEGMENT = "cmd"
@@ -19,9 +20,12 @@ FILES_SEGMENT = "files"
 COMMAND_ACTIONS = ("load", "start", "pause", "resume", "stop")
 JOB_STATES = ("idle", "loaded", "running", "paused", "fault", "offline")
 REMOTE_CONTROL_MODES = ("off", "ask")
-LOAD_SOURCES = ("ftp", "local")
+LOAD_SOURCES = ("ftp", "local", "server")
 COMMAND_SOURCE = "remote"
-ACK_STATUSES = ("received", "accepted", "rejected", "expired", "done", "failed")
+ACK_STATUSES = ("received", "accepted", "progress", "rejected", "expired", "done", "failed")
+TERMINAL_ACK_STATUSES = ("rejected", "expired", "done", "failed")
+NON_TERMINAL_ACK_STATUSES = ("received", "accepted", "progress")
+PROGRESS_STAGES = ("downloading", "verifying")
 REASON_CODES = (
     "INVALID_STATE",
     "NO_FILE",
@@ -36,6 +40,12 @@ REASON_CODES = (
     "DUPLICATE",
     "UNAUTHORIZED",
     "LOCKED_BY_OTHER",
+    "FILE_TOO_LARGE",
+    "UNSUPPORTED_TYPE",
+    "FILE_CHANGED",
+    "DISK_FULL",
+    "DOWNLOAD_TIMEOUT",
+    "TRANSFER_DENIED",
 )
 
 COMMAND_REQUIRED_FIELDS = (
@@ -89,6 +99,10 @@ DEFAULT_RMC_STATE = {
 STOP_REQUIRES_CONFIRM = False
 CONFIRM_TIMEOUT_S = 30
 CMD_TTL_S = 60
+MAX_JOB_FILE_MB = int(os.getenv("MAX_JOB_FILE_MB", "200"))
+ALLOWED_EXTENSIONS = (".gcode", ".nc")
+RMC_TRANSFER_SECRET = os.getenv("RMC_TRANSFER_SECRET", "")
+DOWNLOAD_ALLOWANCE_S = int(os.getenv("RMC_DOWNLOAD_ALLOWANCE_S", "300"))
 
 
 def rmc_topic(device_id: str, channel: str) -> str:

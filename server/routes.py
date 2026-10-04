@@ -23,7 +23,8 @@ from datetime import datetime, timezone
 from pathlib import Path
 from fastapi.responses import FileResponse
 
-from fastapi import APIRouter, Body, Depends, Header, HTTPException
+from fastapi import APIRouter, Body, Depends, File, Header, HTTPException, Query, Request, UploadFile
+from server.rmc_transfer import require_transfer_ready, save_uploaded_file, verify_download_token
 from fastapi.responses import Response, StreamingResponse
 from server.state_store import state
 from server.db import get_sessions_by_device, get_runtime_latest
@@ -795,9 +796,15 @@ def get_session_replay(session_id: str):
 # ---------------------------------------------------------------------------
 
 @router.post("/api/devices/{device_id}/commands")
-def issue_rmc_command(device_id: str, body: dict = Body(...), principal: Principal = Depends(_rmc_principal)):
+def issue_rmc_command(
+    device_id: str,
+    request: Request,
+    body: dict = Body(...),
+    principal: Principal = Depends(_rmc_principal),
+):
     require_role(principal, "operator", "admin")
-    return rmc_service.issue_command(device_id, body, principal.name)
+    base_url = str(request.base_url).rstrip("/")
+    return rmc_service.issue_command(device_id, body, principal.name, request_base_url=base_url)
 
 
 @router.get("/api/devices/{device_id}/commands/{cmd_id}")
@@ -834,5 +841,85 @@ def release_rmc_lock(device_id: str, override: bool = False, principal: Principa
 @router.get("/api/devices/{device_id}/lock")
 def get_rmc_lock(device_id: str, principal: Principal = Depends(_rmc_principal)):
     return rmc_service.get_lock(device_id) or {"device_id": device_id, "issued_by": None}
+
+
+# ---------------------------------------------------------------------------
+# RMC Server File Registry & Transfer Endpoints (Phase 6A)
+# ---------------------------------------------------------------------------
+
+@router.post("/api/rmc/files")
+async def upload_rmc_file(
+    file: UploadFile = File(...),
+    principal: Principal = Depends(_rmc_principal),
+):
+    require_role(principal, "operator", "admin")
+    return await save_uploaded_file(file, principal.name)
+
+
+@router.get("/api/rmc/files")
+def list_rmc_files(principal: Principal = Depends(_rmc_principal)):
+    return db.list_rmc_server_files()
+
+
+@router.delete("/api/rmc/files/{file_id}")
+def delete_rmc_file(file_id: str, principal: Principal = Depends(_rmc_principal)):
+    require_role(principal, "operator", "admin")
+    file_record = db.get_rmc_server_file(file_id)
+    if not file_record:
+        raise HTTPException(
+            status_code=404,
+            detail={"reason_code": "FILE_NOT_FOUND", "message": "File not found"},
+        )
+    if principal.role != "admin" and principal.name != file_record["uploaded_by"]:
+        raise HTTPException(
+            status_code=403,
+            detail={"reason_code": "TRANSFER_DENIED", "message": "Only admin or uploader may delete file"},
+        )
+    if db.is_rmc_file_in_flight(file_id):
+        raise HTTPException(
+            status_code=409,
+            detail={"reason_code": "INVALID_STATE", "message": "File is referenced by an in-flight command"},
+        )
+    disk_path = db.RMC_FILES_DIR / file_record["stored_name"]
+    disk_path.unlink(missing_ok=True)
+    db.delete_rmc_server_file(file_id)
+    return {"deleted": file_id}
+
+
+@router.get("/api/rmc/files/{file_id}/download")
+def download_rmc_file(
+    file_id: str,
+    token: str = Query(...),
+    device_id: str | None = Query(default=None),
+):
+    require_transfer_ready()
+    valid, tok_dev_or_reason = verify_download_token(file_id, token, device_id)
+    if not valid:
+        raise HTTPException(
+            status_code=403,
+            detail={"reason_code": "TRANSFER_DENIED", "message": tok_dev_or_reason},
+        )
+    file_record = db.get_rmc_server_file(file_id)
+    if not file_record:
+        raise HTTPException(
+            status_code=404,
+            detail={"reason_code": "FILE_NOT_FOUND", "message": "File not found"},
+        )
+    disk_path = db.RMC_FILES_DIR / file_record["stored_name"]
+    if not disk_path.is_file():
+        raise HTTPException(
+            status_code=404,
+            detail={"reason_code": "FILE_NOT_FOUND", "message": "Physical file missing from disk"},
+        )
+    if disk_path.stat().st_size != file_record["size"]:
+        raise HTTPException(
+            status_code=500,
+            detail={"reason_code": "FILE_CHANGED", "message": "Physical file size mismatch"},
+        )
+    return FileResponse(
+        path=disk_path,
+        filename=file_record["display_name"],
+        media_type="application/octet-stream",
+    )
 
 

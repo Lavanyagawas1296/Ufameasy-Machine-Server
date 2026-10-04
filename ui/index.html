@@ -1539,6 +1539,388 @@
       white-space: nowrap;
     }
 
+    /* Remote Machine Control (RMC) Dashboard UI */
+    .rmc-card {
+      position: relative;
+    }
+    .rmc-alert-banner {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 10px 14px;
+      border-radius: 8px;
+      margin-bottom: 14px;
+      font-size: 12px;
+      font-weight: 600;
+    }
+    .rmc-offline-banner {
+      background: rgba(255, 92, 114, 0.12);
+      border: 1px solid var(--red);
+      color: #ff8595;
+    }
+    .rmc-locked-banner {
+      background: rgba(245, 185, 66, 0.12);
+      border: 1px solid var(--yellow);
+      color: #ffd066;
+    }
+    .rmc-meta-grid {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 10px;
+      margin: 14px 0;
+    }
+    @media (max-width: 768px) {
+      .rmc-meta-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
+    }
+    .rmc-meta-item {
+      background: var(--panel2);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 10px 12px;
+    }
+    .rmc-meta-item .lbl {
+      font-size: 10px;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      margin-bottom: 4px;
+    }
+    .rmc-meta-item .val {
+      font-size: 13px;
+      font-weight: 700;
+      color: #fff;
+      word-break: break-all;
+    }
+    .rmc-tag {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      padding: 3px 8px;
+      border-radius: 4px;
+      font-size: 11px;
+      font-weight: 600;
+      white-space: nowrap;
+    }
+    .rmc-tag.tag-busy {
+      background: rgba(245, 185, 66, 0.15);
+      color: var(--yellow);
+      border: 1px solid rgba(245, 185, 66, 0.4);
+    }
+    .rmc-tag.tag-ask {
+      background: rgba(37, 185, 240, 0.15);
+      color: var(--accent);
+      border: 1px solid rgba(37, 185, 240, 0.4);
+    }
+    .rmc-tag.tag-off {
+      background: rgba(130, 154, 177, 0.15);
+      color: var(--muted);
+      border: 1px solid var(--border);
+    }
+    .rmc-actions-bar {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      flex-wrap: wrap;
+      margin: 16px 0;
+    }
+    .rmc-btn {
+      padding: 10px 18px;
+      border-radius: 6px;
+      font-size: 13px;
+      font-weight: 700;
+      font-family: var(--font-ui);
+      border: 0;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      transition: all 0.15s ease;
+      min-height: 42px;
+      user-select: none;
+    }
+    .rmc-btn:disabled {
+      opacity: 0.35;
+      cursor: not-allowed;
+      filter: grayscale(0.8);
+      pointer-events: auto;
+    }
+    .rmc-btn-load {
+      background: var(--panel2);
+      color: var(--accent);
+      border: 1px solid var(--accent);
+    }
+    .rmc-btn-load:hover:not(:disabled) {
+      background: var(--accent-soft);
+      transform: translateY(-1px);
+    }
+    .rmc-btn-start {
+      background: var(--green);
+      color: #000;
+    }
+    .rmc-btn-start:hover:not(:disabled) {
+      background: #26f296;
+      transform: translateY(-1px);
+    }
+    .rmc-btn-pause {
+      background: var(--yellow);
+      color: #000;
+    }
+    .rmc-btn-pause:hover:not(:disabled) {
+      background: #ffd066;
+      transform: translateY(-1px);
+    }
+    .rmc-btn-resume {
+      background: var(--accent);
+      color: #000;
+    }
+    .rmc-btn-resume:hover:not(:disabled) {
+      background: #45c5f3;
+      transform: translateY(-1px);
+    }
+    .rmc-btn-stop {
+      background: var(--red);
+      color: #fff;
+    }
+    .rmc-btn-stop:hover:not(:disabled) {
+      background: #ff7588;
+      transform: translateY(-1px);
+    }
+    .rmc-btn.pending {
+      animation: rmcBtnPulse 1.5s infinite;
+    }
+    @keyframes rmcBtnPulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.65; }
+    }
+    .rmc-timeline-wrap {
+      background: #081627;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 16px;
+      margin-top: 14px;
+    }
+    .rmc-timeline-steps {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      position: relative;
+    }
+    .rmc-timeline-step {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 6px;
+      z-index: 2;
+      flex: 1;
+    }
+    .rmc-step-dot {
+      width: 26px;
+      height: 26px;
+      border-radius: 50%;
+      background: var(--panel2);
+      border: 2px solid var(--border-light);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 11px;
+      font-weight: 700;
+      color: var(--muted);
+      transition: all 0.2s ease;
+    }
+    .rmc-step-label {
+      font-size: 11px;
+      font-weight: 600;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+    }
+    .rmc-timeline-step.active .rmc-step-dot {
+      background: var(--accent);
+      border-color: #fff;
+      color: #000;
+      box-shadow: 0 0 10px rgba(37, 185, 240, 0.6);
+    }
+    .rmc-timeline-step.active .rmc-step-label {
+      color: var(--accent);
+      font-weight: 700;
+    }
+    .rmc-timeline-step.done .rmc-step-dot {
+      background: var(--green);
+      border-color: var(--green);
+      color: #000;
+    }
+    .rmc-timeline-step.done .rmc-step-label {
+      color: var(--green);
+    }
+    .rmc-timeline-step.failed .rmc-step-dot {
+      background: var(--red);
+      border-color: var(--red);
+      color: #fff;
+    }
+    .rmc-timeline-step.failed .rmc-step-label {
+      color: var(--red);
+    }
+    .rmc-timeline-bar {
+      position: absolute;
+      top: 13px;
+      left: 12%;
+      right: 12%;
+      height: 2px;
+      background: var(--border-light);
+      z-index: 1;
+    }
+    .rmc-timeline-bar-fill {
+      height: 100%;
+      background: var(--accent);
+      width: 0%;
+      transition: width 0.3s ease;
+    }
+    .rmc-timeline-msg {
+      margin-top: 12px;
+      font-size: 12px;
+      color: var(--muted);
+      text-align: center;
+      min-height: 18px;
+    }
+    .rmc-audit-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 12px;
+    }
+    .rmc-audit-table th {
+      text-align: left;
+      padding: 10px 14px;
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: var(--muted);
+      border-bottom: 1px solid var(--border);
+      background: rgba(16, 33, 54, 0.4);
+    }
+    .rmc-audit-table td {
+      padding: 10px 14px;
+      border-bottom: 1px solid var(--border);
+      color: var(--text);
+    }
+    .rmc-audit-table tr:hover td {
+      background: rgba(37, 185, 240, 0.04);
+    }
+    .rmc-modal-overlay {
+      display: none;
+      position: fixed;
+      inset: 0;
+      z-index: 9999;
+      background: rgba(0, 5, 15, 0.75);
+      backdrop-filter: blur(4px);
+      align-items: center;
+      justify-content: center;
+      padding: 16px;
+    }
+    .rmc-modal-box {
+      background: linear-gradient(145deg, #0b1e30, #061525);
+      border: 1px solid var(--border-light);
+      border-radius: 14px;
+      padding: 24px;
+      width: 540px;
+      max-width: 95vw;
+      max-height: 90vh;
+      display: flex;
+      flex-direction: column;
+      box-shadow: 0 24px 64px rgba(0,0,0,0.6), 0 0 0 1px rgba(37,185,240,0.15);
+      animation: ipModalIn .22s cubic-bezier(.22,1,.36,1);
+    }
+    .rmc-modal-head {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 16px;
+      border-bottom: 1px solid var(--border);
+      padding-bottom: 12px;
+    }
+    .rmc-modal-head h3 {
+      font-size: 16px;
+      font-weight: 700;
+      color: #fff;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .rmc-modal-close {
+      background: transparent;
+      border: 0;
+      color: var(--muted);
+      cursor: pointer;
+      font-size: 20px;
+      line-height: 1;
+      padding: 4px;
+      border-radius: 4px;
+    }
+    .rmc-modal-close:hover {
+      color: #fff;
+      background: var(--panel2);
+    }
+    .rmc-tabs {
+      display: flex;
+      gap: 6px;
+      margin-bottom: 16px;
+      border-bottom: 1px solid var(--border);
+      padding-bottom: 8px;
+    }
+    .rmc-tab-btn {
+      padding: 6px 14px;
+      background: transparent;
+      border: 1px solid transparent;
+      color: var(--muted);
+      border-radius: 6px;
+      font-size: 12px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.15s ease;
+    }
+    .rmc-tab-btn.active {
+      background: var(--panel2);
+      border-color: var(--border-light);
+      color: var(--accent);
+    }
+    .rmc-file-list {
+      max-height: 260px;
+      overflow-y: auto;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      margin-bottom: 16px;
+    }
+    .rmc-file-item {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 10px 14px;
+      border-bottom: 1px solid var(--border);
+      cursor: pointer;
+      transition: background 0.15s;
+    }
+    .rmc-file-item:last-child {
+      border-bottom: 0;
+    }
+    .rmc-file-item:hover {
+      background: var(--panel2);
+    }
+    .rmc-file-item.selected {
+      background: rgba(37, 185, 240, 0.12);
+      border-left: 3px solid var(--accent);
+    }
+    .rmc-stage-bar {
+      margin-bottom: 14px;
+      padding: 8px 12px;
+      border-radius: 6px;
+      background: var(--panel2);
+      border: 1px solid var(--border);
+      font-size: 12px;
+      color: var(--muted);
+      display: none;
+    }
+
     /* Mobile Bottom Navigation Bar (Hidden on desktop & tablet) */
     .mobile-bottom-nav {
       display: none;
@@ -2454,130 +2836,158 @@
           <h1>Control Panel</h1>
           <p>Load G-code files, inspect toolpaths, and operate print jobs directly from the dashboard</p>
         </div>
-        <div style="display:flex;align-items:center;gap:12px;">
-          <button class="action-btn" id="cpLoadSampleBtn" type="button" title="Load bundled sample test file">
-            <svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
-            <span>Load Sample (pf_gas_test.nc)</span>
-          </button>
+        <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
+          <div id="rmcLockStatusWrap" style="display:flex;align-items:center;gap:8px;">
+            <span id="rmcLockBadge" class="rmc-tag tag-off" title="Control lock state">
+              <svg width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+              <span id="rmcLockText">Unlocked</span>
+            </span>
+            <button class="action-btn primary" id="rmcTakeLockBtn" type="button" title="Acquire exclusive control lock for this machine">
+              <span>Take Control</span>
+            </button>
+            <button class="action-btn" id="rmcReleaseLockBtn" type="button" style="display:none;" title="Release exclusive control lock">
+              <span>Release Control</span>
+            </button>
+          </div>
         </div>
       </div>
 
-      <div class="control-grid">
-        <!-- Card 1: G-Code File Loader -->
-        <div class="panel-card">
-          <div class="card-head">
-            <div class="card-title">
-              <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="12" y1="18" x2="12" y2="12"/><line x1="9" y1="15" x2="15" y2="15"/></svg>
-              <span>G-Code File Source</span>
-            </div>
-            <span id="cpUploadStatus" style="font-size:11px;color:var(--muted);">No file loaded</span>
-          </div>
-          <div class="panel-body">
-            <!-- Dropzone -->
-            <div id="cpDropzone" class="cp-dropzone">
-              <input type="file" id="cpFileInput" accept=".gcode,.nc,.txt,.tap" style="display:none;">
-              <div class="cp-dropzone-icon">
-                <svg width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
-              </div>
-              <div style="font-weight:700;font-size:13px;color:#fff;">Drag & drop G-code file here</div>
-              <div style="font-size:11px;color:var(--muted);">or click to browse from your computer (.gcode, .nc)</div>
-            </div>
+      <!-- Offline / Stale Banner -->
+      <div id="rmcOfflineBanner" class="rmc-alert-banner rmc-offline-banner" style="display:none;" role="alert">
+        <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/><line x1="1" y1="1" x2="23" y2="23"/></svg>
+        <span id="rmcOfflineText">Machine is offline. Remote controls are disabled.</span>
+      </div>
 
-            <!-- Pre-flight Metadata -->
-            <div class="cp-meta-grid">
-              <div class="cp-meta-item">
-                <div class="lbl">Active File</div>
-                <div class="val" id="cpFileName" style="color:var(--accent);word-break:break-all;">&mdash;</div>
-              </div>
-              <div class="cp-meta-item">
-                <div class="lbl">File Size</div>
-                <div class="val" id="cpFileSize">&mdash;</div>
-              </div>
-              <div class="cp-meta-item">
-                <div class="lbl">Total Lines</div>
-                <div class="val" id="cpTotalLines">&mdash;</div>
-              </div>
-              <div class="cp-meta-item">
-                <div class="lbl">Est. Runtime</div>
-                <div class="val" id="cpEstDuration" style="color:var(--green);">&mdash;</div>
-              </div>
-            </div>
-          </div>
-        </div>
+      <!-- Locked by Other Banner -->
+      <div id="rmcLockedByOtherBanner" class="rmc-alert-banner rmc-locked-banner" style="display:none;" role="alert">
+        <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+        <span id="rmcLockedByOtherText">Machine control is locked by another operator. Remote actions disabled.</span>
+      </div>
 
-        <!-- Card 2: Job Execution & Telemetry -->
-        <div class="panel-card">
-          <div class="card-head">
+      <div class="control-grid" style="grid-template-columns:1fr;margin-bottom:20px;">
+        <!-- Remote Machine Control Job Card -->
+        <div class="panel-card rmc-card" id="rmcJobCard">
+          <div class="card-head" style="justify-content:space-between;flex-wrap:wrap;gap:10px;">
             <div class="card-title">
               <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><polygon points="5 3 19 12 5 21 5 3"/></svg>
-              <span>Job Execution</span>
+              <span>Remote Machine Control</span>
             </div>
-            <span id="cpJobBadge"><span class="status-pill off">IDLE</span></span>
+            <div style="display:flex;align-items:center;gap:10px;">
+              <span id="rmcJobBadge"><span class="status-pill off"><span class="badge-icon">⚡✕</span> OFFLINE</span></span>
+            </div>
           </div>
           <div class="panel-body">
-            <!-- Progress Head -->
+            <!-- Pre-flight Metadata -->
+            <div class="rmc-meta-grid">
+              <div class="rmc-meta-item">
+                <div class="lbl">Active File</div>
+                <div class="val" id="rmcFileName" style="color:var(--accent);">—</div>
+              </div>
+              <div class="rmc-meta-item">
+                <div class="lbl">Controlled By</div>
+                <div class="val" id="rmcControlledBy">—</div>
+              </div>
+              <div class="rmc-meta-item">
+                <div class="lbl">Remote Mode</div>
+                <div class="val" id="rmcRemoteMode"><span class="rmc-tag tag-off">Mode: Off</span></div>
+              </div>
+              <div class="rmc-meta-item">
+                <div class="lbl">Local Operator</div>
+                <div class="val" id="rmcLocalBusy"><span class="rmc-tag tag-off">Idle</span></div>
+              </div>
+            </div>
+
+            <!-- Progress Head & Bar -->
             <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:8px;">
               <div>
-                <span id="cpLineCounter" style="font-family:var(--font-mono);font-size:14px;font-weight:700;color:#fff;">Line 0 / 0</span>
-                <span id="cpElapsedText" style="font-size:11px;color:var(--muted);margin-left:12px;">Elapsed: 00:00:00</span>
+                <span id="rmcProgressLabel" style="font-size:12px;color:var(--muted);font-weight:600;">Job Progress</span>
+                <span id="rmcStateDetail" style="font-size:11px;color:var(--muted);margin-left:10px;"></span>
               </div>
-              <span id="cpProgressPct" style="font-family:var(--font-mono);font-size:22px;font-weight:800;color:var(--accent);">0.0%</span>
+              <span id="rmcProgressPct" style="font-family:var(--font-mono);font-size:22px;font-weight:800;color:var(--accent);">0.0%</span>
             </div>
-
-            <!-- Progress Bar -->
             <div class="kpi-bar-wrap" style="height:10px;">
-              <div id="cpProgressBar" class="kpi-bar-fill" style="width:0%;"></div>
+              <div id="rmcProgressBar" class="kpi-bar-fill" style="width:0%;"></div>
             </div>
 
-            <!-- Active G-Code line -->
-            <div style="margin-top:14px;">
-              <div style="font-size:10px;text-transform:uppercase;color:var(--muted);letter-spacing:0.05em;margin-bottom:4px;">Executing Command:</div>
-              <div id="cpCurrentCmd" class="cp-cmd-badge">Idle</div>
-            </div>
-
-            <!-- Controls Toolbar -->
-            <div class="cp-actions-bar">
-              <button id="cpStartBtn" class="cp-btn cp-btn-start" type="button" disabled>
-                <svg width="14" height="14" fill="currentColor" viewBox="0 0 24 24"><polygon points="5 3 19 12 5 21 5 3"/></svg>
-                <span>Start</span>
+            <!-- 5 Command Actions Bar -->
+            <div class="rmc-actions-bar" role="toolbar" aria-label="Machine execution controls">
+              <button id="rmcBtnLoad" class="rmc-btn rmc-btn-load" type="button" aria-label="Load G-code file" disabled title="Machine offline">
+                <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+                <span class="rmc-btn-text">Load</span>
               </button>
-              <button id="cpPauseBtn" class="cp-btn cp-btn-pause" type="button" disabled>
+              <button id="rmcBtnStart" class="rmc-btn rmc-btn-start" type="button" aria-label="Start job" disabled title="Machine offline">
+                <svg width="14" height="14" fill="currentColor" viewBox="0 0 24 24"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+                <span class="rmc-btn-text">Start</span>
+              </button>
+              <button id="rmcBtnPause" class="rmc-btn rmc-btn-pause" type="button" aria-label="Pause job" disabled title="Machine offline">
                 <svg width="14" height="14" fill="currentColor" viewBox="0 0 24 24"><rect x="6" y="4" width="4" height="16"/><rect x="14" y="4" width="4" height="16"/></svg>
-                <span>Pause</span>
+                <span class="rmc-btn-text">Pause</span>
               </button>
-              <button id="cpResumeBtn" class="cp-btn cp-btn-resume" type="button" disabled style="display:none;">
+              <button id="rmcBtnResume" class="rmc-btn rmc-btn-resume" type="button" aria-label="Resume job" disabled title="Machine offline">
                 <svg width="14" height="14" fill="currentColor" viewBox="0 0 24 24"><polygon points="5 3 19 12 5 21 5 3"/></svg>
-                <span>Resume</span>
+                <span class="rmc-btn-text">Resume</span>
               </button>
-              <button id="cpAbortBtn" class="cp-btn cp-btn-abort" type="button" disabled>
+              <button id="rmcBtnStop" class="rmc-btn rmc-btn-stop" type="button" aria-label="Stop job" disabled title="Machine offline">
                 <svg width="14" height="14" fill="currentColor" viewBox="0 0 24 24"><rect x="4" y="4" width="16" height="16" rx="2"/></svg>
-                <span>Abort</span>
+                <span class="rmc-btn-text">Stop</span>
               </button>
-              <button id="cpResetBtn" class="cp-btn cp-btn-reset" type="button" disabled>
-                <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>
-                <span>Reset</span>
-              </button>
+            </div>
+
+            <!-- Command Lifecycle Timeline -->
+            <div class="rmc-timeline-wrap" id="rmcTimelineSection">
+              <div class="rmc-timeline-steps">
+                <div class="rmc-timeline-bar"><div id="rmcTimelineBarFill" class="rmc-timeline-bar-fill"></div></div>
+                <div class="rmc-timeline-step" id="rmcStepSent">
+                  <div class="rmc-step-dot" id="rmcDotSent">1</div>
+                  <div class="rmc-step-label">Sent</div>
+                </div>
+                <div class="rmc-timeline-step" id="rmcStepReceived">
+                  <div class="rmc-step-dot" id="rmcDotReceived">2</div>
+                  <div class="rmc-step-label">Received</div>
+                </div>
+                <div class="rmc-timeline-step" id="rmcStepAccepted">
+                  <div class="rmc-step-dot" id="rmcDotAccepted">3</div>
+                  <div class="rmc-step-label">Accepted</div>
+                </div>
+                <div class="rmc-timeline-step" id="rmcStepDone">
+                  <div class="rmc-step-dot" id="rmcDotDone">4</div>
+                  <div class="rmc-step-label">Done</div>
+                </div>
+              </div>
+              <div id="rmcTimelineMsg" class="rmc-timeline-msg">No active commands.</div>
             </div>
           </div>
         </div>
       </div>
 
-      <!-- Dashboard Job Activity Log -->
+      <!-- Activity & Audit Log Panel -->
       <div class="panel-card" style="margin-bottom:20px;">
         <div class="card-head" style="justify-content:space-between;">
           <div class="card-title">
             <svg width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><rect x="2" y="3" width="20" height="14" rx="2"/><path d="M8 21h8M12 17v4"/></svg>
-            <span>Dashboard Activity Log</span>
+            <span>RMC Command Audit &amp; Activity Log</span>
           </div>
           <div style="display:flex;align-items:center;gap:10px;">
-            <span id="dashboardActivityBadge" style="font-size:10px;text-transform:uppercase;color:var(--muted);letter-spacing:0.06em;">Waiting for events...</span>
-            <button class="action-btn" type="button" id="clearActivityLogBtn" title="Clear log" style="padding:3px 10px;font-size:11px;">Clear</button>
+            <button class="action-btn" type="button" id="rmcRefreshAuditBtn" title="Refresh audit log" style="padding:3px 10px;font-size:11px;">Refresh</button>
           </div>
         </div>
-        <div class="panel-body" style="padding:0;">
-          <div id="dashboardActivityLog" style="max-height:240px;overflow-y:auto;padding:12px 18px;display:flex;flex-direction:column;gap:8px;">
-            <div style="color:var(--muted);font-size:12px;font-style:italic;" id="dashActivityEmpty">No dashboard activity yet. Load or operate a job from the Control Panel to see events here.</div>
-          </div>
+        <div class="panel-body" style="padding:0;overflow-x:auto;">
+          <table class="rmc-audit-table">
+            <thead>
+              <tr>
+                <th>Time</th>
+                <th>Operator</th>
+                <th>Action</th>
+                <th>Outcome</th>
+                <th>Details</th>
+              </tr>
+            </thead>
+            <tbody id="rmcAuditTableBody">
+              <tr>
+                <td colspan="5" style="text-align:center;color:var(--muted);padding:18px;">No commands issued yet for this device.</td>
+              </tr>
+            </tbody>
+          </table>
         </div>
       </div>
 
@@ -2902,6 +3312,58 @@
   </div>
 </div>
 
+<!-- RMC Confirm Dialog Modal (multi-device safety) -->
+<div id="rmcConfirmModal" class="rmc-modal-overlay" role="dialog" aria-modal="true" aria-labelledby="rmcConfirmTitle">
+  <div class="rmc-modal-box" style="width:460px;">
+    <div class="rmc-modal-head">
+      <h3 id="rmcConfirmTitle">Confirm Action</h3>
+      <button class="rmc-modal-close" id="rmcConfirmClose" type="button" aria-label="Close dialog">&times;</button>
+    </div>
+    <div style="font-size:13px;line-height:1.5;color:var(--text);margin-bottom:22px;" id="rmcConfirmBody">
+      <!-- Injected securely via escapeHtml -->
+    </div>
+    <div style="display:flex;justify-content:flex-end;gap:10px;">
+      <button class="action-btn" id="rmcConfirmCancel" type="button">Cancel</button>
+      <button class="action-btn primary" id="rmcConfirmOk" type="button">Confirm</button>
+    </div>
+  </div>
+</div>
+
+<!-- RMC Load File Modal -->
+<div id="rmcLoadModal" class="rmc-modal-overlay" role="dialog" aria-modal="true" aria-labelledby="rmcLoadTitle">
+  <div class="rmc-modal-box">
+    <div class="rmc-modal-head">
+      <h3 id="rmcLoadTitle">
+        <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+        <span>Load G-Code File</span>
+      </h3>
+      <button class="rmc-modal-close" id="rmcLoadClose" type="button" aria-label="Close dialog">&times;</button>
+    </div>
+    <div class="rmc-tabs" role="tablist">
+      <button class="rmc-tab-btn active" id="rmcTabOnMachine" type="button" role="tab" aria-selected="true">On Machine</button>
+      <button class="rmc-tab-btn" id="rmcTabServerFiles" type="button" role="tab" aria-selected="false">Server Files</button>
+    </div>
+    <div id="rmcOnMachinePanel" role="tabpanel">
+      <div id="rmcFileList" class="rmc-file-list" tabindex="0" aria-label="Available machine files">
+        <div style="padding:20px;text-align:center;color:var(--muted);font-size:12px;">No files available on machine.</div>
+      </div>
+    </div>
+    <div id="rmcServerFilesPanel" role="tabpanel" style="display:none;">
+      <div style="padding:24px 16px;text-align:center;background:var(--panel2);border:1px dashed var(--border-light);border-radius:8px;margin-bottom:16px;">
+        <div style="font-weight:700;font-size:14px;color:#fff;margin-bottom:6px;">Server-Side File Storage</div>
+        <div style="font-size:12px;color:var(--muted);line-height:1.5;">Direct server file uploads and centralized repository will be available in <strong>Phase 6</strong>.<br>In Phase 5, select files currently available on the machine in the &ldquo;On Machine&rdquo; tab.</div>
+      </div>
+    </div>
+    <div id="rmcLoadStageBar" class="rmc-stage-bar" role="status" aria-live="polite">
+      <span id="rmcLoadStageText">Sending command...</span>
+    </div>
+    <div style="display:flex;justify-content:flex-end;gap:10px;margin-top:auto;">
+      <button class="action-btn" id="rmcLoadCancel" type="button">Cancel</button>
+      <button class="action-btn primary" id="rmcLoadSubmit" type="button" disabled>Load Selected File</button>
+    </div>
+  </div>
+</div>
+
 <script>
   // DOM References
   const tableBody = document.getElementById("tableBody");
@@ -2983,27 +3445,69 @@
   const kpiConnSub = document.getElementById("kpiConnSub");
   const topbarClock = document.getElementById("topbarClock");
 
-  // Control Panel DOM
-  const cpDropzone = document.getElementById("cpDropzone");
-  const cpFileInput = document.getElementById("cpFileInput");
-  const cpLoadSampleBtn = document.getElementById("cpLoadSampleBtn");
-  const cpUploadStatus = document.getElementById("cpUploadStatus");
-  const cpFileName = document.getElementById("cpFileName");
-  const cpFileSize = document.getElementById("cpFileSize");
-  const cpTotalLines = document.getElementById("cpTotalLines");
-  const cpEstDuration = document.getElementById("cpEstDuration");
-  const cpJobBadge = document.getElementById("cpJobBadge");
-  const cpLineCounter = document.getElementById("cpLineCounter");
-  const cpElapsedText = document.getElementById("cpElapsedText");
-  const cpProgressPct = document.getElementById("cpProgressPct");
-  const cpProgressBar = document.getElementById("cpProgressBar");
-  const cpCurrentCmd = document.getElementById("cpCurrentCmd");
-  const cpStartBtn = document.getElementById("cpStartBtn");
-  const cpPauseBtn = document.getElementById("cpPauseBtn");
-  const cpResumeBtn = document.getElementById("cpResumeBtn");
-  const cpAbortBtn = document.getElementById("cpAbortBtn");
-  const cpResetBtn = document.getElementById("cpResetBtn");
-  let currentJobState = null;
+  // RMC DOM Elements
+  const rmcJobBadge = document.getElementById("rmcJobBadge");
+  const rmcFileName = document.getElementById("rmcFileName");
+  const rmcControlledBy = document.getElementById("rmcControlledBy");
+  const rmcRemoteMode = document.getElementById("rmcRemoteMode");
+  const rmcLocalBusy = document.getElementById("rmcLocalBusy");
+  const rmcProgressPct = document.getElementById("rmcProgressPct");
+  const rmcProgressBar = document.getElementById("rmcProgressBar");
+  const rmcStateDetail = document.getElementById("rmcStateDetail");
+  const rmcBtnLoad = document.getElementById("rmcBtnLoad");
+  const rmcBtnStart = document.getElementById("rmcBtnStart");
+  const rmcBtnPause = document.getElementById("rmcBtnPause");
+  const rmcBtnResume = document.getElementById("rmcBtnResume");
+  const rmcBtnStop = document.getElementById("rmcBtnStop");
+  const rmcOfflineBanner = document.getElementById("rmcOfflineBanner");
+  const rmcOfflineText = document.getElementById("rmcOfflineText");
+  const rmcLockedByOtherBanner = document.getElementById("rmcLockedByOtherBanner");
+  const rmcLockedByOtherText = document.getElementById("rmcLockedByOtherText");
+  const rmcLockBadge = document.getElementById("rmcLockBadge");
+  const rmcLockText = document.getElementById("rmcLockText");
+  const rmcTakeLockBtn = document.getElementById("rmcTakeLockBtn");
+  const rmcReleaseLockBtn = document.getElementById("rmcReleaseLockBtn");
+  const rmcTimelineMsg = document.getElementById("rmcTimelineMsg");
+  const rmcTimelineBarFill = document.getElementById("rmcTimelineBarFill");
+  const rmcStepSent = document.getElementById("rmcStepSent");
+  const rmcStepReceived = document.getElementById("rmcStepReceived");
+  const rmcStepAccepted = document.getElementById("rmcStepAccepted");
+  const rmcStepDone = document.getElementById("rmcStepDone");
+  const rmcAuditTableBody = document.getElementById("rmcAuditTableBody");
+  const rmcRefreshAuditBtn = document.getElementById("rmcRefreshAuditBtn");
+
+  // RMC Modals
+  const rmcLoadModal = document.getElementById("rmcLoadModal");
+  const rmcLoadClose = document.getElementById("rmcLoadClose");
+  const rmcLoadCancel = document.getElementById("rmcLoadCancel");
+  const rmcLoadSubmit = document.getElementById("rmcLoadSubmit");
+  const rmcFileList = document.getElementById("rmcFileList");
+  const rmcTabOnMachine = document.getElementById("rmcTabOnMachine");
+  const rmcTabServerFiles = document.getElementById("rmcTabServerFiles");
+  const rmcOnMachinePanel = document.getElementById("rmcOnMachinePanel");
+  const rmcServerFilesPanel = document.getElementById("rmcServerFilesPanel");
+  const rmcLoadStageBar = document.getElementById("rmcLoadStageBar");
+  const rmcLoadStageText = document.getElementById("rmcLoadStageText");
+
+  const rmcConfirmModal = document.getElementById("rmcConfirmModal");
+  const rmcConfirmTitle = document.getElementById("rmcConfirmTitle");
+  const rmcConfirmBody = document.getElementById("rmcConfirmBody");
+  const rmcConfirmClose = document.getElementById("rmcConfirmClose");
+  const rmcConfirmCancel = document.getElementById("rmcConfirmCancel");
+  const rmcConfirmOk = document.getElementById("rmcConfirmOk");
+
+  // RMC State Stores (Keyed strictly by device_id)
+  const rmcStates = {};        // did -> state object
+  const rmcFiles = {};         // did -> files list
+  const rmcLocks = {};         // did -> lock object { device_id, issued_by }
+  const rmcCommands = {};      // did -> array of recent commands
+  const rmcActiveCmd = {};     // did -> active command object
+  const rmcLastSeq = {};       // did -> monotonic sequence number
+  let rmcPendingTimer = null;
+  let rmcStaleCheckTimer = null;
+  let rmcActionInFlight = false;
+  let rmcSelectedFile = null;
+  let rmcConfirmCallback = null;
 
   // State
   const rowsByKey = new Map();
@@ -3070,6 +3574,16 @@
     toastTimer = setTimeout(() => { toast.classList.remove('visible'); }, 3200);
   }
 
+  function escapeHtml(str) {
+    if (str == null) return "";
+    return String(str)
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;")
+      .replace(/"/g, "&quot;")
+      .replace(/'/g, "&#39;");
+  }
+
   let eventCounter = 0;
   function logEvent(type, detail = '') {
     if (!eventsList) return;
@@ -3121,7 +3635,7 @@
     currentMachineConnected = connected;
     if (statusDot && statusText) {
       statusDot.className = 'dot ' + (connected ? 'on' : '');
-      statusText.textContent = connected ? 'Connected' : 'Disconnected';
+      statusText.textContent = connected ? 'Connected' : 'Reconnecting...';
     }
     if (topbarStatusBadge) {
       topbarStatusBadge.className = 'topbar-status-badge ' + (connected ? '' : 'disconnected');
@@ -3129,11 +3643,14 @@
     if (posConnText) posConnText.textContent = connected ? 'Connected' : 'Offline';
     if (posConnDot) posConnDot.style.background = connected ? 'var(--green)' : 'var(--red)';
     if (kpiConnVal) {
-      kpiConnVal.textContent = connected ? 'Connected' : 'Offline';
+      kpiConnVal.textContent = connected ? 'Connected' : 'Reconnecting...';
       kpiConnVal.style.color = connected ? 'var(--green)' : 'var(--red)';
     }
     if (kpiConnSub) {
       kpiConnSub.textContent = connected ? (deviceSelect.value ? `Device: ${deviceSelect.value}` : 'Server online') : 'Reconnecting...';
+    }
+    if (typeof updateRmcUI === "function" && deviceSelect?.value) {
+      updateRmcUI(deviceSelect.value);
     }
   }
 
@@ -3753,7 +4270,7 @@
       liveRuntimeData = {};
       latestPositionSets = { xma: null, xmr: null, xwa: null, xwr: null };
       update5AxisDisplay();
-      updateControlPanelUI(null);
+      updateRmcUI(null);
       tableBody.innerHTML = "";
       rowsByKey.clear();
       if (emptyState) emptyState.classList.add("visible");
@@ -3762,6 +4279,13 @@
       return;
     }
 
+    const prevDid = localStorage.getItem("ufameasy_selected_device");
+    if (prevDid && prevDid !== selectedDid && rmcLocks[prevDid]?.issued_by === getCurrentUser()) {
+      try {
+        fetch(`/api/devices/${encodeURIComponent(prevDid)}/lock`, { method: "DELETE", headers: getAuthHeaders() });
+        delete rmcLocks[prevDid];
+      } catch (_) {}
+    }
     localStorage.setItem("ufameasy_selected_device", selectedDid);
 
     // 1. CRITICAL: Stop previous device camera stream immediately!
@@ -3852,8 +4376,8 @@
     // 7. Refresh session list for this device
     await refreshSessions();
 
-    // 8. Fetch job status for this device
-    await fetchJobStatus(selectedDid);
+    // 8. Fetch RMC device data (lock, commands audit) and render card
+    await fetchRmcDeviceData(selectedDid);
 
     logEvent("device_selected", selectedDid);
   }
@@ -4333,335 +4857,947 @@
     logEvent("download_logs_csv", ip);
   });
 
-  // ── Control Panel (G-Code Upload, Sample & Machine Operation) ─────────────
-  function formatJobDuration(sec) {
-    if (sec == null || isNaN(sec) || sec < 0) return "--:--";
-    const s = Math.floor(sec);
-    const hrs = Math.floor(s / 3600);
-    const mins = Math.floor((s % 3600) / 60);
-    const secs = s % 60;
-    if (hrs > 0) {
-      return `${String(hrs).padStart(2, '0')}:${String(mins).padStart(2, '0')}:${String(secs).padStart(2, '0')}`;
+  // ── Remote Machine Control (RMC Phase 5) ──────────────────────────────────
+  function getAuthHeaders() {
+    const urlParams = new URLSearchParams(window.location.search);
+    const token = urlParams.get("token");
+    const headers = { "Content-Type": "application/json" };
+    if (token) {
+      headers["Authorization"] = `Bearer ${token}`;
     }
-    return `${String(mins).padStart(2, '0')}:${String(secs).padStart(2, '0')}`;
+    return headers;
   }
 
-  function formatJobFileSize(bytes) {
-    if (bytes == null || isNaN(bytes) || bytes <= 0) return "—";
-    if (bytes < 1024) return bytes + " B";
-    if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + " KB";
-    return (bytes / (1024 * 1024)).toFixed(2) + " MB";
+  function getCurrentUser() {
+    const urlParams = new URLSearchParams(window.location.search);
+    return urlParams.get("user") || "local-dev";
   }
 
-  function updateControlPanelUI(job) {
-    if (!job) {
-      job = {
-        status: "idle",
-        file_name: "",
-        file_size: 0,
-        total_lines: 0,
-        current_line: 0,
-        elapsed_seconds: 0,
-        estimated_seconds: 0,
-        estimated_time_fmt: "—",
-        current_gcode: "Ready to run",
-        percentage: 0.0
-      };
+  function isViewerMode() {
+    const urlParams = new URLSearchParams(window.location.search);
+    return urlParams.get("role") === "viewer";
+  }
+
+  const RMC_REASON_TEXTS = {
+    INVALID_STATE: "Machine is not in a valid state for this action",
+    NO_FILE: "No file is currently loaded on machine",
+    MACHINE_BUSY: "Machine is currently busy",
+    OPERATOR_DECLINED: "Local operator declined remote command",
+    EXPIRED: "Command expired waiting for operator approval",
+    REMOTE_DISABLED: "Remote control is disabled on machine (mode: off)",
+    FILE_NOT_FOUND: "Requested file not found on machine",
+    HASH_MISMATCH: "File checksum validation failed",
+    DOWNLOAD_FAILED: "File download to machine failed",
+    FAULT: "Machine fault condition reported",
+    DUPLICATE: "Duplicate command request",
+    UNAUTHORIZED: "Unauthorized command request",
+    LOCKED_BY_OTHER: "Machine is locked by another operator"
+  };
+
+  function formatReasonCode(code, fallback = "") {
+    if (!code) return fallback;
+    return RMC_REASON_TEXTS[code] || fallback || code;
+  }
+
+  function isDeviceStale(st) {
+    if (!st) return true;
+    if (st.job_state === "offline") return true;
+    if (!st.recorded_at) return true;
+    try {
+      const recTime = new Date(st.recorded_at).getTime();
+      if (isNaN(recTime)) return true;
+      return (Date.now() - recTime) > 30000;
+    } catch (_) {
+      return true;
     }
-    currentJobState = job;
+  }
 
-    const fn = job.file_name || "";
-    if (cpFileName) cpFileName.textContent = fn || "—";
-    if (cpUploadStatus) {
-      cpUploadStatus.textContent = fn ? `Loaded: ${fn}` : "No file loaded";
-      cpUploadStatus.style.color = fn ? "var(--accent)" : "var(--muted)";
+  function getOfflineSinceTime(st) {
+    if (!st || !st.recorded_at) {
+      const d = new Date();
+      return `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
     }
-    if (cpFileSize) cpFileSize.textContent = job.file_size ? formatJobFileSize(job.file_size) : "—";
-    if (cpTotalLines) cpTotalLines.textContent = job.total_lines != null ? job.total_lines : "—";
-    if (cpEstDuration) cpEstDuration.textContent = job.estimated_time_fmt || formatJobDuration(job.estimated_seconds);
-
-    const curLine = job.current_line || 0;
-    const totLines = job.total_lines || 0;
-    if (cpLineCounter) cpLineCounter.textContent = `Line ${curLine} / ${totLines}`;
-    if (cpElapsedText) cpElapsedText.textContent = `Elapsed: ${formatJobDuration(job.elapsed_seconds || 0)}`;
-
-    let pct = job.percentage != null ? Number(job.percentage) : 0;
-    if (totLines > 0 && curLine > 0) {
-      pct = Math.min(100, Math.max(0, (curLine / totLines) * 100));
+    try {
+      const d = new Date(st.recorded_at);
+      if (isNaN(d.getTime())) return "recently";
+      return `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
+    } catch (_) {
+      return "recently";
     }
-    if (cpProgressPct) cpProgressPct.textContent = `${pct.toFixed(1)}%`;
-    if (cpProgressBar) cpProgressBar.style.width = `${pct}%`;
+  }
 
-    const st = (job.status || "idle").toLowerCase();
-    if (cpCurrentCmd) {
-      if (job.error) {
-        cpCurrentCmd.textContent = `Error: ${job.error}`;
-        cpCurrentCmd.style.borderColor = "var(--red)";
+  function getRmcButtonStates(st, isStale, isLockedByOther, isCmdPending, isReadOnly) {
+    const res = {
+      load:   { enabled: false, reason: "" },
+      start:  { enabled: false, reason: "" },
+      pause:  { enabled: false, reason: "" },
+      resume: { enabled: false, reason: "" },
+      stop:   { enabled: false, reason: "" },
+    };
+
+    if (isReadOnly) {
+      const r = "View-only mode: Remote control disabled";
+      res.load.reason = r; res.start.reason = r; res.pause.reason = r; res.resume.reason = r; res.stop.reason = r;
+      return res;
+    }
+
+    if (isStale || !st || st.job_state === "offline") {
+      const r = "Machine offline";
+      res.load.reason = r; res.start.reason = r; res.pause.reason = r; res.resume.reason = r; res.stop.reason = r;
+      return res;
+    }
+
+    if (isLockedByOther) {
+      const r = `Locked by ${st.controlled_by || "another operator"}`;
+      res.load.reason = r; res.start.reason = r; res.pause.reason = r; res.resume.reason = r; res.stop.reason = r;
+      return res;
+    }
+
+    if (isCmdPending) {
+      const r = "Command in progress";
+      res.load.reason = r; res.start.reason = r; res.pause.reason = r; res.resume.reason = r; res.stop.reason = r;
+      return res;
+    }
+
+    const js = (st.job_state || "idle").toLowerCase();
+    const hasFile = Boolean(st.file && (typeof st.file === "string" ? st.file : (st.file.name || st.file.path || st.file.file_id)));
+
+    switch (js) {
+      case "idle":
+        res.load.enabled = true;
+        res.start.reason = hasFile ? "Machine is idle (must be loaded)" : "No file loaded";
+        res.pause.reason = "Machine is idle";
+        res.resume.reason = "Machine is idle";
+        res.stop.reason = "Machine is idle";
+        break;
+
+      case "loaded":
+        res.load.enabled = true;
+        if (hasFile) {
+          res.start.enabled = true;
+        } else {
+          res.start.reason = "No file loaded";
+        }
+        res.pause.reason = "Job not yet started";
+        res.resume.reason = "Job not yet started";
+        res.stop.reason = "Job not running";
+        break;
+
+      case "running":
+        res.load.reason = "Cannot load while machine is running";
+        res.start.reason = "Job is already running";
+        res.pause.enabled = true;
+        res.resume.reason = "Job is already running";
+        res.stop.enabled = true;
+        break;
+
+      case "paused":
+        res.load.reason = "Cannot load while machine is paused";
+        res.start.reason = "Job is already paused";
+        res.pause.reason = "Job is already paused";
+        res.resume.enabled = true;
+        res.stop.enabled = true;
+        break;
+
+      case "fault":
+        res.load.reason = "Machine in fault state";
+        res.start.reason = "Machine in fault state";
+        res.pause.reason = "Machine in fault state";
+        res.resume.reason = "Machine in fault state";
+        res.stop.enabled = true; // Stop allowed to clear/abort from fault when online
+        break;
+
+      case "offline":
+      default:
+        res.load.reason = "Machine offline";
+        res.start.reason = "Machine offline";
+        res.pause.reason = "Machine offline";
+        res.resume.reason = "Machine offline";
+        res.stop.reason = "Machine offline";
+        break;
+    }
+
+    return res;
+  }
+
+  function updateRmcUI(deviceId) {
+    const did = deviceId || (deviceSelect ? deviceSelect.value : null);
+    if (!did) {
+      if (rmcFileName) rmcFileName.textContent = "—";
+      if (rmcControlledBy) rmcControlledBy.textContent = "—";
+      if (rmcRemoteMode) rmcRemoteMode.innerHTML = '<span class="rmc-tag tag-off">Mode: Off</span>';
+      if (rmcLocalBusy) rmcLocalBusy.innerHTML = '<span class="rmc-tag tag-off">Idle</span>';
+      if (rmcJobBadge) rmcJobBadge.innerHTML = '<span class="status-pill off"><span class="badge-icon">⚡✕</span> OFFLINE</span>';
+      if (rmcProgressPct) rmcProgressPct.textContent = "0.0%";
+      if (rmcProgressBar) rmcProgressBar.style.width = "0%";
+      if (rmcOfflineBanner) rmcOfflineBanner.style.display = "none";
+      if (rmcLockedByOtherBanner) rmcLockedByOtherBanner.style.display = "none";
+      [rmcBtnLoad, rmcBtnStart, rmcBtnPause, rmcBtnResume, rmcBtnStop].forEach(b => { if (b) b.disabled = true; });
+      return;
+    }
+
+    const st = rmcStates[did] || {
+      device_id: did,
+      job_state: "offline",
+      file: null,
+      progress: 0,
+      remote_control: "off",
+      local_busy: false,
+      controlled_by: null,
+      recorded_at: null,
+      seq: 0
+    };
+
+    const stale = !currentMachineConnected || isDeviceStale(st);
+    const lock = rmcLocks[did] || {};
+    const lockedBy = st.controlled_by || lock.issued_by;
+    const myUser = getCurrentUser();
+    const isLockedByOther = Boolean(lockedBy && lockedBy !== myUser);
+    const isLockedByMe = Boolean(lockedBy && lockedBy === myUser);
+    const isReadOnly = isViewerMode();
+
+    // Offline Banner
+    if (rmcOfflineBanner && rmcOfflineText) {
+      if (stale || st.job_state === "offline") {
+        rmcOfflineBanner.style.display = "flex";
+        rmcOfflineText.textContent = currentMachineConnected
+          ? `Machine is offline since ${getOfflineSinceTime(st)}. Controls are disabled.`
+          : "Server connection lost (Reconnecting…). Remote controls are disabled.";
       } else {
-        cpCurrentCmd.textContent = job.current_gcode || (st === "running" ? "Processing..." : "Idle");
-        cpCurrentCmd.style.borderColor = "";
+        rmcOfflineBanner.style.display = "none";
       }
     }
 
-    // Update Control Panel Status Badge
-    if (cpJobBadge) {
-      if (st === "running") {
-        cpJobBadge.innerHTML = '<span class="status-pill on">RUNNING</span>';
-      } else if (st === "paused") {
-        cpJobBadge.innerHTML = '<span class="status-pill" style="background:var(--yellow-soft);color:var(--yellow);border-color:var(--yellow);">PAUSED</span>';
-      } else if (st === "completed") {
-        cpJobBadge.innerHTML = '<span class="status-pill on" style="background:var(--green-soft);color:var(--green);border-color:var(--green);">COMPLETED</span>';
-      } else if (st === "aborted") {
-        cpJobBadge.innerHTML = '<span class="status-pill" style="background:var(--red-soft);color:var(--red);border-color:var(--red);">ABORTED</span>';
-      } else if (st === "error" || job.error) {
-        cpJobBadge.innerHTML = '<span class="status-pill off" style="color:var(--red);border-color:var(--red);background:var(--red-soft);">ERROR</span>';
-      } else if (st === "idle" && fn) {
-        cpJobBadge.innerHTML = '<span class="status-pill" style="background:var(--accent-soft);color:var(--accent);border-color:var(--accent);">READY</span>';
+    // Locked By Other Banner
+    if (rmcLockedByOtherBanner && rmcLockedByOtherText) {
+      if (!stale && isLockedByOther) {
+        rmcLockedByOtherBanner.style.display = "flex";
+        rmcLockedByOtherText.innerHTML = `Machine control is locked by <strong style="color:#fff;">${escapeHtml(lockedBy)}</strong>. Remote actions are disabled.`;
       } else {
-        cpJobBadge.innerHTML = '<span class="status-pill off">IDLE</span>';
+        rmcLockedByOtherBanner.style.display = "none";
       }
     }
 
-    // Update Controls Toolbar Buttons
-    const hasFile = Boolean(fn && totLines > 0);
-    if (st === "running") {
-      if (cpStartBtn) { cpStartBtn.disabled = true; cpStartBtn.style.display = "inline-flex"; }
-      if (cpPauseBtn) { cpPauseBtn.disabled = false; cpPauseBtn.style.display = "inline-flex"; }
-      if (cpResumeBtn) { cpResumeBtn.disabled = true; cpResumeBtn.style.display = "none"; }
-      if (cpAbortBtn) cpAbortBtn.disabled = false;
-      if (cpResetBtn) cpResetBtn.disabled = true;
-    } else if (st === "paused") {
-      if (cpStartBtn) { cpStartBtn.disabled = true; cpStartBtn.style.display = "none"; }
-      if (cpPauseBtn) { cpPauseBtn.disabled = true; cpPauseBtn.style.display = "none"; }
-      if (cpResumeBtn) { cpResumeBtn.disabled = false; cpResumeBtn.style.display = "inline-flex"; }
-      if (cpAbortBtn) cpAbortBtn.disabled = false;
-      if (cpResetBtn) cpResetBtn.disabled = true;
-    } else if (st === "completed" || st === "aborted" || st === "error") {
-      if (cpStartBtn) { cpStartBtn.disabled = true; cpStartBtn.style.display = "inline-flex"; }
-      if (cpPauseBtn) { cpPauseBtn.disabled = true; cpPauseBtn.style.display = "inline-flex"; }
-      if (cpResumeBtn) { cpResumeBtn.disabled = true; cpResumeBtn.style.display = "none"; }
-      if (cpAbortBtn) cpAbortBtn.disabled = true;
-      if (cpResetBtn) cpResetBtn.disabled = false;
-    } else {
-      // idle or ready
-      if (cpStartBtn) { cpStartBtn.disabled = !hasFile; cpStartBtn.style.display = "inline-flex"; }
-      if (cpPauseBtn) { cpPauseBtn.disabled = true; cpPauseBtn.style.display = "inline-flex"; }
-      if (cpResumeBtn) { cpResumeBtn.disabled = true; cpResumeBtn.style.display = "none"; }
-      if (cpAbortBtn) cpAbortBtn.disabled = true;
-      if (cpResetBtn) cpResetBtn.disabled = !(curLine > 0 || pct > 0);
+    // Lock Badge & Buttons
+    if (rmcLockBadge && rmcLockText && rmcTakeLockBtn && rmcReleaseLockBtn) {
+      if (isLockedByMe) {
+        rmcLockBadge.className = "rmc-tag tag-busy";
+        rmcLockText.textContent = `Control: You (${escapeHtml(myUser)})`;
+        rmcTakeLockBtn.style.display = "none";
+        rmcReleaseLockBtn.style.display = "inline-flex";
+      } else if (isLockedByOther) {
+        rmcLockBadge.className = "rmc-tag tag-off";
+        rmcLockText.textContent = `Locked by ${escapeHtml(lockedBy)}`;
+        rmcTakeLockBtn.style.display = "none";
+        rmcReleaseLockBtn.style.display = "none";
+      } else {
+        rmcLockBadge.className = "rmc-tag tag-off";
+        rmcLockText.textContent = "Unlocked";
+        rmcTakeLockBtn.style.display = isReadOnly ? "none" : "inline-flex";
+        rmcReleaseLockBtn.style.display = "none";
+      }
     }
 
-    // Synchronize Overview Dashboard KPI Cards & Topbar
+    // State Badge
+    if (rmcJobBadge) {
+      if (!currentMachineConnected) {
+        rmcJobBadge.innerHTML = '<span class="status-pill off" style="color:var(--yellow);"><span class="badge-icon">⚡✕</span> RECONNECTING</span>';
+      } else if (stale || st.job_state === "offline") {
+        rmcJobBadge.innerHTML = '<span class="status-pill off"><span class="badge-icon">⚡✕</span> OFFLINE</span>';
+      } else {
+        const js = (st.job_state || "idle").toLowerCase();
+        if (js === "running") {
+          rmcJobBadge.innerHTML = '<span class="status-pill on"><span class="badge-icon">▶</span> RUNNING</span>';
+        } else if (js === "paused") {
+          rmcJobBadge.innerHTML = '<span class="status-pill" style="background:var(--yellow-soft);color:var(--yellow);border-color:var(--yellow);"><span class="badge-icon">⏸</span> PAUSED</span>';
+        } else if (js === "loaded") {
+          rmcJobBadge.innerHTML = '<span class="status-pill" style="background:var(--accent-soft);color:var(--accent);border-color:var(--accent);"><span class="badge-icon">📄</span> LOADED</span>';
+        } else if (js === "fault") {
+          rmcJobBadge.innerHTML = '<span class="status-pill off" style="color:var(--red);background:var(--red-soft);border-color:var(--red);"><span class="badge-icon">⚠</span> FAULT</span>';
+        } else {
+          rmcJobBadge.innerHTML = '<span class="status-pill off"><span class="badge-icon">⏹</span> IDLE</span>';
+        }
+      }
+    }
+
+    // Metadata items
+    const rawFile = st.file;
+    const fn = (rawFile && typeof rawFile === "object")
+      ? (rawFile.name || rawFile.path || rawFile.file_id || "")
+      : (rawFile || "");
+    if (rmcFileName) {
+      rmcFileName.textContent = fn || "—";
+      rmcFileName.title = fn || "No file loaded";
+    }
+
+    if (rmcControlledBy) {
+      rmcControlledBy.textContent = lockedBy ? escapeHtml(lockedBy) : "None";
+    }
+
+    if (rmcRemoteMode) {
+      const mode = (st.remote_control || "off").toLowerCase();
+      if (mode === "ask") {
+        rmcRemoteMode.innerHTML = '<span class="rmc-tag tag-ask" title="Remote commands require machine operator approval">Mode: Ask</span>';
+      } else {
+        rmcRemoteMode.innerHTML = '<span class="rmc-tag tag-off" title="Remote control is disabled on machine">Mode: Off</span>';
+      }
+    }
+
+    if (rmcLocalBusy) {
+      if (st.local_busy) {
+        rmcLocalBusy.innerHTML = '<span class="rmc-tag tag-busy" title="Local operator is actively controlling machine">Active (Busy)</span>';
+      } else {
+        rmcLocalBusy.innerHTML = '<span class="rmc-tag tag-off" title="No local operator interaction detected">Idle</span>';
+      }
+    }
+
+    // Progress
+    const pct = Math.min(100, Math.max(0, Number(st.progress) || 0));
+    if (rmcProgressPct) rmcProgressPct.textContent = `${pct.toFixed(1)}%`;
+    if (rmcProgressBar) rmcProgressBar.style.width = `${pct}%`;
+
+    // Active Command Pending Check
+    const actCmd = rmcActiveCmd[did];
+    const isCmdPending = Boolean(actCmd && !["done", "rejected", "expired", "timeout", "failed"].includes(actCmd.status));
+
+    // Enable / Disable Table
+    const btnStates = getRmcButtonStates(st, stale, isLockedByOther, isCmdPending, isReadOnly);
+
+    const btnConfig = [
+      { id: "load", el: rmcBtnLoad, label: "Load" },
+      { id: "start", el: rmcBtnStart, label: "Start" },
+      { id: "pause", el: rmcBtnPause, label: "Pause" },
+      { id: "resume", el: rmcBtnResume, label: "Resume" },
+      { id: "stop", el: rmcBtnStop, label: "Stop" },
+    ];
+
+    btnConfig.forEach(cfg => {
+      if (!cfg.el) return;
+      const textSpan = cfg.el.querySelector(".rmc-btn-text") || cfg.el;
+      if (isCmdPending && actCmd && actCmd.action === cfg.id) {
+        cfg.el.classList.add("pending");
+        cfg.el.disabled = true;
+        const exp = new Date(actCmd.expires_at || 0).getTime();
+        const rem = Math.max(0, Math.ceil((exp - Date.now()) / 1000));
+        textSpan.textContent = `Waiting for operator… ${rem}s`;
+        cfg.el.title = "Waiting for operator confirmation";
+      } else {
+        cfg.el.classList.remove("pending");
+        textSpan.textContent = cfg.label;
+        const s = btnStates[cfg.id];
+        cfg.el.disabled = !s.enabled;
+        cfg.el.title = s.enabled ? `${cfg.label} job` : s.reason;
+      }
+    });
+
+    // Synchronize Overview KPIs & Topbar
     if (rtFile) rtFile.textContent = fn || "—";
     if (topbarFile) topbarFile.textContent = fn || "—";
-    if (rtLayerText) rtLayerText.textContent = (totLines > 0) ? `Line ${curLine} / ${totLines}` : "Layer 0 / 0";
     if (progressBar) progressBar.style.width = `${pct}%`;
     if (progressPct) progressPct.textContent = `${pct.toFixed(1)}%`;
 
     if (rtState && rtStateVal && rtStateSub) {
-      if (st === "running") {
-        rtState.innerHTML = '<span class="status-pill on">RUNNING</span>';
-        rtStateVal.textContent = "Running";
-        rtStateSub.textContent = fn ? `Executing ${fn}` : "Job in progress";
-      } else if (st === "paused") {
-        rtState.innerHTML = '<span class="status-pill" style="background:var(--yellow-soft);color:var(--yellow);">PAUSED</span>';
-        rtStateVal.textContent = "Paused";
-        rtStateSub.textContent = `Holding at line ${curLine}`;
-      } else if (st === "completed") {
-        rtState.innerHTML = '<span class="status-pill on" style="background:var(--green-soft);color:var(--green);">COMPLETED</span>';
-        rtStateVal.textContent = "Finished";
-        rtStateSub.textContent = "Print completed successfully";
-      } else if (st === "aborted") {
-        rtState.innerHTML = '<span class="status-pill" style="background:var(--red-soft);color:var(--red);">ABORTED</span>';
-        rtStateVal.textContent = "Aborted";
-        rtStateSub.textContent = "Job execution halted";
-      } else if (st === "error" || job.error) {
-        rtState.innerHTML = '<span class="status-pill off" style="color:var(--red);background:var(--red-soft);">ERROR</span>';
-        rtStateVal.textContent = "Error";
-        rtStateSub.textContent = job.error || "Machine reported error";
-      } else if (st === "idle" && fn) {
-        rtState.innerHTML = '<span class="status-pill" style="background:var(--accent-soft);color:var(--accent);">READY</span>';
-        rtStateVal.textContent = "Ready";
-        rtStateSub.textContent = `File ready: ${fn}`;
+      if (!currentMachineConnected) {
+        rtState.innerHTML = '<span class="status-pill off" style="color:var(--yellow);">RECONNECTING</span>';
+        rtStateVal.textContent = "Reconnecting";
+        rtStateSub.textContent = "WebSocket reconnecting...";
+      } else if (stale || st.job_state === "offline") {
+        rtState.innerHTML = '<span class="status-pill off">OFFLINE</span>';
+        rtStateVal.textContent = "Offline";
+        rtStateSub.textContent = `Offline since ${getOfflineSinceTime(st)}`;
       } else {
-        rtState.innerHTML = '<span class="status-pill off">IDLE</span>';
-        rtStateVal.textContent = "Idle";
-        rtStateSub.textContent = "No active print job";
+        const js = (st.job_state || "idle").toLowerCase();
+        if (js === "running") {
+          rtState.innerHTML = '<span class="status-pill on">RUNNING</span>';
+          rtStateVal.textContent = "Running";
+          rtStateSub.textContent = fn ? `Executing ${fn}` : "Job in progress";
+        } else if (js === "paused") {
+          rtState.innerHTML = '<span class="status-pill" style="background:var(--yellow-soft);color:var(--yellow);">PAUSED</span>';
+          rtStateVal.textContent = "Paused";
+          rtStateSub.textContent = "Execution holding";
+        } else if (js === "loaded") {
+          rtState.innerHTML = '<span class="status-pill" style="background:var(--accent-soft);color:var(--accent);">LOADED</span>';
+          rtStateVal.textContent = "Loaded";
+          rtStateSub.textContent = `File ready: ${fn}`;
+        } else if (js === "fault") {
+          rtState.innerHTML = '<span class="status-pill off" style="color:var(--red);background:var(--red-soft);">FAULT</span>';
+          rtStateVal.textContent = "Fault";
+          rtStateSub.textContent = "Machine fault condition";
+        } else {
+          rtState.innerHTML = '<span class="status-pill off">IDLE</span>';
+          rtStateVal.textContent = "Idle";
+          rtStateSub.textContent = "No active print job";
+        }
       }
     }
+
+    renderRmcAuditTable(rmcCommands[did] || []);
   }
 
-  async function fetchJobStatus(deviceId) {
-    if (!deviceId) return;
-    try {
-      const res = await fetch(`/api/devices/${encodeURIComponent(deviceId)}/job/status`);
-      if (res.ok) {
-        const data = await res.json();
-        updateControlPanelUI(data);
-      }
-    } catch (e) {
-      console.error("fetchJobStatus error:", e);
-    }
-  }
-
-  async function uploadJobFile(file) {
-    const did = deviceSelect.value;
+  async function issueRmcCommand(action, params = {}) {
+    const did = deviceSelect ? deviceSelect.value : null;
     if (!did) {
-      showToast("Please select a device from the topbar first", true);
-      return;
-    }
-    if (!file) {
-      showToast("No file selected", true);
+      showToast("Please select a device first", true);
       return;
     }
 
-    if (file.size === 0) {
-      showToast("File is empty (0 bytes). Please upload a valid G-code file.", true);
-      return;
-    }
+    if (rmcActionInFlight) return;
+    rmcActionInFlight = true;
 
-    const name = file.name || "";
-    const ext = name.split('.').pop().toLowerCase();
-    const validExts = ["gcode", "nc", "tap", "txt"];
-    if (!validExts.includes(ext)) {
-      showToast(`Unsupported file format '.${ext}'. Supported formats: .gcode, .nc, .tap, .txt`, true);
-      return;
-    }
+    // Immediately disable buttons to debounce and prevent double-actions
+    [rmcBtnLoad, rmcBtnStart, rmcBtnPause, rmcBtnResume, rmcBtnStop].forEach(b => { if (b) b.disabled = true; });
 
-    const formData = new FormData();
-    formData.append("file", file);
-
-    if (cpUploadStatus) {
-      cpUploadStatus.textContent = "Uploading & validating G-code...";
-      cpUploadStatus.style.color = "var(--accent)";
-    }
     try {
-      const res = await fetch(`/api/devices/${encodeURIComponent(did)}/job/upload`, {
+      const res = await fetch(`/api/devices/${encodeURIComponent(did)}/commands`, {
         method: "POST",
-        body: formData
+        headers: getAuthHeaders(),
+        body: JSON.stringify({
+          action,
+          params,
+          ttl: 60
+        })
       });
+
       const data = await res.json().catch(() => ({}));
+
       if (!res.ok) {
-        const errMsg = data.detail || data.error || `Upload failed (HTTP ${res.status})`;
-        throw new Error(errMsg);
+        let msg = data.detail || data.message || `Command failed (HTTP ${res.status})`;
+        if (typeof data.detail === "object" && data.detail !== null) {
+          if (data.detail.reason_code === "LOCKED_BY_OTHER") {
+            msg = `Locked by other user (${data.detail.issued_by})`;
+            rmcLocks[did] = { device_id: did, issued_by: data.detail.issued_by };
+          } else {
+            msg = formatReasonCode(data.detail.reason_code, data.detail.message || JSON.stringify(data.detail));
+          }
+        } else if (res.status === 401) {
+          msg = "Authentication required (401). Token missing or invalid.";
+        } else if (res.status === 403) {
+          msg = "Permission denied (403). Operator or Admin role required.";
+        } else if (res.status === 404) {
+          msg = "Device not found (404).";
+        } else if (res.status === 429) {
+          msg = "Rate limit exceeded (429). Please wait before issuing another command.";
+        }
+        throw new Error(msg);
       }
-      showToast(`Loaded ${data.job?.file_name || file.name} (${data.job?.total_lines || 0} lines)`);
-      updateControlPanelUI(data.job);
-      logEvent("gcode_uploaded", data.job?.file_name || file.name);
+
+      const cmdId = data.cmd_id;
+      const now = Date.now();
+      const expiresAt = new Date(now + 60000).toISOString();
+
+      rmcActiveCmd[did] = {
+        cmd_id: cmdId,
+        action,
+        status: "sent",
+        issued_at: new Date(now).toISOString(),
+        expires_at: expiresAt
+      };
+
+      if (data.warning) {
+        showToast(`Warning: ${data.warning}`);
+      }
+
+      startPendingCountdown(did);
+      updateRmcTimeline(did, "sent");
+      updateRmcUI(did);
+      fetchRmcCommands(did);
     } catch (err) {
-      if (cpUploadStatus) {
-        cpUploadStatus.textContent = `Upload error: ${err.message}`;
-        cpUploadStatus.style.color = "var(--red)";
-      }
-      showToast(`Upload Error: ${err.message}`, true);
+      showToast(`Error: ${err.message}`, true);
+      clearRmcActiveCommand(did);
+      updateRmcUI(did);
+    } finally {
+      rmcActionInFlight = false;
     }
   }
 
-  async function loadSampleJob() {
-    const did = deviceSelect.value;
-    if (!did) {
-      showToast("Please select a device from the topbar first", true);
-      return;
-    }
-    if (cpUploadStatus) {
-      cpUploadStatus.textContent = "Loading sample pf_gas_test.nc...";
-      cpUploadStatus.style.color = "var(--accent)";
-    }
-    try {
-      const res = await fetch(`/api/devices/${encodeURIComponent(did)}/job/load_sample`, {
-        method: "POST"
-      });
-      const data = await res.json().catch(() => ({}));
-      if (!res.ok) {
-        const errMsg = data.detail || data.error || "Failed to load sample file";
-        throw new Error(errMsg);
-      }
-      showToast(`Loaded sample pf_gas_test.nc (${data.job?.total_lines || 0} lines)`);
-      updateControlPanelUI(data.job);
-      logEvent("sample_job_loaded", "pf_gas_test.nc");
-    } catch (err) {
-      if (cpUploadStatus) {
-        cpUploadStatus.textContent = `Sample error: ${err.message}`;
-        cpUploadStatus.style.color = "var(--red)";
-      }
-      showToast(`Sample Error: ${err.message}`, true);
-    }
-  }
-
-  async function sendJobAction(action) {
-    const did = deviceSelect.value;
-    if (!did) {
-      showToast("Please select a device from the topbar first", true);
-      return;
-    }
-
-    if (action === "start") {
-      if (!currentJobState || !currentJobState.file_name || !currentJobState.total_lines) {
-        showToast("No G-code file loaded. Please drag & drop a file or click 'Load Sample' first.", true);
+  function startPendingCountdown(did) {
+    if (rmcPendingTimer) clearInterval(rmcPendingTimer);
+    rmcPendingTimer = setInterval(() => {
+      const actCmd = rmcActiveCmd[did];
+      if (!actCmd || ["done", "rejected", "expired", "timeout", "failed"].includes(actCmd.status)) {
+        clearInterval(rmcPendingTimer);
+        rmcPendingTimer = null;
+        updateRmcUI(did);
         return;
       }
+      const expTime = new Date(actCmd.expires_at).getTime();
+      const remSec = Math.max(0, Math.ceil((expTime - Date.now()) / 1000));
+      if (did === deviceSelect.value) {
+        const btnMap = {
+          load: rmcBtnLoad,
+          start: rmcBtnStart,
+          pause: rmcBtnPause,
+          resume: rmcBtnResume,
+          stop: rmcBtnStop
+        };
+        const activeBtn = btnMap[actCmd.action];
+        if (activeBtn) {
+          const textEl = activeBtn.querySelector(".rmc-btn-text") || activeBtn;
+          textEl.textContent = `Waiting for operator… ${remSec}s`;
+        }
+      }
+      if (remSec <= 0) {
+        clearInterval(rmcPendingTimer);
+        rmcPendingTimer = null;
+        actCmd.status = "expired";
+        handleTerminalOutcome(did, actCmd.action, "expired", "EXPIRED", "Timed out waiting for operator response");
+        updateRmcUI(did);
+      }
+    }, 1000);
+  }
+
+  function clearRmcActiveCommand(did) {
+    if (rmcPendingTimer) {
+      clearInterval(rmcPendingTimer);
+      rmcPendingTimer = null;
+    }
+    delete rmcActiveCmd[did];
+  }
+
+  function handleRmcAck(did, ack) {
+    const cmdId = ack.cmd_id;
+    const status = ack.status;
+    const actCmd = rmcActiveCmd[did];
+    if (actCmd && actCmd.cmd_id === cmdId) {
+      actCmd.status = status;
+      actCmd.reason_code = ack.reason_code;
+      actCmd.message = ack.message;
+      updateRmcTimeline(did, status, ack.reason_code, ack.message);
     }
 
-    try {
-      const res = await fetch(`/api/devices/${encodeURIComponent(did)}/job/action`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ action })
-      });
-      const data = await res.json().catch(() => ({}));
-      if (!res.ok) {
-        const errMsg = data.detail || data.error || `Failed to execute ${action}`;
-        throw new Error(errMsg);
-      }
-      showToast(`Job action '${action.toUpperCase()}' triggered`);
-      if (data.job) {
-        updateControlPanelUI(data.job);
-      }
-      logEvent("job_action", action);
-    } catch (err) {
-      showToast(`Action Error: ${err.message}`, true);
+    if (["done", "rejected", "expired", "timeout", "failed"].includes(status)) {
+      handleTerminalOutcome(did, actCmd ? actCmd.action : "command", status, ack.reason_code, ack.message);
+    }
+
+    if (did === deviceSelect.value) {
+      updateRmcUI(did);
+      fetchRmcCommands(did);
     }
   }
 
-  // Wire Control Panel Event Listeners
-  cpDropzone?.addEventListener("click", () => cpFileInput?.click());
-  cpFileInput?.addEventListener("change", (e) => {
-    if (e.target.files && e.target.files[0]) {
-      uploadJobFile(e.target.files[0]);
-    }
-  });
-  cpDropzone?.addEventListener("dragover", (e) => {
-    e.preventDefault();
-    cpDropzone.classList.add("dragover");
-  });
-  cpDropzone?.addEventListener("dragleave", () => {
-    cpDropzone.classList.remove("dragover");
-  });
-  cpDropzone?.addEventListener("drop", (e) => {
-    e.preventDefault();
-    cpDropzone.classList.remove("dragover");
-    if (e.dataTransfer && e.dataTransfer.files && e.dataTransfer.files[0]) {
-      uploadJobFile(e.dataTransfer.files[0]);
-    }
-  });
-  cpLoadSampleBtn?.addEventListener("click", loadSampleJob);
-  cpStartBtn?.addEventListener("click", () => sendJobAction("start"));
-  cpPauseBtn?.addEventListener("click", () => sendJobAction("pause"));
-  cpResumeBtn?.addEventListener("click", () => sendJobAction("resume"));
-  cpAbortBtn?.addEventListener("click", () => sendJobAction("abort"));
-  cpResetBtn?.addEventListener("click", () => sendJobAction("reset"));
+  function handleRmcCmdStatus(did, cmd) {
+    const cmdId = cmd.cmd_id;
+    const status = cmd.status;
+    const actCmd = rmcActiveCmd[did];
 
-  // Clear Dashboard Activity Log
-  document.getElementById("clearActivityLogBtn")?.addEventListener("click", () => {
-    const logEl = document.getElementById("dashboardActivityLog");
-    const emptyEl = document.getElementById("dashActivityEmpty");
-    const badge = document.getElementById("dashboardActivityBadge");
-    if (logEl) {
-      logEl.innerHTML = "";
-      if (emptyEl) { emptyEl.style.display = ""; logEl.appendChild(emptyEl); }
+    if (actCmd && actCmd.cmd_id === cmdId) {
+      actCmd.status = status;
+      actCmd.reason_code = cmd.reason_code;
+      if (cmd.expires_at) actCmd.expires_at = cmd.expires_at;
+      updateRmcTimeline(did, status, cmd.reason_code, cmd.message);
     }
-    if (badge) { badge.textContent = "Waiting for events..."; badge.style.color = ""; }
+
+    if (["done", "rejected", "expired", "timeout", "failed"].includes(status)) {
+      handleTerminalOutcome(did, cmd.action, status, cmd.reason_code, cmd.message);
+    }
+
+    if (did === deviceSelect.value) {
+      updateRmcUI(did);
+      fetchRmcCommands(did);
+    }
+  }
+
+  function handleTerminalOutcome(did, action, status, reasonCode, message) {
+    clearRmcActiveCommand(did);
+    const humanReason = formatReasonCode(reasonCode, message || "");
+    const actionUpper = (action || "COMMAND").toUpperCase();
+
+    if (status === "done") {
+      showToast(`✅ Command ${actionUpper} completed successfully`);
+    } else {
+      const label = status === "expired" ? "timed out / expired" : status;
+      showToast(`❌ Command ${actionUpper} ${label}: ${humanReason || status}`, true);
+    }
+  }
+
+  function updateRmcTimeline(did, status, reasonCode = null, message = null) {
+    if (did !== deviceSelect.value) return;
+
+    [rmcStepSent, rmcStepReceived, rmcStepAccepted, rmcStepDone].forEach(s => {
+      if (s) s.className = "rmc-timeline-step";
+    });
+    if (rmcTimelineBarFill) rmcTimelineBarFill.style.width = "0%";
+
+    const humanReason = formatReasonCode(reasonCode, message || "");
+
+    switch (status) {
+      case "sent":
+        if (rmcStepSent) rmcStepSent.classList.add("active");
+        if (rmcTimelineBarFill) rmcTimelineBarFill.style.width = "0%";
+        if (rmcTimelineMsg) rmcTimelineMsg.textContent = "Command dispatched to server and published via MQTT...";
+        break;
+
+      case "received":
+        if (rmcStepSent) rmcStepSent.classList.add("done");
+        if (rmcStepReceived) rmcStepReceived.classList.add("active");
+        if (rmcTimelineBarFill) rmcTimelineBarFill.style.width = "33%";
+        if (rmcTimelineMsg) rmcTimelineMsg.textContent = "Received by machine. Waiting for operator approval...";
+        break;
+
+      case "accepted":
+        if (rmcStepSent) rmcStepSent.classList.add("done");
+        if (rmcStepReceived) rmcStepReceived.classList.add("done");
+        if (rmcStepAccepted) rmcStepAccepted.classList.add("active");
+        if (rmcTimelineBarFill) rmcTimelineBarFill.style.width = "66%";
+        if (rmcTimelineMsg) rmcTimelineMsg.textContent = "Accepted by machine operator. Executing action...";
+        break;
+
+      case "done":
+        if (rmcStepSent) rmcStepSent.classList.add("done");
+        if (rmcStepReceived) rmcStepReceived.classList.add("done");
+        if (rmcStepAccepted) rmcStepAccepted.classList.add("done");
+        if (rmcStepDone) rmcStepDone.classList.add("done");
+        if (rmcTimelineBarFill) rmcTimelineBarFill.style.width = "100%";
+        if (rmcTimelineMsg) rmcTimelineMsg.textContent = "Command executed and finished successfully.";
+        break;
+
+      case "rejected":
+        if (rmcStepSent) rmcStepSent.classList.add("done");
+        if (rmcStepReceived) rmcStepReceived.classList.add("failed");
+        if (rmcTimelineMsg) rmcTimelineMsg.textContent = `Rejected by operator: ${humanReason}`;
+        break;
+
+      case "expired":
+      case "timeout":
+        if (rmcStepSent) rmcStepSent.classList.add("done");
+        if (rmcStepReceived) rmcStepReceived.classList.add("failed");
+        if (rmcTimelineMsg) rmcTimelineMsg.textContent = `Command expired / timed out: ${humanReason || "Operator did not respond"}`;
+        break;
+
+      case "failed":
+        if (rmcStepSent) rmcStepSent.classList.add("failed");
+        if (rmcTimelineMsg) rmcTimelineMsg.textContent = `Command failed: ${humanReason}`;
+        break;
+
+      default:
+        if (rmcTimelineMsg) rmcTimelineMsg.textContent = "No active command.";
+        break;
+    }
+  }
+
+  // Confirm Modal
+  function showConfirmDialog(title, message, onConfirm) {
+    if (!rmcConfirmModal) return;
+    if (rmcConfirmTitle) rmcConfirmTitle.textContent = title;
+    if (rmcConfirmBody) rmcConfirmBody.innerHTML = message;
+    rmcConfirmCallback = onConfirm;
+    rmcConfirmModal.style.display = "flex";
+  }
+
+  function closeConfirmDialog() {
+    if (rmcConfirmModal) rmcConfirmModal.style.display = "none";
+    rmcConfirmCallback = null;
+  }
+
+  rmcConfirmCancel?.addEventListener("click", closeConfirmDialog);
+  rmcConfirmClose?.addEventListener("click", closeConfirmDialog);
+  rmcConfirmModal?.addEventListener("click", (e) => {
+    if (e.target === rmcConfirmModal) closeConfirmDialog();
   });
+  rmcConfirmOk?.addEventListener("click", () => {
+    const cb = rmcConfirmCallback;
+    closeConfirmDialog();
+    if (cb) cb();
+  });
+
+  // Action Button Listeners
+  rmcBtnLoad?.addEventListener("click", () => {
+    const did = deviceSelect.value;
+    if (!did) {
+      showToast("Please select a device first", true);
+      return;
+    }
+    openLoadFileModal(did);
+  });
+
+  rmcBtnStart?.addEventListener("click", () => {
+    const did = deviceSelect.value;
+    if (!did) return;
+    const st = rmcStates[did] || {};
+    const rawFile = st.file;
+    const fn = (rawFile && typeof rawFile === "object") ? (rawFile.name || rawFile.path || rawFile.file_id || "") : (rawFile || "Active File");
+    showConfirmDialog(
+      "Confirm Job Start",
+      `Are you sure you want to start executing <strong style="color:var(--accent);">${escapeHtml(fn)}</strong> on machine <strong style="color:#fff;">${escapeHtml(did)}</strong>?<br><br><span style="font-size:12px;color:var(--muted);">Verify that the machine build area is clear and inert gas flow is active.</span>`,
+      () => issueRmcCommand("start", {})
+    );
+  });
+
+  rmcBtnPause?.addEventListener("click", () => {
+    issueRmcCommand("pause", {});
+  });
+
+  rmcBtnResume?.addEventListener("click", () => {
+    issueRmcCommand("resume", {});
+  });
+
+  rmcBtnStop?.addEventListener("click", () => {
+    const did = deviceSelect.value;
+    if (!did) return;
+    const st = rmcStates[did] || {};
+    const rawFile = st.file;
+    const fn = (rawFile && typeof rawFile === "object") ? (rawFile.name || rawFile.path || rawFile.file_id || "") : (rawFile || "Current Job");
+    showConfirmDialog(
+      "Confirm Emergency Stop / Halt",
+      `Are you sure you want to <strong style="color:var(--red);">STOP</strong> job <strong style="color:var(--accent);">${escapeHtml(fn)}</strong> on machine <strong style="color:#fff;">${escapeHtml(did)}</strong>?<br><br><span style="font-size:12px;color:var(--red);">Laser power will extinguish and motion will halt immediately. Machine will transition to idle.</span>`,
+      () => issueRmcCommand("stop", {})
+    );
+  });
+
+  // Load File Modal
+  function openLoadFileModal(did) {
+    if (!rmcLoadModal) return;
+    rmcSelectedFile = null;
+    if (rmcLoadSubmit) rmcLoadSubmit.disabled = true;
+    if (rmcLoadStageBar) rmcLoadStageBar.style.display = "none";
+    switchLoadModalTab("onMachine");
+    renderRmcFilesModal(did);
+    rmcLoadModal.style.display = "flex";
+  }
+
+  function closeLoadFileModal() {
+    if (rmcLoadModal) rmcLoadModal.style.display = "none";
+    rmcSelectedFile = null;
+  }
+
+  function switchLoadModalTab(tab) {
+    if (tab === "onMachine") {
+      rmcTabOnMachine?.classList.add("active");
+      rmcTabServerFiles?.classList.remove("active");
+      if (rmcOnMachinePanel) rmcOnMachinePanel.style.display = "block";
+      if (rmcServerFilesPanel) rmcServerFilesPanel.style.display = "none";
+      if (rmcLoadSubmit) rmcLoadSubmit.style.display = "inline-flex";
+    } else {
+      rmcTabOnMachine?.classList.remove("active");
+      rmcTabServerFiles?.classList.add("active");
+      if (rmcOnMachinePanel) rmcOnMachinePanel.style.display = "none";
+      if (rmcServerFilesPanel) rmcServerFilesPanel.style.display = "block";
+      if (rmcLoadSubmit) rmcLoadSubmit.style.display = "none";
+    }
+  }
+
+  rmcTabOnMachine?.addEventListener("click", () => switchLoadModalTab("onMachine"));
+  rmcTabServerFiles?.addEventListener("click", () => switchLoadModalTab("serverFiles"));
+  rmcLoadClose?.addEventListener("click", closeLoadFileModal);
+  rmcLoadCancel?.addEventListener("click", closeLoadFileModal);
+  rmcLoadModal?.addEventListener("click", (e) => {
+    if (e.target === rmcLoadModal) closeLoadFileModal();
+  });
+
+  function renderRmcFilesModal(did) {
+    if (!rmcFileList) return;
+    const files = rmcFiles[did] || [];
+    if (!files || files.length === 0) {
+      rmcFileList.innerHTML = '<div style="padding:20px;text-align:center;color:var(--muted);font-size:12px;">No files available on this machine yet. FreeCAD or local operator must register files.</div>';
+      return;
+    }
+    rmcFileList.innerHTML = "";
+    files.forEach(f => {
+      const item = document.createElement("div");
+      item.className = "rmc-file-item";
+      const name = typeof f === "string" ? f : (f.name || f.path || f.file_id || "file");
+      const sizeStr = (f && f.size) ? formatBytes(f.size) : "";
+      const modStr = (f && f.modified) ? formatRecordingDate(f.modified) : "";
+
+      item.innerHTML = `
+        <div style="display:flex;align-items:center;gap:10px;">
+          <svg width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+          <span style="font-weight:600;color:#fff;">${escapeHtml(name)}</span>
+        </div>
+        <div style="font-size:11px;color:var(--muted);display:flex;gap:12px;">
+          ${sizeStr ? `<span>${escapeHtml(sizeStr)}</span>` : ""}
+          ${modStr ? `<span>${escapeHtml(modStr)}</span>` : ""}
+        </div>
+      `;
+      item.addEventListener("click", () => {
+        rmcFileList.querySelectorAll(".rmc-file-item").forEach(el => el.classList.remove("selected"));
+        item.classList.add("selected");
+        rmcSelectedFile = f;
+        if (rmcLoadSubmit) rmcLoadSubmit.disabled = false;
+      });
+      rmcFileList.appendChild(item);
+    });
+  }
+
+  rmcLoadSubmit?.addEventListener("click", async () => {
+    if (!rmcSelectedFile) return;
+    const did = deviceSelect.value;
+    if (!did) return;
+
+    const fileId = typeof rmcSelectedFile === "string" ? rmcSelectedFile : (rmcSelectedFile.file_id || rmcSelectedFile.name || rmcSelectedFile.path);
+    const sha256 = (typeof rmcSelectedFile === "object" && rmcSelectedFile.sha256) ? rmcSelectedFile.sha256 : "";
+    const size = (typeof rmcSelectedFile === "object" && rmcSelectedFile.size) ? Number(rmcSelectedFile.size) || 0 : 0;
+
+    if (rmcLoadStageBar && rmcLoadStageText) {
+      rmcLoadStageBar.style.display = "block";
+      rmcLoadStageText.textContent = "Sending Load command...";
+      rmcLoadStageBar.style.borderColor = "var(--border)";
+    }
+    rmcLoadSubmit.disabled = true;
+
+    try {
+      await issueRmcCommand("load", {
+        source: "local",
+        file_id: fileId,
+        sha256,
+        size
+      });
+      closeLoadFileModal();
+    } catch (err) {
+      if (rmcLoadStageText) {
+        rmcLoadStageText.textContent = `Rejected: ${err.message}`;
+        rmcLoadStageBar.style.borderColor = "var(--red)";
+      }
+      rmcLoadSubmit.disabled = false;
+    }
+  });
+
+  // Lock Actions
+  rmcTakeLockBtn?.addEventListener("click", async () => {
+    const did = deviceSelect.value;
+    if (!did) return;
+    try {
+      const res = await fetch(`/api/devices/${encodeURIComponent(did)}/lock`, {
+        method: "POST",
+        headers: getAuthHeaders(),
+        body: JSON.stringify({})
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        if (res.status === 423) {
+          const issuer = data.detail?.issued_by || "another operator";
+          rmcLocks[did] = { device_id: did, issued_by: issuer };
+          updateRmcUI(did);
+          throw new Error(`Device is already locked by ${issuer}`);
+        }
+        throw new Error(data.detail || `Failed to acquire lock (HTTP ${res.status})`);
+      }
+      rmcLocks[did] = data;
+      showToast("Exclusive control lock acquired");
+      updateRmcUI(did);
+    } catch (err) {
+      showToast(err.message, true);
+    }
+  });
+
+  rmcReleaseLockBtn?.addEventListener("click", async () => {
+    const did = deviceSelect.value;
+    if (!did) return;
+    try {
+      const res = await fetch(`/api/devices/${encodeURIComponent(did)}/lock`, {
+        method: "DELETE",
+        headers: getAuthHeaders()
+      });
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        throw new Error(data.detail || `Failed to release lock (HTTP ${res.status})`);
+      }
+      delete rmcLocks[did];
+      showToast("Control lock released");
+      updateRmcUI(did);
+    } catch (err) {
+      showToast(err.message, true);
+    }
+  });
+
+  window.addEventListener("beforeunload", () => {
+    const did = deviceSelect ? deviceSelect.value : null;
+    const myUser = getCurrentUser();
+    if (did && rmcLocks[did] && rmcLocks[did].issued_by === myUser) {
+      navigator.sendBeacon && navigator.sendBeacon(`/api/devices/${encodeURIComponent(did)}/lock`);
+    }
+  });
+
+  // Activity Log
+  async function fetchRmcCommands(did) {
+    if (!did) return;
+    try {
+      const res = await fetch(`/api/devices/${encodeURIComponent(did)}/commands?limit=50`, {
+        headers: getAuthHeaders()
+      });
+      if (!res.ok) return;
+      const list = await res.json();
+      rmcCommands[did] = Array.isArray(list) ? list : [];
+      if (did === deviceSelect.value) {
+        renderRmcAuditTable(rmcCommands[did]);
+      }
+    } catch (_) {}
+  }
+
+  function renderRmcAuditTable(list) {
+    if (!rmcAuditTableBody) return;
+    if (!list || list.length === 0) {
+      rmcAuditTableBody.innerHTML = '<tr><td colspan="5" style="text-align:center;color:var(--muted);padding:18px;">No commands issued yet for this device.</td></tr>';
+      return;
+    }
+    rmcAuditTableBody.innerHTML = "";
+    list.forEach(cmd => {
+      const tr = document.createElement("tr");
+      const timeStr = cmd.issued_at ? new Date(cmd.issued_at).toLocaleTimeString() : "—";
+      const userStr = escapeHtml(cmd.issued_by || "unknown");
+      const actStr = escapeHtml((cmd.action || "").toUpperCase());
+      const status = (cmd.status || "sent").toLowerCase();
+
+      let statusPill = "";
+      if (status === "done") {
+        statusPill = '<span class="status-pill on">DONE</span>';
+      } else if (["rejected", "failed"].includes(status)) {
+        statusPill = `<span class="status-pill off" style="color:var(--red);background:var(--red-soft);border-color:var(--red);">${escapeHtml(status.toUpperCase())}</span>`;
+      } else if (["expired", "timeout"].includes(status)) {
+        statusPill = `<span class="status-pill" style="color:var(--yellow);background:var(--yellow-soft);border-color:var(--yellow);">${escapeHtml(status.toUpperCase())}</span>`;
+      } else {
+        statusPill = `<span class="status-pill" style="color:var(--accent);background:var(--accent-soft);border-color:var(--accent);">${escapeHtml(status.toUpperCase())}</span>`;
+      }
+
+      let detail = "";
+      if (cmd.reason_code) {
+        detail = formatReasonCode(cmd.reason_code);
+      } else if (cmd.action === "load" && cmd.params) {
+        detail = `File: ${escapeHtml(cmd.params.file_id || cmd.params.path || "")}`;
+      } else {
+        detail = escapeHtml(cmd.message || cmd.status || "");
+      }
+
+      tr.innerHTML = `
+        <td style="font-family:var(--font-mono);font-size:11px;color:var(--muted);">${escapeHtml(timeStr)}</td>
+        <td style="font-weight:600;">${userStr}</td>
+        <td><span class="status-pill" style="font-weight:700;">${actStr}</span></td>
+        <td>${statusPill}</td>
+        <td style="font-size:11px;color:var(--muted);">${escapeHtml(detail)}</td>
+      `;
+      rmcAuditTableBody.appendChild(tr);
+    });
+  }
+
+  rmcRefreshAuditBtn?.addEventListener("click", () => {
+    const did = deviceSelect.value;
+    if (did) fetchRmcCommands(did);
+  });
+
+  async function fetchRmcDeviceData(did) {
+    if (!did) return;
+    try {
+      const lockRes = await fetch(`/api/devices/${encodeURIComponent(did)}/lock`, {
+        headers: getAuthHeaders()
+      });
+      if (lockRes.ok) {
+        const lockData = await lockRes.json();
+        rmcLocks[did] = lockData;
+      }
+    } catch (_) {}
+    await fetchRmcCommands(did);
+    updateRmcUI(did);
+  }
+
+  function startRmcStaleChecker() {
+    if (rmcStaleCheckTimer) clearInterval(rmcStaleCheckTimer);
+    rmcStaleCheckTimer = setInterval(() => {
+      const did = deviceSelect ? deviceSelect.value : null;
+      if (did && rmcStates[did]) {
+        updateRmcUI(did);
+      }
+    }, 3000);
+  }
 
   // WebSocket Connection
   function connectWS() {
@@ -4675,6 +5811,10 @@
     socket.onopen = () => {
       setConn(true);
       logEvent("WebSocket connected");
+      const sel = deviceSelect ? deviceSelect.value : null;
+      if (sel) {
+        fetchRmcDeviceData(sel);
+      }
     };
 
     socket.onmessage = (ev) => {
@@ -4682,11 +5822,13 @@
       try { msg = JSON.parse(ev.data); } catch(e) { return; }
       const selected = deviceSelect.value;
 
-      // STRICT DEVICE ISOLATION:
-      // Drop any message that does not belong to the currently selected device.
-      if (msg.type !== "init") {
+      // RMC events are isolated and keyed per device_id:
+      const isRmcEvent = ["rmc_state", "rmc_files", "rmc_ack", "rmc_cmd_status"].includes(msg.type);
+
+      if (!isRmcEvent && msg.type !== "init") {
+        // Drop telemetry/runtime events that do not belong to the selected device
         if (!selected) return;
-        if (!msg.device_id || msg.device_id !== selected) {
+        if (msg.device_id && msg.device_id !== selected) {
           return;
         }
       }
@@ -4696,9 +5838,29 @@
           const sessions = msg.active_sessions || {};
           lastInitSessionsData = msg.sessions_data || {};
           lastInitLiveRuntime = msg.live_runtime || {};
-          const jobStates = msg.job_states || {};
+          const rmcInitStates = msg.rmc_states || {};
+          const rmcInitFiles = msg.rmc_files || {};
 
-          Object.keys(sessions).forEach(did => {
+          // Ingest RMC states and files per device
+          Object.entries(rmcInitStates).forEach(([did, st]) => {
+            if (st) {
+              rmcStates[did] = st;
+              rmcLastSeq[did] = Number(st.seq) || 0;
+            }
+          });
+          Object.entries(rmcInitFiles).forEach(([did, files]) => {
+            if (files) {
+              rmcFiles[did] = files;
+            }
+          });
+
+          const allKnownDevices = new Set([
+            ...Object.keys(sessions),
+            ...Object.keys(rmcInitStates),
+            ...Object.keys(rmcInitFiles)
+          ]);
+
+          allKnownDevices.forEach(did => {
             if (![...deviceSelect.options].some(o => o.value === did)) {
               const opt = document.createElement("option");
               opt.value = did;
@@ -4709,8 +5871,8 @@
 
           const currentVal = deviceSelect.value;
           const saved = localStorage.getItem("ufameasy_selected_device");
-          if (!currentVal || !sessions[currentVal]) {
-            const preferred = (saved && sessions[saved]) ? saved : null;
+          if (!currentVal || (!sessions[currentVal] && !rmcInitStates[currentVal])) {
+            const preferred = (saved && (sessions[saved] || rmcInitStates[saved])) ? saved : null;
             if (preferred) deviceSelect.value = preferred;
             else if (deviceSelect.options.length > 1) deviceSelect.value = deviceSelect.options[1].value;
           }
@@ -4718,58 +5880,58 @@
           const sel = deviceSelect.value;
           if (sel) {
             handleDeviceChange(sel);
-            if (jobStates[sel]) {
-              updateControlPanelUI(jobStates[sel]);
+            updateRmcUI(sel);
+            fetchRmcDeviceData(sel);
+          }
+          break;
+        }
+
+        case "rmc_state": {
+          const did = msg.device_id;
+          const st = msg.data;
+          if (!did || !st) break;
+
+          // Ignore out-of-order state if seq is older than what's already shown
+          const seq = Number(st.seq) || 0;
+          const prevSeq = rmcLastSeq[did];
+          if (prevSeq !== undefined && seq < prevSeq) {
+            console.warn(`[RMC] Ignored stale seq for ${did}: ${seq} < ${prevSeq}`);
+            break;
+          }
+          rmcLastSeq[did] = seq;
+          rmcStates[did] = st;
+
+          if (did === selected) {
+            updateRmcUI(did);
+          }
+          break;
+        }
+
+        case "rmc_files": {
+          const did = msg.device_id;
+          if (!did || !msg.data) break;
+          const files = msg.data.files || (Array.isArray(msg.data) ? msg.data : []);
+          rmcFiles[did] = files;
+
+          if (did === selected) {
+            if (rmcLoadModal && rmcLoadModal.style.display === "flex") {
+              renderRmcFilesModal(did);
             }
           }
           break;
         }
 
-        case "dashboard_job_event": {
-          const ev = msg.event || "";
-          const fn = msg.file_name || "";
-          const evMap = {
-            loaded:  { icon: "📂", color: "var(--accent)",  label: "Job Loaded from Dashboard" },
-            started: { icon: "▶",  color: "var(--green)",   label: "Job Started from Dashboard" },
-            paused:  { icon: "⏸",  color: "var(--yellow)",  label: "Job Paused from Dashboard" },
-            resumed: { icon: "▶▶", color: "var(--green)",   label: "Job Resumed from Dashboard" },
-            aborted: { icon: "⛔",  color: "var(--red)",    label: "Job Aborted from Dashboard" },
-            reset:   { icon: "↺",  color: "var(--muted)",  label: "Job Reset from Dashboard" },
-          };
-          const info = evMap[ev] || { icon: "ℹ", color: "var(--muted)", label: `Dashboard: ${ev}` };
-          // Toast notification
-          showToast(`${info.icon} ${info.label}${fn ? ': ' + fn : ''}`, ev === 'aborted');
-          // Activity log entry
-          const logEl = document.getElementById('dashboardActivityLog');
-          const emptyEl = document.getElementById('dashActivityEmpty');
-          const badge = document.getElementById('dashboardActivityBadge');
-          if (logEl) {
-            if (emptyEl) emptyEl.style.display = 'none';
-            const entry = document.createElement('div');
-            const ts = new Date().toLocaleTimeString();
-            entry.style.cssText = 'display:flex;align-items:flex-start;gap:10px;padding:8px 10px;border-radius:8px;background:var(--surface);border:1px solid var(--border);';
-            entry.innerHTML = `
-              <span style="font-size:18px;line-height:1;">${info.icon}</span>
-              <div style="flex:1;min-width:0;">
-                <div style="font-weight:700;font-size:13px;color:${info.color};">${info.label}</div>
-                ${fn ? `<div style="font-size:11px;color:var(--muted);margin-top:2px;word-break:break-all;">File: <strong style="color:#fff;">${fn}</strong></div>` : ''}
-                <div style="font-size:10px;color:var(--muted);margin-top:3px;">${ts}</div>
-              </div>`;
-            logEl.insertBefore(entry, logEl.firstChild);
-            // Keep max 30 entries
-            while (logEl.children.length > 31) logEl.removeChild(logEl.lastChild);
-            if (badge) { badge.textContent = `Last: ${ts}`; badge.style.color = info.color; }
-          }
-          logEvent(`dashboard_${ev}`, fn);
+        case "rmc_ack": {
+          const did = msg.device_id;
+          if (!did || !msg.data) break;
+          handleRmcAck(did, msg.data);
           break;
         }
 
-        case "job_progress": {
-          const d = msg.data || {};
-          if (d.status === "error" || d.error) {
-            showToast("Machine Error: " + (d.error || "Execution error"), true);
-          }
-          updateControlPanelUI(d);
+        case "rmc_cmd_status": {
+          const did = msg.device_id;
+          if (!did || !msg.data) break;
+          handleRmcCmdStatus(did, msg.data);
           break;
         }
 
@@ -4924,6 +6086,7 @@
   loadDevices();
   connectWS();
   startEquipPoll();
+  startRmcStaleChecker();
 </script>
 </body>
 </html>

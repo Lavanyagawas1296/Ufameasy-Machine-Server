@@ -8,12 +8,22 @@ import json
 import os
 from pathlib import PurePosixPath
 import threading
+import urllib.parse
 import uuid
 
 from fastapi import HTTPException
 
 from server import db
-from server.rmc_contract import COMMAND_ACTIONS, LOAD_SOURCES, TRANSITIONS, rmc_topic, CMD_SEGMENT
+from server.rmc_contract import (
+    COMMAND_ACTIONS,
+    DOWNLOAD_ALLOWANCE_S,
+    LOAD_SOURCES,
+    PROGRESS_STAGES,
+    TRANSITIONS,
+    rmc_topic,
+    CMD_SEGMENT,
+)
+from server.rmc_transfer import sign_download_token
 from server.state_store import state
 
 
@@ -120,14 +130,111 @@ class RMCService:
             raise HTTPException(status_code=400, detail="ftp_name must be a relative path")
         return path.as_posix()
 
-    def _validate_params(self, action: str, params: dict) -> dict:
+    def _validate_params(
+        self,
+        action: str,
+        params: dict,
+        device_id: str = "",
+        *,
+        download_expiry: int | None = None,
+        request_base_url: str | None = None,
+    ) -> dict:
         if not isinstance(params, dict):
             raise HTTPException(status_code=422, detail="params must be an object")
         if action != "load":
             return {}
+
+        # Reject client-supplied paths or URLs
+        if "path" in params or "url" in params or "download_url" in params:
+            raise HTTPException(
+                status_code=422,
+                detail={"reason_code": "UNAUTHORIZED", "message": "Client-supplied paths or URLs are forbidden"},
+            )
+
         source = params.get("source")
         if source not in LOAD_SOURCES:
-            raise HTTPException(status_code=422, detail="load source must be ftp or local")
+            raise HTTPException(status_code=422, detail="load source must be server, local, or ftp")
+
+        if source == "server":
+            file_id = params.get("file_id")
+            if not isinstance(file_id, str) or not file_id:
+                raise HTTPException(status_code=422, detail={"reason_code": "NO_FILE", "message": "server load requires file_id"})
+            file_record = db.get_rmc_server_file(file_id)
+            if not file_record:
+                raise HTTPException(
+                    status_code=404,
+                    detail={"reason_code": "FILE_NOT_FOUND", "message": f"Server file {file_id} not found"},
+                )
+            disk_path = db.RMC_FILES_DIR / file_record["stored_name"]
+            if not disk_path.is_file():
+                raise HTTPException(
+                    status_code=404,
+                    detail={"reason_code": "FILE_NOT_FOUND", "message": "Server file missing from disk"},
+                )
+            if disk_path.stat().st_size != file_record["size"]:
+                raise HTTPException(
+                    status_code=500,
+                    detail={"reason_code": "FILE_CHANGED", "message": "Server file size mismatch"},
+                )
+            token = sign_download_token(
+                file_id=file_id,
+                device_id=device_id,
+                expiry=download_expiry or int(self._now().timestamp()) + 300,
+            )
+            env_base = os.getenv("RMC_SERVER_BASE_URL", "").strip()
+            if env_base:
+                base_url = env_base.rstrip("/")
+            else:
+                candidate = (request_base_url or "").strip()
+                if not candidate:
+                    raise HTTPException(
+                        status_code=400,
+                        detail="Download URL base not provided; please set RMC_SERVER_BASE_URL",
+                    )
+                parsed = urllib.parse.urlparse(candidate if "://" in candidate else f"http://{candidate}")
+                host = (parsed.hostname or "").lower()
+                if host in {"localhost", "127.0.0.1", "::1"}:
+                    raise HTTPException(
+                        status_code=400,
+                        detail="Download URL base resolves to loopback (localhost/127.0.0.1/::1); please set RMC_SERVER_BASE_URL environment variable for remote machines",
+                    )
+                base_url = candidate.rstrip("/")
+            download_url = f"{base_url}/api/rmc/files/{file_id}/download?token={token}"
+            return {
+                "source": "server",
+                "file_id": file_id,
+                "name": file_record["display_name"],
+                "size": file_record["size"],
+                "sha256": file_record["sha256"],
+                "download_url": download_url,
+            }
+
+        if source == "local":
+            file_id = params.get("file_id")
+            if not isinstance(file_id, str) or not file_id or "/" in file_id or "\\" in file_id:
+                raise HTTPException(status_code=422, detail={"reason_code": "NO_FILE", "message": "local load requires an opaque file_id"})
+            device_files = state.get_rmc_files(device_id)
+            match = None
+            for f in device_files:
+                if isinstance(f, dict) and f.get("file_id") == file_id:
+                    match = f
+                    break
+            if not match:
+                raise HTTPException(
+                    status_code=404,
+                    detail={"reason_code": "FILE_NOT_FOUND", "message": f"Local file '{file_id}' not found on device '{device_id}'"},
+                )
+            name = match.get("name") or file_id
+            size = match.get("size", 0)
+            sha256 = match.get("sha256", "")
+            return {
+                "source": "local",
+                "file_id": file_id,
+                "name": name,
+                "size": size,
+                "sha256": sha256,
+            }
+
         if source == "ftp":
             ftp_name = params.get("ftp_name")
             if not isinstance(ftp_name, str):
@@ -135,20 +242,40 @@ class RMCService:
             relative = self._safe_ftp_name(ftp_name)
             size = params.get("size")
             sha256 = params.get("sha256")
-            if not isinstance(size, int) or size < 0 or not isinstance(sha256, str) or not sha256:
+            if not isinstance(size, int) or isinstance(size, bool) or size < 0 or not isinstance(sha256, str) or not sha256:
                 raise HTTPException(status_code=422, detail="ftp load requires size and sha256")
-            return {"source": "ftp", "path": relative, "sha256": sha256, "size": size}
-        file_id = params.get("file_id")
-        if not isinstance(file_id, str) or not file_id or "/" in file_id or "\\" in file_id:
-            raise HTTPException(status_code=422, detail="local load requires an opaque file_id")
-        return {"source": "local", "file_id": file_id, "sha256": params.get("sha256", ""), "size": params.get("size", 0)}
+            return {"source": "ftp", "path": relative, "name": relative, "sha256": sha256, "size": size}
 
-    def issue_command(self, device_id: str, body: dict, user: str) -> dict:
+        return {}
+
+    def issue_command(
+        self,
+        device_id: str,
+        body: dict,
+        user: str,
+        *,
+        request_base_url: str | None = None,
+    ) -> dict:
         self._require_known_device(device_id)
         action = body.get("action") if isinstance(body, dict) else None
         if action not in COMMAND_ACTIONS:
             raise HTTPException(status_code=422, detail="Unsupported RMC action")
-        params = self._validate_params(action, body.get("params", {}))
+
+        ttl = body.get("ttl", 60)
+        if not isinstance(ttl, int) or not 1 <= ttl <= 300:
+            raise HTTPException(status_code=422, detail="ttl must be 1..300 seconds")
+
+        now = self._now()
+        download_allowance_s = int(os.getenv("RMC_DOWNLOAD_ALLOWANCE_S", str(DOWNLOAD_ALLOWANCE_S)))
+        download_expiry = int(now.timestamp()) + ttl + download_allowance_s
+
+        params = self._validate_params(
+            action,
+            body.get("params", {}),
+            device_id,
+            download_expiry=download_expiry,
+            request_base_url=request_base_url,
+        )
         current = self._device_state(device_id)
         offline = current.get("job_state") == "offline"
         if offline and action != "stop":
@@ -158,16 +285,12 @@ class RMCService:
         self._rate_check(device_id, user)
         fingerprint = (device_id, user, action, json.dumps(params, sort_keys=True))
         recent = self._recent[("duplicate", fingerprint)]
-        now = self._now()
         while recent and now.timestamp() - recent[0] > 5:
             recent.popleft()
         if recent:
             raise HTTPException(status_code=409, detail={"reason_code": "DUPLICATE", "message": "Duplicate command request"})
         recent.append(now.timestamp())
         self.acquire_lock(device_id, user)
-        ttl = body.get("ttl", 60)
-        if not isinstance(ttl, int) or not 1 <= ttl <= 300:
-            raise HTTPException(status_code=422, detail="ttl must be 1..300 seconds")
         command = {
             "cmd_id": str(uuid.uuid4()), "device_id": device_id, "action": action, "params": params,
             "issued_by": user, "issued_at": now.isoformat(),
@@ -206,28 +329,46 @@ class RMCService:
         if command is None or command["device_id"] != device_id:
             return
         status = ack.get("status")
-        if status not in {"received", "accepted", "done", "rejected", "expired", "failed"}:
+        if status not in {"received", "accepted", "progress", "done", "rejected", "expired", "failed"}:
             return
         allowed = {
-            "sent": {"received", "rejected", "expired", "failed"},
-            "received": {"accepted", "rejected", "expired", "failed"},
-            "accepted": {"done", "failed", "expired"},
+            "sent": {"received", "accepted", "rejected", "expired", "failed"},
+            "received": {"accepted", "progress", "rejected", "expired", "failed"},
+            "accepted": {"progress", "done", "failed", "expired"},
+            "progress": {"progress", "accepted", "rejected", "done", "failed", "expired"},
         }
         if status not in allowed.get(command["status"], set()):
             return
-        if db.update_rmc_command(cmd_id, status, ack.get("reason_code"), ack.get("message")):
-            if status == "accepted":
+
+        message = ack.get("message")
+        extra_broadcast = {}
+        if status == "progress":
+            stage = ack.get("stage")
+            if stage not in PROGRESS_STAGES:
+                stage = "downloading"
+            try:
+                percent = float(ack.get("percent", 0))
+            except (ValueError, TypeError):
+                percent = 0.0
+            extra_broadcast = {"stage": stage, "percent": percent}
+            if not message:
+                message = f"{stage} {percent:.0f}%"
+
+        if db.update_rmc_command(cmd_id, status, ack.get("reason_code"), message):
+            if status in {"accepted", "progress"}:
                 self._schedule(cmd_id, self.done_timeout_s, "done")
             elif status in {"done", "rejected", "expired", "failed"}:
                 with self._lock:
                     timer = self._timers.pop(cmd_id, None)
                 if timer:
                     timer.cancel()
-            self._broadcast_status(cmd_id)
+            self._broadcast_status(cmd_id, extra=extra_broadcast)
 
-    def _broadcast_status(self, cmd_id: str) -> None:
+    def _broadcast_status(self, cmd_id: str, extra: dict | None = None) -> None:
         command = db.get_rmc_command(cmd_id)
         if command:
+            if extra:
+                command.update(extra)
             self._broadcast({"type": "rmc_cmd_status", "device_id": command["device_id"], "data": command})
 
 

@@ -5,6 +5,7 @@ from pathlib import Path
 
 
 DB_PATH = Path(__file__).resolve().parent / "data" / "params.db"
+RMC_FILES_DIR = Path(__file__).resolve().parent / "data" / "rmc_files"
 
 
 def get_conn():
@@ -14,6 +15,7 @@ def get_conn():
 
 
 def init_db():
+    RMC_FILES_DIR.mkdir(parents=True, exist_ok=True)
     conn = sqlite3.connect(DB_PATH)
     try:
         conn.execute(
@@ -143,6 +145,19 @@ def init_db():
                 issued_by TEXT NOT NULL,
                 acquired_at TEXT NOT NULL,
                 touched_at TEXT NOT NULL
+            )
+            """
+        )
+        conn.execute(
+            """
+            CREATE TABLE IF NOT EXISTS rmc_server_files (
+                file_id TEXT PRIMARY KEY,
+                display_name TEXT NOT NULL,
+                size INTEGER NOT NULL,
+                sha256 TEXT NOT NULL UNIQUE,
+                uploaded_by TEXT NOT NULL,
+                uploaded_at TEXT NOT NULL,
+                stored_name TEXT NOT NULL
             )
             """
         )
@@ -533,3 +548,103 @@ def delete_rmc_lock(device_id: str) -> None:
     finally:
         if conn is not None:
             conn.close()
+
+
+def create_rmc_server_file(
+    file_id: str,
+    display_name: str,
+    size: int,
+    sha256: str,
+    uploaded_by: str,
+    uploaded_at: str,
+    stored_name: str,
+) -> dict:
+    conn = None
+    try:
+        conn = get_conn()
+        conn.execute(
+            """INSERT INTO rmc_server_files
+               (file_id, display_name, size, sha256, uploaded_by, uploaded_at, stored_name)
+               VALUES (?, ?, ?, ?, ?, ?, ?)""",
+            (file_id, display_name, size, sha256, uploaded_by, uploaded_at, stored_name),
+        )
+        conn.commit()
+        return {
+            "file_id": file_id,
+            "display_name": display_name,
+            "size": size,
+            "sha256": sha256,
+            "uploaded_by": uploaded_by,
+            "uploaded_at": uploaded_at,
+            "stored_name": stored_name,
+        }
+    finally:
+        if conn is not None:
+            conn.close()
+
+
+def get_rmc_server_file(file_id: str) -> dict | None:
+    conn = None
+    try:
+        conn = get_conn()
+        row = conn.execute("SELECT * FROM rmc_server_files WHERE file_id = ?", (file_id,)).fetchone()
+        return dict(row) if row else None
+    finally:
+        if conn is not None:
+            conn.close()
+
+
+def get_rmc_server_file_by_sha256(sha256: str) -> dict | None:
+    conn = None
+    try:
+        conn = get_conn()
+        row = conn.execute("SELECT * FROM rmc_server_files WHERE sha256 = ?", (sha256,)).fetchone()
+        return dict(row) if row else None
+    finally:
+        if conn is not None:
+            conn.close()
+
+
+def list_rmc_server_files() -> list[dict]:
+    conn = None
+    try:
+        conn = get_conn()
+        rows = conn.execute("SELECT * FROM rmc_server_files ORDER BY uploaded_at DESC").fetchall()
+        return [dict(row) for row in rows]
+    finally:
+        if conn is not None:
+            conn.close()
+
+
+def delete_rmc_server_file(file_id: str) -> bool:
+    conn = None
+    try:
+        conn = get_conn()
+        cur = conn.execute("DELETE FROM rmc_server_files WHERE file_id = ?", (file_id,))
+        conn.commit()
+        return bool(cur.rowcount)
+    finally:
+        if conn is not None:
+            conn.close()
+
+
+def is_rmc_file_in_flight(file_id: str) -> bool:
+    conn = None
+    try:
+        conn = get_conn()
+        rows = conn.execute(
+            """SELECT params_json FROM rmc_commands
+               WHERE action = 'load' AND status IN ('sent', 'received', 'accepted', 'progress')"""
+        ).fetchall()
+        for row in rows:
+            try:
+                p = json.loads(row["params_json"])
+                if p.get("file_id") == file_id:
+                    return True
+            except Exception:
+                pass
+        return False
+    finally:
+        if conn is not None:
+            conn.close()
+
