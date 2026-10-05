@@ -36,7 +36,7 @@ class RMCService:
         self._recent: dict[tuple, deque] = defaultdict(deque)
         self.fresh_s = int(os.getenv("RMC_STATE_FRESH_S", "30"))
         self.received_timeout_s = int(os.getenv("RMC_RECEIVED_TIMEOUT_S", "10"))
-        self.done_timeout_s = int(os.getenv("RMC_DONE_TIMEOUT_S", "120"))
+        self.done_timeout_s = max(60, int(os.getenv("RMC_DONE_TIMEOUT_S", "120")))
         self.lock_ttl_s = int(os.getenv("RMC_LOCK_TTL_S", "300"))
         self.rate_limit = int(os.getenv("RMC_RATE_LIMIT", "10"))
         self.rate_window_s = int(os.getenv("RMC_RATE_WINDOW_S", "60"))
@@ -319,8 +319,8 @@ class RMCService:
         command = db.get_rmc_command(cmd_id)
         if command is None:
             return
-        expected = "sent" if waiting_for == "received" else "accepted"
-        if command["status"] == expected and db.update_rmc_command(cmd_id, "timeout", None, f"Timed out waiting for {waiting_for}"):
+        expected = {"sent"} if waiting_for == "received" else {"accepted", "progress"}
+        if command["status"] in expected and db.update_rmc_command(cmd_id, "timeout", None, f"Timed out waiting for {waiting_for}"):
             self._broadcast_status(cmd_id)
 
     def handle_ack(self, device_id: str, ack: dict) -> None:
@@ -344,24 +344,31 @@ class RMCService:
         extra_broadcast = {}
         if status == "progress":
             stage = ack.get("stage")
+            if not stage and isinstance(ack.get("progress"), dict):
+                stage = ack["progress"].get("stage")
             if stage not in PROGRESS_STAGES:
                 stage = "downloading"
             try:
-                percent = float(ack.get("percent", 0))
+                percent = float(
+                    ack.get("percent")
+                    if ack.get("percent") is not None
+                    else (ack.get("progress") or {}).get("percent", 0)
+                )
             except (ValueError, TypeError):
                 percent = 0.0
             extra_broadcast = {"stage": stage, "percent": percent}
             if not message:
                 message = f"{stage} {percent:.0f}%"
 
-        if db.update_rmc_command(cmd_id, status, ack.get("reason_code"), message):
-            if status in {"accepted", "progress"}:
-                self._schedule(cmd_id, self.done_timeout_s, "done")
-            elif status in {"done", "rejected", "expired", "failed"}:
-                with self._lock:
-                    timer = self._timers.pop(cmd_id, None)
-                if timer:
-                    timer.cancel()
+        updated = db.update_rmc_command(cmd_id, status, ack.get("reason_code"), message)
+        if status in {"accepted", "progress"}:
+            self._schedule(cmd_id, self.done_timeout_s, "done")
+        elif status in {"done", "rejected", "expired", "failed"}:
+            with self._lock:
+                timer = self._timers.pop(cmd_id, None)
+            if timer:
+                timer.cancel()
+        if updated:
             self._broadcast_status(cmd_id, extra=extra_broadcast)
 
     def _broadcast_status(self, cmd_id: str, extra: dict | None = None) -> None:

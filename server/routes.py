@@ -636,7 +636,7 @@ async def check_camera(ip: str, port: int = 8765, device_id: str | None = None):
 
     def _check() -> dict:
         try:
-            with socket.create_connection((ip, port), timeout=0.75):
+            with socket.create_connection((ip, port), timeout=3):
                 pass
         except OSError:
             return {"available": False, "ip": ip, "port": port, "error": "No live streaming from this device"}
@@ -645,7 +645,8 @@ async def check_camera(ip: str, port: int = 8765, device_id: str | None = None):
         try:
             import urllib.request
             req = urllib.request.Request(f"http://{ip}:{port}/status", headers={"User-Agent": "UFAMeasy-Server"})
-            with urllib.request.urlopen(req, timeout=1.0) as res:
+            # 0.5s is enough — TCP socket (3s above) already confirmed host is reachable
+            with urllib.request.urlopen(req, timeout=0.5) as res:
                 if res.status == 200:
                     data = json.loads(res.read().decode("utf-8"))
                     reported_dev = data.get("device_id")

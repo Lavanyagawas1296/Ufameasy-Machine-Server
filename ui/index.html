@@ -4,8 +4,11 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>UFAMeasy Machine Server</title>
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="preconnect" href="https://fonts.googleapis.com" crossorigin>
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <!-- Non-render-blocking font load: page renders immediately on factory Wi-Fi (no internet) using system fallback fonts -->
+  <link rel="preload" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap" as="style" onload="this.onload=null;this.rel='stylesheet'">
+  <noscript><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap"></noscript>
   <style>
     :root {
       --bg: #060d17;
@@ -1920,6 +1923,50 @@
       color: var(--muted);
       display: none;
     }
+    .rmc-upload-dropzone {
+      border: 1px dashed var(--border-light);
+      border-radius: 8px;
+      padding: 16px;
+      text-align: center;
+      background: var(--panel2);
+      cursor: pointer;
+      transition: all 0.15s ease;
+      margin-bottom: 12px;
+    }
+    .rmc-upload-dropzone:hover, .rmc-upload-dropzone.dragover {
+      border-color: var(--accent);
+      background: rgba(37, 185, 240, 0.08);
+    }
+    .rmc-upload-progress {
+      height: 4px;
+      background: var(--border);
+      border-radius: 2px;
+      overflow: hidden;
+      margin-top: 8px;
+      display: none;
+    }
+    .rmc-upload-progress-fill {
+      height: 100%;
+      background: var(--accent);
+      width: 0%;
+      transition: width 0.1s linear;
+    }
+    .rmc-delete-file-btn {
+      background: transparent;
+      border: 0;
+      color: var(--muted);
+      cursor: pointer;
+      padding: 2px 6px;
+      border-radius: 4px;
+      display: inline-flex;
+      align-items: center;
+      font-size: 16px;
+      line-height: 1;
+    }
+    .rmc-delete-file-btn:hover {
+      color: var(--red);
+      background: var(--red-soft);
+    }
 
     /* Mobile Bottom Navigation Bar (Hidden on desktop & tablet) */
     .mobile-bottom-nav {
@@ -3345,13 +3392,22 @@
     </div>
     <div id="rmcOnMachinePanel" role="tabpanel">
       <div id="rmcFileList" class="rmc-file-list" tabindex="0" aria-label="Available machine files">
-        <div style="padding:20px;text-align:center;color:var(--muted);font-size:12px;">No files available on machine.</div>
+        <div style="padding:20px;text-align:center;color:var(--muted);font-size:12px;">Machine has not published any files</div>
       </div>
     </div>
     <div id="rmcServerFilesPanel" role="tabpanel" style="display:none;">
-      <div style="padding:24px 16px;text-align:center;background:var(--panel2);border:1px dashed var(--border-light);border-radius:8px;margin-bottom:16px;">
-        <div style="font-weight:700;font-size:14px;color:#fff;margin-bottom:6px;">Server-Side File Storage</div>
-        <div style="font-size:12px;color:var(--muted);line-height:1.5;">Direct server file uploads and centralized repository will be available in <strong>Phase 6</strong>.<br>In Phase 5, select files currently available on the machine in the &ldquo;On Machine&rdquo; tab.</div>
+      <input type="file" id="rmcServerFileInput" accept=".gcode,.nc" style="display:none;">
+      <div id="rmcServerDropzone" class="rmc-upload-dropzone" tabindex="0" role="button" aria-label="Upload G-code file" style="cursor:pointer;">
+        <svg width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" style="margin-bottom:4px;color:var(--accent);"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+        <div style="font-size:13px;font-weight:600;color:#fff;">Drag &amp; drop file here, or <button type="button" id="rmcBrowseBtn" class="action-btn primary" style="display:inline-flex;align-items:center;padding:2px 10px;font-size:12px;margin-left:4px;cursor:pointer;">Browse</button></div>
+        <div style="font-size:11px;color:var(--muted);margin-top:2px;">Supported: .gcode, .nc (Max 200 MB)</div>
+        <div id="rmcUploadProgressBar" class="rmc-upload-progress">
+          <div id="rmcUploadProgressFill" class="rmc-upload-progress-fill"></div>
+        </div>
+      </div>
+      <div style="font-size:11px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:6px;">Server Registry Files</div>
+      <div id="rmcServerFileList" class="rmc-file-list" tabindex="0" aria-label="Server registry files">
+        <div style="padding:20px;text-align:center;color:var(--muted);font-size:12px;">Loading server files...</div>
       </div>
     </div>
     <div id="rmcLoadStageBar" class="rmc-stage-bar" role="status" aria-live="polite">
@@ -3486,6 +3542,11 @@
   const rmcTabServerFiles = document.getElementById("rmcTabServerFiles");
   const rmcOnMachinePanel = document.getElementById("rmcOnMachinePanel");
   const rmcServerFilesPanel = document.getElementById("rmcServerFilesPanel");
+  const rmcServerDropzone = document.getElementById("rmcServerDropzone");
+  const rmcServerFileInput = document.getElementById("rmcServerFileInput");
+  const rmcUploadProgressBar = document.getElementById("rmcUploadProgressBar");
+  const rmcUploadProgressFill = document.getElementById("rmcUploadProgressFill");
+  const rmcServerFileList = document.getElementById("rmcServerFileList");
   const rmcLoadStageBar = document.getElementById("rmcLoadStageBar");
   const rmcLoadStageText = document.getElementById("rmcLoadStageText");
 
@@ -3503,6 +3564,11 @@
   const rmcCommands = {};      // did -> array of recent commands
   const rmcActiveCmd = {};     // did -> active command object
   const rmcLastSeq = {};       // did -> monotonic sequence number
+  const rmcLastStateReceivedAt = {}; // did -> timestamp ms
+  let rmcServerFiles = [];     // server registry files list
+  let rmcSelectedServerFile = null;
+  let rmcActiveTab = "onMachine";
+  let rmcLockRenewTimer = null;
   let rmcPendingTimer = null;
   let rmcStaleCheckTimer = null;
   let rmcActionInFlight = false;
@@ -4878,6 +4944,8 @@
     return urlParams.get("role") === "viewer";
   }
 
+  const RMC_STALE_MS = 45000;
+
   const RMC_REASON_TEXTS = {
     INVALID_STATE: "Machine is not in a valid state for this action",
     NO_FILE: "No file is currently loaded on machine",
@@ -4889,9 +4957,15 @@
     HASH_MISMATCH: "File checksum validation failed",
     DOWNLOAD_FAILED: "File download to machine failed",
     FAULT: "Machine fault condition reported",
-    DUPLICATE: "Duplicate command request",
+    DUPLICATE: "Duplicate file or command request",
     UNAUTHORIZED: "Unauthorized command request",
-    LOCKED_BY_OTHER: "Machine is locked by another operator"
+    LOCKED_BY_OTHER: "Machine is locked by another operator",
+    FILE_TOO_LARGE: "File exceeds maximum allowed size (200 MB)",
+    UNSUPPORTED_TYPE: "Unsupported file type. Only .gcode and .nc files are allowed",
+    FILE_CHANGED: "File on disk has been modified or size does not match",
+    DISK_FULL: "Server or machine disk space is full",
+    DOWNLOAD_TIMEOUT: "File download timed out before completion",
+    TRANSFER_DENIED: "File transfer or download access denied"
   };
 
   function formatReasonCode(code, fallback = "") {
@@ -4899,14 +4973,18 @@
     return RMC_REASON_TEXTS[code] || fallback || code;
   }
 
-  function isDeviceStale(st) {
+  function isDeviceStale(st, did) {
     if (!st) return true;
     if (st.job_state === "offline") return true;
+    const lastRecv = did ? rmcLastStateReceivedAt[did] : null;
+    if (lastRecv) {
+      return (Date.now() - lastRecv) > RMC_STALE_MS;
+    }
     if (!st.recorded_at) return true;
     try {
       const recTime = new Date(st.recorded_at).getTime();
       if (isNaN(recTime)) return true;
-      return (Date.now() - recTime) > 30000;
+      return (Date.now() - recTime) > RMC_STALE_MS;
     } catch (_) {
       return true;
     }
@@ -5048,7 +5126,7 @@
       seq: 0
     };
 
-    const stale = !currentMachineConnected || isDeviceStale(st);
+    const stale = !currentMachineConnected || isDeviceStale(st, did);
     const lock = rmcLocks[did] || {};
     const lockedBy = st.controlled_by || lock.issued_by;
     const myUser = getCurrentUser();
@@ -5085,16 +5163,19 @@
         rmcLockText.textContent = `Control: You (${escapeHtml(myUser)})`;
         rmcTakeLockBtn.style.display = "none";
         rmcReleaseLockBtn.style.display = "inline-flex";
+        startLockRenewal();
       } else if (isLockedByOther) {
         rmcLockBadge.className = "rmc-tag tag-off";
         rmcLockText.textContent = `Locked by ${escapeHtml(lockedBy)}`;
         rmcTakeLockBtn.style.display = "none";
         rmcReleaseLockBtn.style.display = "none";
+        stopLockRenewal();
       } else {
         rmcLockBadge.className = "rmc-tag tag-off";
         rmcLockText.textContent = "Unlocked";
         rmcTakeLockBtn.style.display = isReadOnly ? "none" : "inline-flex";
         rmcReleaseLockBtn.style.display = "none";
+        stopLockRenewal();
       }
     }
 
@@ -5177,10 +5258,23 @@
       if (isCmdPending && actCmd && actCmd.action === cfg.id) {
         cfg.el.classList.add("pending");
         cfg.el.disabled = true;
-        const exp = new Date(actCmd.expires_at || 0).getTime();
-        const rem = Math.max(0, Math.ceil((exp - Date.now()) / 1000));
-        textSpan.textContent = `Waiting for operator… ${rem}s`;
-        cfg.el.title = "Waiting for operator confirmation";
+        if (actCmd.status === "progress") {
+          const stage = actCmd.stage || "downloading";
+          const pct = Math.round(Number(actCmd.percent) || 0);
+          textSpan.textContent = stage === "downloading" ? `Downloading ${pct}%` : "Verifying…";
+          cfg.el.title = stage === "downloading" ? `Downloading file to machine (${pct}%)` : "Verifying file checksum";
+        } else if (actCmd.status === "received") {
+          textSpan.textContent = "Waiting for machine…";
+          cfg.el.title = "Waiting for machine to process command";
+        } else if (actCmd.status === "sent") {
+          textSpan.textContent = "Sending…";
+          cfg.el.title = "Dispatching command to machine";
+        } else {
+          const exp = new Date(actCmd.expires_at || 0).getTime();
+          const rem = Math.max(0, Math.ceil((exp - Date.now()) / 1000));
+          textSpan.textContent = `Waiting for operator… ${rem}s`;
+          cfg.el.title = "Waiting for operator confirmation";
+        }
       } else {
         cfg.el.classList.remove("pending");
         textSpan.textContent = cfg.label;
@@ -5301,10 +5395,12 @@
       updateRmcTimeline(did, "sent");
       updateRmcUI(did);
       fetchRmcCommands(did);
+      return cmdId;
     } catch (err) {
       showToast(`Error: ${err.message}`, true);
       clearRmcActiveCommand(did);
       updateRmcUI(did);
+      throw err;
     } finally {
       rmcActionInFlight = false;
     }
@@ -5320,6 +5416,13 @@
         updateRmcUI(did);
         return;
       }
+      // If command is in progress (downloading/verifying), do not show a countdown timeout or expire
+      if (actCmd.status === "progress") {
+        if (did === deviceSelect.value) {
+          updateRmcUI(did);
+        }
+        return;
+      }
       const expTime = new Date(actCmd.expires_at).getTime();
       const remSec = Math.max(0, Math.ceil((expTime - Date.now()) / 1000));
       if (did === deviceSelect.value) {
@@ -5333,7 +5436,13 @@
         const activeBtn = btnMap[actCmd.action];
         if (activeBtn) {
           const textEl = activeBtn.querySelector(".rmc-btn-text") || activeBtn;
-          textEl.textContent = `Waiting for operator… ${remSec}s`;
+          if (actCmd.status === "received") {
+            textEl.textContent = "Waiting for machine…";
+          } else if (actCmd.status === "sent") {
+            textEl.textContent = "Sending…";
+          } else {
+            textEl.textContent = `Waiting for operator… ${remSec}s`;
+          }
         }
       }
       if (remSec <= 0) {
@@ -5362,7 +5471,11 @@
       actCmd.status = status;
       actCmd.reason_code = ack.reason_code;
       actCmd.message = ack.message;
-      updateRmcTimeline(did, status, ack.reason_code, ack.message);
+      if (status === "progress") {
+        actCmd.stage = ack.stage || (ack.progress && ack.progress.stage) || "downloading";
+        actCmd.percent = ack.percent !== undefined ? ack.percent : (ack.progress ? ack.progress.percent : 0);
+      }
+      updateRmcTimeline(did, status, ack.reason_code, ack.message, actCmd);
     }
 
     if (["done", "rejected", "expired", "timeout", "failed"].includes(status)) {
@@ -5384,7 +5497,11 @@
       actCmd.status = status;
       actCmd.reason_code = cmd.reason_code;
       if (cmd.expires_at) actCmd.expires_at = cmd.expires_at;
-      updateRmcTimeline(did, status, cmd.reason_code, cmd.message);
+      if (status === "progress") {
+        actCmd.stage = cmd.stage || (cmd.progress && cmd.progress.stage) || "downloading";
+        actCmd.percent = cmd.percent !== undefined ? cmd.percent : (cmd.progress ? cmd.progress.percent : 0);
+      }
+      updateRmcTimeline(did, status, cmd.reason_code, cmd.message, actCmd);
     }
 
     if (["done", "rejected", "expired", "timeout", "failed"].includes(status)) {
@@ -5410,7 +5527,7 @@
     }
   }
 
-  function updateRmcTimeline(did, status, reasonCode = null, message = null) {
+  function updateRmcTimeline(did, status, reasonCode = null, message = null, actCmd = null) {
     if (did !== deviceSelect.value) return;
 
     [rmcStepSent, rmcStepReceived, rmcStepAccepted, rmcStepDone].forEach(s => {
@@ -5419,27 +5536,46 @@
     if (rmcTimelineBarFill) rmcTimelineBarFill.style.width = "0%";
 
     const humanReason = formatReasonCode(reasonCode, message || "");
+    const cmdObj = actCmd || rmcActiveCmd[did];
+    const stage = cmdObj ? (cmdObj.stage || "downloading") : "downloading";
+    const percent = cmdObj ? Math.round(Number(cmdObj.percent) || 0) : 0;
+
+    let stageText = "";
 
     switch (status) {
       case "sent":
         if (rmcStepSent) rmcStepSent.classList.add("active");
-        if (rmcTimelineBarFill) rmcTimelineBarFill.style.width = "0%";
-        if (rmcTimelineMsg) rmcTimelineMsg.textContent = "Command dispatched to server and published via MQTT...";
+        if (rmcTimelineBarFill) rmcTimelineBarFill.style.width = "10%";
+        stageText = "Sending command to machine...";
         break;
 
       case "received":
         if (rmcStepSent) rmcStepSent.classList.add("done");
         if (rmcStepReceived) rmcStepReceived.classList.add("active");
-        if (rmcTimelineBarFill) rmcTimelineBarFill.style.width = "33%";
-        if (rmcTimelineMsg) rmcTimelineMsg.textContent = "Received by machine. Waiting for operator approval...";
+        if (rmcTimelineBarFill) rmcTimelineBarFill.style.width = "30%";
+        stageText = "Waiting for machine...";
+        break;
+
+      case "progress":
+        if (rmcStepSent) rmcStepSent.classList.add("done");
+        if (rmcStepReceived) rmcStepReceived.classList.add("done");
+        if (rmcStepAccepted) rmcStepAccepted.classList.add("active");
+        if (stage === "downloading") {
+          const w = Math.min(65, 30 + Math.round((percent / 100) * 35));
+          if (rmcTimelineBarFill) rmcTimelineBarFill.style.width = `${w}%`;
+          stageText = `Downloading ${percent}%...`;
+        } else {
+          if (rmcTimelineBarFill) rmcTimelineBarFill.style.width = "68%";
+          stageText = "Verifying checksum...";
+        }
         break;
 
       case "accepted":
         if (rmcStepSent) rmcStepSent.classList.add("done");
         if (rmcStepReceived) rmcStepReceived.classList.add("done");
         if (rmcStepAccepted) rmcStepAccepted.classList.add("active");
-        if (rmcTimelineBarFill) rmcTimelineBarFill.style.width = "66%";
-        if (rmcTimelineMsg) rmcTimelineMsg.textContent = "Accepted by machine operator. Executing action...";
+        if (rmcTimelineBarFill) rmcTimelineBarFill.style.width = "75%";
+        stageText = "Waiting for operator approval...";
         break;
 
       case "done":
@@ -5448,30 +5584,53 @@
         if (rmcStepAccepted) rmcStepAccepted.classList.add("done");
         if (rmcStepDone) rmcStepDone.classList.add("done");
         if (rmcTimelineBarFill) rmcTimelineBarFill.style.width = "100%";
-        if (rmcTimelineMsg) rmcTimelineMsg.textContent = "Command executed and finished successfully.";
+        stageText = "Done: Command completed successfully.";
         break;
 
       case "rejected":
         if (rmcStepSent) rmcStepSent.classList.add("done");
         if (rmcStepReceived) rmcStepReceived.classList.add("failed");
-        if (rmcTimelineMsg) rmcTimelineMsg.textContent = `Rejected by operator: ${humanReason}`;
+        if (rmcTimelineBarFill) rmcTimelineBarFill.style.width = "50%";
+        stageText = `Rejected: ${humanReason || "Operator declined"}`;
         break;
 
       case "expired":
       case "timeout":
         if (rmcStepSent) rmcStepSent.classList.add("done");
         if (rmcStepReceived) rmcStepReceived.classList.add("failed");
-        if (rmcTimelineMsg) rmcTimelineMsg.textContent = `Command expired / timed out: ${humanReason || "Operator did not respond"}`;
+        if (rmcTimelineBarFill) rmcTimelineBarFill.style.width = "50%";
+        stageText = `Timed out: ${humanReason || "No response received"}`;
         break;
 
       case "failed":
         if (rmcStepSent) rmcStepSent.classList.add("failed");
-        if (rmcTimelineMsg) rmcTimelineMsg.textContent = `Command failed: ${humanReason}`;
+        if (rmcTimelineBarFill) rmcTimelineBarFill.style.width = "50%";
+        stageText = `Failed: ${humanReason || "Execution error"}`;
         break;
 
       default:
-        if (rmcTimelineMsg) rmcTimelineMsg.textContent = "No active command.";
+        stageText = "No active command.";
         break;
+    }
+
+    if (rmcTimelineMsg) rmcTimelineMsg.textContent = stageText;
+
+    if (rmcLoadStageBar && rmcLoadStageText && rmcLoadModal && rmcLoadModal.style.display === "flex") {
+      rmcLoadStageBar.style.display = "block";
+      rmcLoadStageText.textContent = stageText;
+      if (["rejected", "expired", "timeout", "failed"].includes(status)) {
+        rmcLoadStageBar.style.borderColor = "var(--red)";
+        if (rmcLoadSubmit) rmcLoadSubmit.disabled = false;
+      } else if (status === "done") {
+        rmcLoadStageBar.style.borderColor = "var(--green)";
+        setTimeout(() => {
+          if (rmcLoadModal && rmcLoadModal.style.display === "flex") {
+            closeLoadFileModal();
+          }
+        }, 1200);
+      } else {
+        rmcLoadStageBar.style.borderColor = "var(--border)";
+      }
     }
   }
 
@@ -5548,31 +5707,71 @@
   function openLoadFileModal(did) {
     if (!rmcLoadModal) return;
     rmcSelectedFile = null;
-    if (rmcLoadSubmit) rmcLoadSubmit.disabled = true;
+    rmcSelectedServerFile = null;
+    if (rmcLoadSubmit) {
+      rmcLoadSubmit.disabled = true;
+      rmcLoadSubmit.textContent = "Load Selected File";
+    }
     if (rmcLoadStageBar) rmcLoadStageBar.style.display = "none";
-    switchLoadModalTab("onMachine");
+    const machineFiles = rmcFiles[did] || [];
+    // If the machine has no published files, default to serverFiles tab so user immediately sees upload & file selector
+    const defaultTab = (machineFiles.length > 0) ? (rmcActiveTab || "onMachine") : "serverFiles";
+    switchLoadModalTab(defaultTab);
     renderRmcFilesModal(did);
+    fetchServerFiles();
     rmcLoadModal.style.display = "flex";
   }
 
   function closeLoadFileModal() {
     if (rmcLoadModal) rmcLoadModal.style.display = "none";
     rmcSelectedFile = null;
+    rmcSelectedServerFile = null;
   }
 
   function switchLoadModalTab(tab) {
+    rmcActiveTab = tab;
     if (tab === "onMachine") {
       rmcTabOnMachine?.classList.add("active");
       rmcTabServerFiles?.classList.remove("active");
       if (rmcOnMachinePanel) rmcOnMachinePanel.style.display = "block";
       if (rmcServerFilesPanel) rmcServerFilesPanel.style.display = "none";
-      if (rmcLoadSubmit) rmcLoadSubmit.style.display = "inline-flex";
+      if (rmcLoadSubmit) {
+        rmcLoadSubmit.style.display = "inline-flex";
+        rmcLoadSubmit.disabled = !Boolean(rmcSelectedFile);
+        const name = rmcSelectedFile ? (typeof rmcSelectedFile === "string" ? rmcSelectedFile : (rmcSelectedFile.display_name || rmcSelectedFile.name || "File")) : "";
+        rmcLoadSubmit.textContent = name ? `Load "${name}" to Machine` : "Load Selected File";
+      }
+      if (rmcLoadStageBar && rmcLoadStageText) {
+        if (rmcSelectedFile) {
+          rmcLoadStageBar.style.display = "block";
+          rmcLoadStageBar.style.borderColor = "var(--accent)";
+          const name = typeof rmcSelectedFile === "string" ? rmcSelectedFile : (rmcSelectedFile.display_name || rmcSelectedFile.name || "File");
+          rmcLoadStageText.innerHTML = `Selected: <strong>${escapeHtml(name)}</strong>`;
+        } else {
+          rmcLoadStageBar.style.display = "none";
+        }
+      }
     } else {
       rmcTabOnMachine?.classList.remove("active");
       rmcTabServerFiles?.classList.add("active");
       if (rmcOnMachinePanel) rmcOnMachinePanel.style.display = "none";
       if (rmcServerFilesPanel) rmcServerFilesPanel.style.display = "block";
-      if (rmcLoadSubmit) rmcLoadSubmit.style.display = "none";
+      if (rmcLoadSubmit) {
+        rmcLoadSubmit.style.display = "inline-flex";
+        rmcLoadSubmit.disabled = !Boolean(rmcSelectedServerFile);
+        const name = rmcSelectedServerFile ? (rmcSelectedServerFile.display_name || "File") : "";
+        rmcLoadSubmit.textContent = name ? `Load "${name}" to Machine` : "Load Selected File";
+      }
+      if (rmcLoadStageBar && rmcLoadStageText) {
+        if (rmcSelectedServerFile) {
+          rmcLoadStageBar.style.display = "block";
+          rmcLoadStageBar.style.borderColor = "var(--green)";
+          rmcLoadStageText.innerHTML = `Selected: <strong>${escapeHtml(rmcSelectedServerFile.display_name)}</strong> (${formatBytes(rmcSelectedServerFile.size)}) — Ready to load`;
+        } else {
+          rmcLoadStageBar.style.display = "none";
+        }
+      }
+      fetchServerFiles();
     }
   }
 
@@ -5588,16 +5787,28 @@
     if (!rmcFileList) return;
     const files = rmcFiles[did] || [];
     if (!files || files.length === 0) {
-      rmcFileList.innerHTML = '<div style="padding:20px;text-align:center;color:var(--muted);font-size:12px;">No files available on this machine yet. FreeCAD or local operator must register files.</div>';
+      rmcFileList.innerHTML = `
+        <div style="padding:24px;text-align:center;color:var(--muted);font-size:12px;">
+          <div>Machine has not published any cached files.</div>
+          <button type="button" class="action-btn primary" id="rmcSwitchToServerBtn" style="margin-top:12px;padding:6px 14px;font-size:12px;cursor:pointer;">
+            Upload or Select from Server Files &rarr;
+          </button>
+        </div>
+      `;
+      const btn = document.getElementById("rmcSwitchToServerBtn");
+      btn?.addEventListener("click", () => switchLoadModalTab("serverFiles"));
       return;
     }
     rmcFileList.innerHTML = "";
     files.forEach(f => {
       const item = document.createElement("div");
       item.className = "rmc-file-item";
+      if (rmcSelectedFile && (rmcSelectedFile === f || (f.file_id && rmcSelectedFile.file_id === f.file_id))) {
+        item.classList.add("selected");
+      }
       const name = typeof f === "string" ? f : (f.name || f.path || f.file_id || "file");
       const sizeStr = (f && f.size) ? formatBytes(f.size) : "";
-      const modStr = (f && f.modified) ? formatRecordingDate(f.modified) : "";
+      const modStr = (f && f.mtime) ? formatRecordingDate(f.mtime) : ((f && f.modified) ? formatRecordingDate(f.modified) : "");
 
       item.innerHTML = `
         <div style="display:flex;align-items:center;gap:10px;">
@@ -5613,46 +5824,397 @@
         rmcFileList.querySelectorAll(".rmc-file-item").forEach(el => el.classList.remove("selected"));
         item.classList.add("selected");
         rmcSelectedFile = f;
-        if (rmcLoadSubmit) rmcLoadSubmit.disabled = false;
+        if (rmcLoadSubmit && rmcActiveTab === "onMachine") {
+          rmcLoadSubmit.disabled = false;
+          rmcLoadSubmit.textContent = `Load "${name}" to Machine`;
+        }
+        if (rmcLoadStageBar && rmcLoadStageText) {
+          rmcLoadStageBar.style.display = "block";
+          rmcLoadStageBar.style.borderColor = "var(--accent)";
+          rmcLoadStageText.innerHTML = `Selected: <strong>${escapeHtml(name)}</strong>`;
+        }
       });
       rmcFileList.appendChild(item);
     });
   }
 
-  rmcLoadSubmit?.addEventListener("click", async () => {
-    if (!rmcSelectedFile) return;
-    const did = deviceSelect.value;
-    if (!did) return;
+  // Server Files (Registry & Transfer)
+  async function fetchServerFiles() {
+    try {
+      const res = await fetch("/api/rmc/files", {
+        headers: getAuthHeaders()
+      });
+      if (!res.ok) {
+        if (rmcServerFileList) {
+          rmcServerFileList.innerHTML = '<div style="padding:20px;text-align:center;color:var(--muted);font-size:12px;">Failed to load server files.</div>';
+        }
+        return;
+      }
+      const data = await res.json();
+      rmcServerFiles = Array.isArray(data) ? data : [];
+      renderServerFiles();
+    } catch (_) {
+      if (rmcServerFileList) {
+        rmcServerFileList.innerHTML = '<div style="padding:20px;text-align:center;color:var(--muted);font-size:12px;">Failed to load server files.</div>';
+      }
+    }
+  }
 
-    const fileId = typeof rmcSelectedFile === "string" ? rmcSelectedFile : (rmcSelectedFile.file_id || rmcSelectedFile.name || rmcSelectedFile.path);
-    const sha256 = (typeof rmcSelectedFile === "object" && rmcSelectedFile.sha256) ? rmcSelectedFile.sha256 : "";
-    const size = (typeof rmcSelectedFile === "object" && rmcSelectedFile.size) ? Number(rmcSelectedFile.size) || 0 : 0;
+  function renderServerFiles() {
+    if (!rmcServerFileList) return;
+    if (!rmcServerFiles || rmcServerFiles.length === 0) {
+      rmcServerFileList.innerHTML = '<div style="padding:20px;text-align:center;color:var(--muted);font-size:12px;">No server registry files found. Upload a file above.</div>';
+      return;
+    }
+    rmcServerFileList.innerHTML = "";
+    rmcServerFiles.forEach(f => {
+      const item = document.createElement("div");
+      item.className = "rmc-file-item";
+      if (rmcSelectedServerFile && rmcSelectedServerFile.file_id === f.file_id) {
+        item.classList.add("selected");
+      }
+      const name = f.display_name || f.file_id || "file";
+      const sizeStr = f.size ? formatBytes(f.size) : "0 B";
+      const uploaderStr = f.uploaded_by ? `by ${escapeHtml(f.uploaded_by)}` : "";
+      const dateStr = f.uploaded_at ? formatRecordingDate(f.uploaded_at) : "";
+
+      item.innerHTML = `
+        <div style="display:flex;align-items:center;gap:10px;min-width:0;flex:1;">
+          <svg width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" style="flex-shrink:0;"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+          <div style="min-width:0;overflow:hidden;text-overflow:ellipsis;">
+            <div style="font-weight:600;color:#fff;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${escapeHtml(name)}</div>
+            <div style="font-size:11px;color:var(--muted);display:flex;gap:8px;flex-wrap:wrap;margin-top:2px;">
+              <span>${escapeHtml(sizeStr)}</span>
+              ${uploaderStr ? `<span>${uploaderStr}</span>` : ""}
+              ${dateStr ? `<span>${escapeHtml(dateStr)}</span>` : ""}
+            </div>
+          </div>
+        </div>
+        <button class="rmc-delete-file-btn" type="button" title="Delete file from server" aria-label="Delete ${escapeHtml(name)}">
+          <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
+        </button>
+      `;
+
+      item.addEventListener("click", (e) => {
+        if (e.target.closest(".rmc-delete-file-btn")) return;
+        rmcServerFileList.querySelectorAll(".rmc-file-item").forEach(el => el.classList.remove("selected"));
+        item.classList.add("selected");
+        rmcSelectedServerFile = f;
+        if (rmcLoadSubmit && rmcActiveTab === "serverFiles") {
+          rmcLoadSubmit.disabled = false;
+          rmcLoadSubmit.textContent = `Load "${name}" to Machine`;
+        }
+        if (rmcLoadStageBar && rmcLoadStageText) {
+          rmcLoadStageBar.style.display = "block";
+          rmcLoadStageBar.style.borderColor = "var(--green)";
+          rmcLoadStageText.innerHTML = `Selected: <strong>${escapeHtml(name)}</strong> (${formatBytes(f.size)}) — Ready to load`;
+        }
+      });
+
+      const delBtn = item.querySelector(".rmc-delete-file-btn");
+      delBtn?.addEventListener("click", (e) => {
+        e.stopPropagation();
+        showConfirmDialog(
+          "Delete Server File",
+          `Are you sure you want to permanently delete <strong style="color:var(--red);">${escapeHtml(name)}</strong> from the server registry?`,
+          async () => {
+            try {
+              const delRes = await fetch(`/api/rmc/files/${encodeURIComponent(f.file_id)}`, {
+                method: "DELETE",
+                headers: getAuthHeaders()
+              });
+              if (!delRes.ok) {
+                const errJson = await delRes.json().catch(() => ({}));
+                const errDetail = errJson.detail || errJson;
+                const reason = typeof errDetail === "object" ? (errDetail.reason_code || "") : "";
+                const msg = typeof errDetail === "object" ? (errDetail.message || "") : String(errDetail);
+                throw new Error(formatReasonCode(reason, msg || `Delete failed (${delRes.status})`));
+              }
+              showToast("File deleted from server registry");
+              if (rmcSelectedServerFile && rmcSelectedServerFile.file_id === f.file_id) {
+                rmcSelectedServerFile = null;
+                if (rmcLoadSubmit && rmcActiveTab === "serverFiles") {
+                  rmcLoadSubmit.disabled = true;
+                  rmcLoadSubmit.textContent = "Load Selected File";
+                }
+                if (rmcLoadStageBar) rmcLoadStageBar.style.display = "none";
+              }
+              await fetchServerFiles();
+            } catch (err) {
+              showToast(`Error: ${err.message}`, true);
+            }
+          }
+        );
+      });
+
+      rmcServerFileList.appendChild(item);
+    });
+  }
+
+  function selectServerFileById(fileId) {
+    if (!fileId || !rmcServerFileList) return;
+    const found = rmcServerFiles.find(f => f.file_id === fileId);
+    if (found) {
+      rmcSelectedServerFile = found;
+      if (rmcLoadSubmit && rmcActiveTab === "serverFiles") {
+        rmcLoadSubmit.disabled = false;
+        rmcLoadSubmit.textContent = `Load "${found.display_name}" to Machine`;
+      }
+      rmcServerFileList.querySelectorAll(".rmc-file-item").forEach(el => el.classList.remove("selected"));
+      const items = rmcServerFileList.querySelectorAll(".rmc-file-item");
+      const idx = rmcServerFiles.indexOf(found);
+      if (items[idx]) {
+        items[idx].classList.add("selected");
+        items[idx].scrollIntoView({ block: "nearest", behavior: "smooth" });
+      }
+      if (rmcLoadStageBar && rmcLoadStageText) {
+        rmcLoadStageBar.style.display = "block";
+        rmcLoadStageBar.style.borderColor = "var(--green)";
+        rmcLoadStageText.innerHTML = `Selected: <strong>${escapeHtml(found.display_name)}</strong> (${formatBytes(found.size)}) — Ready to load`;
+      }
+    }
+  }
+
+  function uploadFileToServer(file) {
+    if (!file) return;
+
+    // Client checks: .gcode, .nc only
+    const nameLower = file.name.toLowerCase();
+    if (!nameLower.endsWith(".gcode") && !nameLower.endsWith(".nc")) {
+      showToast("Invalid file type. Only .gcode and .nc files are supported.", true);
+      return;
+    }
+
+    // Client checks: 200 MB max
+    const maxBytes = 200 * 1024 * 1024;
+    if (file.size > maxBytes) {
+      showToast("File exceeds maximum allowed size (200 MB).", true);
+      return;
+    }
+
+    if (rmcUploadProgressBar && rmcUploadProgressFill) {
+      rmcUploadProgressBar.style.display = "block";
+      rmcUploadProgressFill.style.width = "0%";
+    }
 
     if (rmcLoadStageBar && rmcLoadStageText) {
       rmcLoadStageBar.style.display = "block";
-      rmcLoadStageText.textContent = "Sending Load command...";
-      rmcLoadStageBar.style.borderColor = "var(--border)";
+      rmcLoadStageBar.style.borderColor = "var(--accent)";
+      rmcLoadStageText.textContent = `Uploading ${file.name}...`;
     }
-    rmcLoadSubmit.disabled = true;
 
-    try {
-      await issueRmcCommand("load", {
-        source: "local",
-        file_id: fileId,
-        sha256,
-        size
-      });
-      closeLoadFileModal();
-    } catch (err) {
-      if (rmcLoadStageText) {
-        rmcLoadStageText.textContent = `Rejected: ${err.message}`;
-        rmcLoadStageBar.style.borderColor = "var(--red)";
+    const formData = new FormData();
+    formData.append("file", file);
+
+    const xhr = new XMLHttpRequest();
+    xhr.open("POST", "/api/rmc/files", true);
+
+    // CRITICAL: Do NOT set Content-Type header on FormData uploads!
+    // The browser automatically sets Content-Type: multipart/form-data with boundary.
+    const urlParams = new URLSearchParams(window.location.search);
+    const token = urlParams.get("token");
+    if (token) {
+      xhr.setRequestHeader("Authorization", `Bearer ${token}`);
+    }
+
+    xhr.upload.onprogress = (e) => {
+      if (e.lengthComputable && rmcUploadProgressFill) {
+        const pct = Math.round((e.loaded / e.total) * 100);
+        rmcUploadProgressFill.style.width = `${pct}%`;
+        if (rmcLoadStageText) {
+          rmcLoadStageText.textContent = `Uploading ${file.name}... ${pct}%`;
+        }
       }
-      rmcLoadSubmit.disabled = false;
+    };
+
+    xhr.onload = async () => {
+      setTimeout(() => {
+        if (rmcUploadProgressBar) rmcUploadProgressBar.style.display = "none";
+        if (rmcUploadProgressFill) rmcUploadProgressFill.style.width = "0%";
+      }, 500);
+
+      if (xhr.status >= 200 && xhr.status < 300) {
+        let resp = {};
+        try { resp = JSON.parse(xhr.responseText); } catch(_) {}
+        showToast("File uploaded successfully to server registry");
+        await fetchServerFiles();
+        if (resp.file_id) {
+          selectServerFileById(resp.file_id);
+        }
+      } else if (xhr.status === 409) {
+        let resp = {};
+        try { resp = JSON.parse(xhr.responseText); } catch(_) {}
+        const detail = resp.detail || resp;
+        const existingId = detail.existing_file_id || (typeof detail === "object" ? detail.existing_file_id : null);
+        showToast("Identical file already exists in server registry. Selecting existing file.");
+        await fetchServerFiles();
+        if (existingId) {
+          selectServerFileById(existingId);
+        }
+      } else {
+        let resp = {};
+        try { resp = JSON.parse(xhr.responseText); } catch(_) {}
+        const detail = resp.detail || resp;
+        let reason = "";
+        let msg = "";
+        if (Array.isArray(detail)) {
+          msg = detail.map(d => d.msg || JSON.stringify(d)).join("; ");
+        } else if (typeof detail === "object" && detail !== null) {
+          reason = detail.reason_code || "";
+          msg = detail.message || JSON.stringify(detail);
+        } else {
+          msg = String(detail || `Upload failed (${xhr.status})`);
+        }
+        const formattedErr = formatReasonCode(reason, msg || `Upload failed (${xhr.status})`);
+        showToast(formattedErr, true);
+        if (rmcLoadStageBar && rmcLoadStageText) {
+          rmcLoadStageBar.style.display = "block";
+          rmcLoadStageBar.style.borderColor = "var(--red)";
+          rmcLoadStageText.textContent = `Upload failed: ${formattedErr}`;
+        }
+      }
+    };
+
+    xhr.onerror = () => {
+      if (rmcUploadProgressBar) rmcUploadProgressBar.style.display = "none";
+      showToast("Network error uploading file to server", true);
+      if (rmcLoadStageBar && rmcLoadStageText) {
+        rmcLoadStageBar.style.display = "block";
+        rmcLoadStageBar.style.borderColor = "var(--red)";
+        rmcLoadStageText.textContent = "Network error uploading file to server";
+      }
+    };
+
+    xhr.send(formData);
+  }
+
+  const rmcBrowseBtn = document.getElementById("rmcBrowseBtn");
+  rmcBrowseBtn?.addEventListener("click", (e) => {
+    e.stopPropagation();
+    rmcServerFileInput?.click();
+  });
+
+  rmcServerDropzone?.addEventListener("click", (e) => {
+    if (e.target.id === "rmcBrowseBtn" || e.target.closest("#rmcBrowseBtn")) return;
+    rmcServerFileInput?.click();
+  });
+  rmcServerDropzone?.addEventListener("keydown", (e) => {
+    if (e.key === "Enter" || e.key === " ") {
+      e.preventDefault();
+      rmcServerFileInput?.click();
+    }
+  });
+  rmcServerFileInput?.addEventListener("click", (e) => {
+    e.stopPropagation();
+  });
+  rmcServerFileInput?.addEventListener("change", (e) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      uploadFileToServer(file);
+      e.target.value = "";
+    }
+  });
+  rmcServerDropzone?.addEventListener("dragover", (e) => {
+    e.preventDefault();
+    rmcServerDropzone.classList.add("dragover");
+  });
+  rmcServerDropzone?.addEventListener("dragleave", () => {
+    rmcServerDropzone.classList.remove("dragover");
+  });
+  rmcServerDropzone?.addEventListener("drop", (e) => {
+    e.preventDefault();
+    rmcServerDropzone.classList.remove("dragover");
+    const file = e.dataTransfer?.files?.[0];
+    if (file) {
+      uploadFileToServer(file);
     }
   });
 
-  // Lock Actions
+  rmcLoadSubmit?.addEventListener("click", async () => {
+    const did = deviceSelect ? deviceSelect.value : null;
+    if (!did) return;
+
+    if (rmcActiveTab === "serverFiles") {
+      if (!rmcSelectedServerFile || !rmcSelectedServerFile.file_id) return;
+      if (rmcLoadStageBar && rmcLoadStageText) {
+        rmcLoadStageBar.style.display = "block";
+        rmcLoadStageText.textContent = "Sending Load command...";
+        rmcLoadStageBar.style.borderColor = "var(--border)";
+      }
+      rmcLoadSubmit.disabled = true;
+
+      try {
+        await issueRmcCommand("load", {
+          source: "server",
+          file_id: rmcSelectedServerFile.file_id
+        });
+      } catch (err) {
+        if (rmcLoadStageText) {
+          rmcLoadStageText.textContent = `Rejected: ${err.message}`;
+          rmcLoadStageBar.style.borderColor = "var(--red)";
+        }
+        rmcLoadSubmit.disabled = false;
+      }
+    } else {
+      if (!rmcSelectedFile) return;
+      const fileId = typeof rmcSelectedFile === "string" ? rmcSelectedFile : (rmcSelectedFile.file_id || rmcSelectedFile.name || rmcSelectedFile.path);
+      if (!fileId) return;
+
+      if (rmcLoadStageBar && rmcLoadStageText) {
+        rmcLoadStageBar.style.display = "block";
+        rmcLoadStageText.textContent = "Sending Load command...";
+        rmcLoadStageBar.style.borderColor = "var(--border)";
+      }
+      rmcLoadSubmit.disabled = true;
+
+      try {
+        await issueRmcCommand("load", {
+          source: "local",
+          file_id: fileId
+        });
+      } catch (err) {
+        if (rmcLoadStageText) {
+          rmcLoadStageText.textContent = `Rejected: ${err.message}`;
+          rmcLoadStageBar.style.borderColor = "var(--red)";
+        }
+        rmcLoadSubmit.disabled = false;
+      }
+    }
+  });
+
+  // Lock Actions & Periodic Renewal
+  function renewLockIfHeld() {
+    const did = deviceSelect ? deviceSelect.value : null;
+    const myUser = getCurrentUser();
+    if (!did || !rmcLocks[did] || rmcLocks[did].issued_by !== myUser) {
+      stopLockRenewal();
+      return;
+    }
+    fetch(`/api/devices/${encodeURIComponent(did)}/lock`, {
+      method: "POST",
+      headers: getAuthHeaders(),
+      body: JSON.stringify({})
+    }).then(res => {
+      if (res.ok) return res.json();
+    }).then(data => {
+      if (data && data.issued_by) {
+        rmcLocks[did] = data;
+      }
+    }).catch(() => {});
+  }
+
+  function startLockRenewal() {
+    if (rmcLockRenewTimer) return;
+    rmcLockRenewTimer = setInterval(renewLockIfHeld, 30000);
+  }
+
+  function stopLockRenewal() {
+    if (rmcLockRenewTimer) {
+      clearInterval(rmcLockRenewTimer);
+      rmcLockRenewTimer = null;
+    }
+  }
+
   rmcTakeLockBtn?.addEventListener("click", async () => {
     const did = deviceSelect.value;
     if (!did) return;
@@ -5675,6 +6237,7 @@
       rmcLocks[did] = data;
       showToast("Exclusive control lock acquired");
       updateRmcUI(did);
+      startLockRenewal();
     } catch (err) {
       showToast(err.message, true);
     }
@@ -5695,6 +6258,7 @@
       delete rmcLocks[did];
       showToast("Control lock released");
       updateRmcUI(did);
+      stopLockRenewal();
     } catch (err) {
       showToast(err.message, true);
     }
@@ -5704,7 +6268,13 @@
     const did = deviceSelect ? deviceSelect.value : null;
     const myUser = getCurrentUser();
     if (did && rmcLocks[did] && rmcLocks[did].issued_by === myUser) {
-      navigator.sendBeacon && navigator.sendBeacon(`/api/devices/${encodeURIComponent(did)}/lock`);
+      try {
+        fetch(`/api/devices/${encodeURIComponent(did)}/lock`, {
+          method: "DELETE",
+          headers: getAuthHeaders(),
+          keepalive: true
+        });
+      } catch (_) {}
     }
   });
 
@@ -5846,6 +6416,7 @@
             if (st) {
               rmcStates[did] = st;
               rmcLastSeq[did] = Number(st.seq) || 0;
+              rmcLastStateReceivedAt[did] = Date.now();
             }
           });
           Object.entries(rmcInitFiles).forEach(([did, files]) => {
@@ -5890,6 +6461,8 @@
           const did = msg.device_id;
           const st = msg.data;
           if (!did || !st) break;
+
+          rmcLastStateReceivedAt[did] = Date.now();
 
           // Ignore out-of-order state if seq is older than what's already shown
           const seq = Number(st.seq) || 0;
@@ -6074,7 +6647,9 @@
 
   function startEquipPoll() {
     stopEquipPoll();
-    _equipPollTimer = setInterval(pollEquipmentState, 3000);
+    // 8s on factory floor — WebSocket covers real-time during active jobs;
+    // polling every 3s clogs the HTTP queue on slow factory Wi-Fi
+    _equipPollTimer = setInterval(pollEquipmentState, 8000);
   }
 
   function stopEquipPoll() {
