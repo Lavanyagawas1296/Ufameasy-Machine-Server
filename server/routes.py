@@ -23,13 +23,21 @@ from datetime import datetime, timezone
 from pathlib import Path
 from fastapi.responses import FileResponse
 
-from fastapi import APIRouter, HTTPException, UploadFile, File, Body
+from fastapi import APIRouter, Body, Depends, File, Header, HTTPException, Query, Request, UploadFile
+from server.rmc_transfer import require_transfer_ready, save_uploaded_file, verify_download_token
 from fastapi.responses import Response, StreamingResponse
 from server.state_store import state
 from server.db import get_sessions_by_device, get_runtime_latest
 from server.media_gateway import health as media_health, stream_for, stream_provider
+from server import db
+from server.rmc_auth import Principal, require_role, resolve_principal
+from server.rmc_service import rmc_service
 
 router = APIRouter()
+
+
+def _rmc_principal(authorization: str | None = Header(default=None)) -> Principal:
+    return resolve_principal(authorization)
 
 REMOTE_LOG_PATH = "ufameasy_sys.csv"
 FTP_PORT = 2121
@@ -628,7 +636,7 @@ async def check_camera(ip: str, port: int = 8765, device_id: str | None = None):
 
     def _check() -> dict:
         try:
-            with socket.create_connection((ip, port), timeout=0.75):
+            with socket.create_connection((ip, port), timeout=3):
                 pass
         except OSError:
             return {"available": False, "ip": ip, "port": port, "error": "No live streaming from this device"}
@@ -637,7 +645,8 @@ async def check_camera(ip: str, port: int = 8765, device_id: str | None = None):
         try:
             import urllib.request
             req = urllib.request.Request(f"http://{ip}:{port}/status", headers={"User-Agent": "UFAMeasy-Server"})
-            with urllib.request.urlopen(req, timeout=1.0) as res:
+            # 0.5s is enough — TCP socket (3s above) already confirmed host is reachable
+            with urllib.request.urlopen(req, timeout=0.5) as res:
                 if res.status == 200:
                     data = json.loads(res.read().decode("utf-8"))
                     reported_dev = data.get("device_id")
@@ -784,400 +793,134 @@ def get_session_replay(session_id: str):
 
 
 # ---------------------------------------------------------------------------
-# G-Code Job Management & Control Endpoints
+# Remote Machine Control API
 # ---------------------------------------------------------------------------
 
-JOBS_DIR = Path("data/jobs")
-JOBS_DIR.mkdir(parents=True, exist_ok=True)
-
-_sim_active = {}
-_sim_lock = threading.Lock()
-
-
-def _parse_gcode_meta(file_path: Path):
-    lines = []
-    total_valid = 0
-    estimated_seconds = 0.0
-    try:
-        with open(file_path, "r", encoding="utf-8", errors="ignore") as f:
-            for raw_line in f:
-                line = raw_line.strip()
-                lines.append(line)
-                if not line or line.startswith(";"):
-                    continue
-                total_valid += 1
-                u = line.upper()
-                if u.startswith("G04") or u.startswith("G4"):
-                    parts = u.split()
-                    for p in parts:
-                        if p.startswith("P"):
-                            try:
-                                val = float(p[1:])
-                                estimated_seconds += (val / 1000.0) if val > 100 else val
-                            except ValueError:
-                                pass
-                        elif p.startswith("X"):
-                            try:
-                                estimated_seconds += float(p[1:])
-                            except ValueError:
-                                pass
-                else:
-                    estimated_seconds += 0.3
-    except Exception as exc:
-        print(f"[JOB] parse error: {exc}")
-
-    if estimated_seconds < 1.0 and total_valid > 0:
-        estimated_seconds = max(1.0, total_valid * 0.5)
-
-    mins, secs = divmod(int(estimated_seconds), 60)
-    hours, mins = divmod(mins, 60)
-    fmt = f"{hours:02d}:{mins:02d}:{secs:02d}" if hours > 0 else f"{mins:02d}:{secs:02d}"
-
-    return {
-        "lines": lines,
-        "total_lines": total_valid,
-        "estimated_seconds": round(estimated_seconds, 1),
-        "estimated_time_fmt": fmt,
-    }
+@router.post("/api/devices/{device_id}/commands")
+def issue_rmc_command(
+    device_id: str,
+    request: Request,
+    body: dict = Body(...),
+    principal: Principal = Depends(_rmc_principal),
+):
+    require_role(principal, "operator", "admin")
+    base_url = str(request.base_url).rstrip("/")
+    return rmc_service.issue_command(device_id, body, principal.name, request_base_url=base_url)
 
 
-def _run_simulation_worker(device_id: str, file_path: Path):
-    from server.mqtt_client import _broadcast
-    with _sim_lock:
-        info = _sim_active.setdefault(device_id, {"stop": False, "pause": False, "thread": None})
-        info["stop"] = False
-        info["pause"] = False
-
-    meta = _parse_gcode_meta(file_path)
-    executable_lines = [l for l in meta["lines"] if l and not l.startswith(";")]
-    total = len(executable_lines)
-
-    cur_state = state.get_job_state(device_id)
-    start_line = cur_state.get("current_line", 0)
-    elapsed = float(cur_state.get("elapsed_seconds", 0))
-
-    for i in range(start_line, total):
-        with _sim_lock:
-            if info.get("stop"):
-                break
-
-        while True:
-            with _sim_lock:
-                if info.get("stop"):
-                    break
-                if not info.get("pause"):
-                    break
-            time.sleep(0.15)
-
-        with _sim_lock:
-            if info.get("stop"):
-                break
-
-        cmd = executable_lines[i]
-        dwell = 0.4
-        if cmd.upper().startswith("G04") or cmd.upper().startswith("G4"):
-            dwell = 1.5
-
-        if "M64 P24" in cmd.upper():
-            state.update_parameter(device_id, "pf_gas_on", 1)
-        elif "M65 P24" in cmd.upper():
-            state.update_parameter(device_id, "pf_gas_on", 0)
-
-        time.sleep(dwell)
-        elapsed += dwell
-
-        updated = state.update_job_state(device_id, {
-            "status": "running",
-            "current_line": i + 1,
-            "total_lines": total,
-            "current_gcode": cmd,
-            "elapsed_seconds": int(elapsed),
-        })
-        _broadcast({"type": "job_progress", "device_id": device_id, "data": updated})
-
-    with _sim_lock:
-        stopped = info.get("stop", False)
-
-    if not stopped:
-        updated = state.update_job_state(device_id, {
-            "status": "completed",
-            "current_line": total,
-            "total_lines": total,
-            "current_gcode": "M30 (End of Program)",
-            "elapsed_seconds": int(elapsed),
-        })
-        _broadcast({"type": "job_progress", "device_id": device_id, "data": updated})
+@router.get("/api/devices/{device_id}/commands/{cmd_id}")
+def get_rmc_command(device_id: str, cmd_id: str, principal: Principal = Depends(_rmc_principal)):
+    command = db.get_rmc_command(cmd_id)
+    if command is None or command["device_id"] != device_id:
+        raise HTTPException(status_code=404, detail="Command not found")
+    return command
 
 
-@router.post("/api/devices/{device_id}/job/upload")
-async def upload_job_file(device_id: str, file: UploadFile = File(...)):
-    """
-    Upload a G-code file for a specific device, save it, and return pre-flight info.
-    """
-    if not device_id or device_id.strip() == "":
-        raise HTTPException(status_code=400, detail="Invalid or empty device_id")
+@router.get("/api/devices/{device_id}/commands")
+def list_rmc_commands(device_id: str, limit: int = 50, principal: Principal = Depends(_rmc_principal)):
+    return db.list_rmc_commands(device_id, max(1, min(limit, 100)))
 
-    filename = file.filename or ""
-    suffix = Path(filename).suffix.lower()
-    valid_suffixes = {".gcode", ".nc", ".tap", ".txt"}
-    if suffix not in valid_suffixes:
+
+@router.post("/api/devices/{device_id}/lock")
+def acquire_rmc_lock(device_id: str, body: dict = Body(default={}), principal: Principal = Depends(_rmc_principal)):
+    require_role(principal, "operator", "admin")
+    override = bool(body.get("override", False))
+    if override:
+        require_role(principal, "admin")
+    return rmc_service.acquire_lock(device_id, principal.name, admin_override=override)
+
+
+@router.delete("/api/devices/{device_id}/lock")
+def release_rmc_lock(device_id: str, override: bool = False, principal: Principal = Depends(_rmc_principal)):
+    require_role(principal, "operator", "admin")
+    if override:
+        require_role(principal, "admin")
+    rmc_service.release_lock(device_id, principal.name, admin_override=override)
+    return {"released": True}
+
+
+@router.get("/api/devices/{device_id}/lock")
+def get_rmc_lock(device_id: str, principal: Principal = Depends(_rmc_principal)):
+    return rmc_service.get_lock(device_id) or {"device_id": device_id, "issued_by": None}
+
+
+# ---------------------------------------------------------------------------
+# RMC Server File Registry & Transfer Endpoints (Phase 6A)
+# ---------------------------------------------------------------------------
+
+@router.post("/api/rmc/files")
+async def upload_rmc_file(
+    file: UploadFile = File(...),
+    principal: Principal = Depends(_rmc_principal),
+):
+    require_role(principal, "operator", "admin")
+    return await save_uploaded_file(file, principal.name)
+
+
+@router.get("/api/rmc/files")
+def list_rmc_files(principal: Principal = Depends(_rmc_principal)):
+    return db.list_rmc_server_files()
+
+
+@router.delete("/api/rmc/files/{file_id}")
+def delete_rmc_file(file_id: str, principal: Principal = Depends(_rmc_principal)):
+    require_role(principal, "operator", "admin")
+    file_record = db.get_rmc_server_file(file_id)
+    if not file_record:
         raise HTTPException(
-            status_code=400,
-            detail=f"Unsupported file format '{suffix or 'none'}'. Supported formats: .gcode, .nc, .tap, .txt"
+            status_code=404,
+            detail={"reason_code": "FILE_NOT_FOUND", "message": "File not found"},
         )
-
-    try:
-        content = await file.read()
-    except Exception as exc:
-        raise HTTPException(status_code=400, detail=f"Failed to read uploaded file: {exc}")
-
-    if not content or len(content) == 0:
-        raise HTTPException(status_code=400, detail="Uploaded file is empty (0 bytes).")
-
-    device_job_dir = JOBS_DIR / device_id
-    device_job_dir.mkdir(parents=True, exist_ok=True)
-    dest_path = device_job_dir / filename
-
-    try:
-        dest_path.write_bytes(content)
-    except Exception as exc:
-        raise HTTPException(status_code=500, detail=f"Failed to save file: {exc}")
-
-    meta = _parse_gcode_meta(dest_path)
-    if meta["total_lines"] <= 0:
+    if principal.role != "admin" and principal.name != file_record["uploaded_by"]:
         raise HTTPException(
-            status_code=400,
-            detail="The file does not contain any executable G-code instructions (empty or comments only)."
+            status_code=403,
+            detail={"reason_code": "TRANSFER_DENIED", "message": "Only admin or uploader may delete file"},
         )
-
-    initial_job_state = state.update_job_state(device_id, {
-        "status": "idle",
-        "file_name": filename,
-        "file_path": str(dest_path),
-        "file_size": len(content),
-        "total_lines": meta["total_lines"],
-        "current_line": 0,
-        "elapsed_seconds": 0,
-        "estimated_seconds": meta["estimated_seconds"],
-        "estimated_time_fmt": meta["estimated_time_fmt"],
-        "current_gcode": "Ready to run",
-    })
-
-    text_content = ""
-    try:
-        text_content = content.decode("utf-8", errors="ignore")
-    except Exception:
-        pass
-
-    from server.mqtt_client import publish_job_command, _broadcast
-    publish_job_command(device_id, "load", {
-        "file_name": filename,
-        "file_path": str(dest_path.resolve()),
-        "content": text_content if len(text_content) <= 300000 else None,
-        "total_lines": meta["total_lines"],
-        "estimated_seconds": meta["estimated_seconds"],
-        "source": "dashboard",
-    })
-
-    _broadcast({"type": "job_progress", "device_id": device_id, "data": initial_job_state})
-    # Dedicated notification so UFAMeasy and the dashboard job section can
-    # display "Job loaded from Dashboard".
-    _broadcast({
-        "type": "dashboard_job_event",
-        "device_id": device_id,
-        "event": "loaded",
-        "file_name": filename,
-        "total_lines": meta["total_lines"],
-        "estimated_time_fmt": meta["estimated_time_fmt"],
-    })
-
-    return {
-        "success": True,
-        "device_id": device_id,
-        "job": initial_job_state,
-    }
+    if db.is_rmc_file_in_flight(file_id):
+        raise HTTPException(
+            status_code=409,
+            detail={"reason_code": "INVALID_STATE", "message": "File is referenced by an in-flight command"},
+        )
+    disk_path = db.RMC_FILES_DIR / file_record["stored_name"]
+    disk_path.unlink(missing_ok=True)
+    db.delete_rmc_server_file(file_id)
+    return {"deleted": file_id}
 
 
-@router.post("/api/devices/{device_id}/job/load_sample")
-async def load_sample_job_file(device_id: str):
-    """
-    Load bundled sample G-code file (pf_gas_test.nc) for instant testing.
-    """
-    if not device_id or device_id.strip() == "":
-        raise HTTPException(status_code=400, detail="Invalid device_id")
+@router.get("/api/rmc/files/{file_id}/download")
+def download_rmc_file(
+    file_id: str,
+    token: str = Query(...),
+    device_id: str | None = Query(default=None),
+):
+    require_transfer_ready()
+    valid, tok_dev_or_reason = verify_download_token(file_id, token, device_id)
+    if not valid:
+        raise HTTPException(
+            status_code=403,
+            detail={"reason_code": "TRANSFER_DENIED", "message": tok_dev_or_reason},
+        )
+    file_record = db.get_rmc_server_file(file_id)
+    if not file_record:
+        raise HTTPException(
+            status_code=404,
+            detail={"reason_code": "FILE_NOT_FOUND", "message": "File not found"},
+        )
+    disk_path = db.RMC_FILES_DIR / file_record["stored_name"]
+    if not disk_path.is_file():
+        raise HTTPException(
+            status_code=404,
+            detail={"reason_code": "FILE_NOT_FOUND", "message": "Physical file missing from disk"},
+        )
+    if disk_path.stat().st_size != file_record["size"]:
+        raise HTTPException(
+            status_code=500,
+            detail={"reason_code": "FILE_CHANGED", "message": "Physical file size mismatch"},
+        )
+    return FileResponse(
+        path=disk_path,
+        filename=file_record["display_name"],
+        media_type="application/octet-stream",
+    )
 
-    sample_src = Path("pf_gas_test.nc")
-    if not sample_src.exists():
-        raise HTTPException(status_code=404, detail="pf_gas_test.nc sample not found")
-
-    device_job_dir = JOBS_DIR / device_id
-    device_job_dir.mkdir(parents=True, exist_ok=True)
-    dest_path = device_job_dir / "pf_gas_test.nc"
-    dest_path.write_bytes(sample_src.read_bytes())
-
-    meta = _parse_gcode_meta(dest_path)
-
-    job_state = state.update_job_state(device_id, {
-        "status": "idle",
-        "file_name": "pf_gas_test.nc",
-        "file_path": str(dest_path),
-        "file_size": dest_path.stat().st_size,
-        "total_lines": meta["total_lines"],
-        "current_line": 0,
-        "elapsed_seconds": 0,
-        "estimated_seconds": meta["estimated_seconds"],
-        "estimated_time_fmt": meta["estimated_time_fmt"],
-        "current_gcode": "Ready to run",
-    })
-
-    from server.mqtt_client import publish_job_command, _broadcast
-    publish_job_command(device_id, "load", {
-        "file_name": "pf_gas_test.nc",
-        "file_path": str(dest_path.resolve()),
-        "total_lines": meta["total_lines"],
-        "estimated_seconds": meta["estimated_seconds"],
-        "source": "dashboard",
-    })
-
-    _broadcast({"type": "job_progress", "device_id": device_id, "data": job_state})
-    _broadcast({
-        "type": "dashboard_job_event",
-        "device_id": device_id,
-        "event": "loaded",
-        "file_name": "pf_gas_test.nc",
-        "total_lines": meta["total_lines"],
-        "estimated_time_fmt": meta["estimated_time_fmt"],
-    })
-
-    return {
-        "success": True,
-        "device_id": device_id,
-        "job": job_state,
-    }
-
-
-@router.post("/api/devices/{device_id}/job/action")
-async def trigger_job_action(device_id: str, payload: dict = Body(...)):
-    """
-    Perform a job lifecycle action: start, pause, resume, abort, reset.
-    """
-    if not device_id or device_id.strip() == "":
-        raise HTTPException(status_code=400, detail="Invalid device_id")
-
-    action = (payload.get("action") or "").lower().strip()
-    valid_actions = {"start", "pause", "resume", "abort", "reset"}
-    if action not in valid_actions:
-        raise HTTPException(status_code=400, detail=f"Invalid action. Expected one of {valid_actions}")
-
-    cur = state.get_job_state(device_id)
-    file_path = cur.get("file_path")
-
-    from server.mqtt_client import publish_job_command, _broadcast
-
-    # Forward to MQTT for live machine with dashboard source tag
-    publish_job_command(device_id, action, {"source": "dashboard"})
-
-    # Manage local state & simulation loop
-    with _sim_lock:
-        info = _sim_active.setdefault(device_id, {"stop": False, "pause": False, "thread": None})
-
-    cur_status = (cur.get("status") or "idle").lower()
-
-    if action == "start":
-        if not file_path or not Path(file_path).exists():
-            raise HTTPException(status_code=400, detail="No G-code file loaded. Please upload or load a file first.")
-        if cur_status == "running":
-            raise HTTPException(status_code=400, detail="Job is already running.")
-        updated = state.update_job_state(device_id, {"status": "running"})
-        _broadcast({"type": "job_progress", "device_id": device_id, "data": updated})
-        _broadcast({
-            "type": "dashboard_job_event",
-            "device_id": device_id,
-            "event": "started",
-            "file_name": cur.get("file_name", ""),
-        })
-
-        # Start simulation worker thread
-        t = threading.Thread(target=_run_simulation_worker, args=(device_id, Path(file_path)), daemon=True)
-        with _sim_lock:
-            info["thread"] = t
-        t.start()
-
-    elif action == "pause":
-        if cur_status != "running":
-            raise HTTPException(status_code=400, detail=f"Cannot pause: job is currently '{cur_status.upper()}', not RUNNING.")
-        with _sim_lock:
-            info["pause"] = True
-        updated = state.update_job_state(device_id, {"status": "paused"})
-        _broadcast({"type": "job_progress", "device_id": device_id, "data": updated})
-        _broadcast({
-            "type": "dashboard_job_event",
-            "device_id": device_id,
-            "event": "paused",
-            "file_name": cur.get("file_name", ""),
-        })
-
-    elif action == "resume":
-        if cur_status != "paused":
-            raise HTTPException(status_code=400, detail=f"Cannot resume: job is currently '{cur_status.upper()}', not PAUSED.")
-        with _sim_lock:
-            info["pause"] = False
-        updated = state.update_job_state(device_id, {"status": "running"})
-        _broadcast({"type": "job_progress", "device_id": device_id, "data": updated})
-        _broadcast({
-            "type": "dashboard_job_event",
-            "device_id": device_id,
-            "event": "resumed",
-            "file_name": cur.get("file_name", ""),
-        })
-
-    elif action == "abort":
-        if cur_status in ("idle", "completed", "aborted"):
-            raise HTTPException(status_code=400, detail=f"Cannot abort: job is already '{cur_status.upper()}'.")
-        with _sim_lock:
-            info["stop"] = True
-            info["pause"] = False
-        updated = state.update_job_state(device_id, {"status": "aborted", "current_gcode": "Aborted by user"})
-        _broadcast({"type": "job_progress", "device_id": device_id, "data": updated})
-        _broadcast({
-            "type": "dashboard_job_event",
-            "device_id": device_id,
-            "event": "aborted",
-            "file_name": cur.get("file_name", ""),
-        })
-
-    elif action == "reset":
-        with _sim_lock:
-            info["stop"] = True
-            info["pause"] = False
-        updated = state.update_job_state(device_id, {
-            "status": "idle",
-            "current_line": 0,
-            "elapsed_seconds": 0,
-            "current_gcode": "Ready to run",
-        })
-        _broadcast({"type": "job_progress", "device_id": device_id, "data": updated})
-        _broadcast({
-            "type": "dashboard_job_event",
-            "device_id": device_id,
-            "event": "reset",
-            "file_name": cur.get("file_name", ""),
-        })
-
-    return {
-        "success": True,
-        "action": action,
-        "device_id": device_id,
-        "job": state.get_job_state(device_id),
-    }
-
-
-@router.get("/api/devices/{device_id}/job/status")
-async def get_job_status(device_id: str):
-    """
-    Get the latest job status and execution progress for a device.
-    """
-    if not device_id or device_id.strip() == "":
-        raise HTTPException(status_code=400, detail="Invalid device_id")
-    return state.get_job_state(device_id)
 

@@ -30,8 +30,19 @@ the console camera directly.
 
 ## One-time setup, then normal launch
 
-Copy `streaming.local.ps1.example` to `streaming.local.ps1` in both
-repositories and edit the values once. These local files are Git-ignored.
-After that, run `start_webrtc_stack.ps1` on the edge laptop and
-`start_ufameasy_webrtc.ps1` on the UFAMeasy console; no `$env:` commands are
-needed again.
+On the DED console, run the UFAMeasy installer instead of editing local files:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File D:\UFAMeasy_Workspace\UFAMeasy\install.ps1 -ConfigureMediaMtx
+```
+
+It detects the console LAN IP and DirectShow cameras, offers a camera selector,
+downloads MediaMTX from its official release if needed, creates the Git-ignored
+configuration in both repositories, and asks permission before adding the
+required Windows Firewall rules. It also enables automatic WebRTC publishing
+when UFAMeasy opens.
+
+Then run `start_webrtc_stack.ps1` on the DED console and
+`start_ufameasy_webrtc.ps1` from the UFAMeasy installation. The gateway launch
+now waits for MediaMTX's Control API and reports its error log if MediaMTX did
+not start correctly.

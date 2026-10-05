@@ -15,6 +15,8 @@ from server.mqtt_client import start_mqtt
 from server.routes import router
 from server.ws_manager import manager
 from server.db import init_db
+from server.db import mark_rmc_inflight_unknown
+from server.rmc_auth import resolve_principal
 
 
 @asynccontextmanager
@@ -33,6 +35,7 @@ async def lifespan(app: FastAPI):
     """
     # MQTT must start before requests are served so API reads see live updates.
     init_db()
+    mark_rmc_inflight_unknown()
     start_mqtt()
     yield
 
@@ -95,6 +98,13 @@ async def websocket_endpoint(websocket: WebSocket):
     from server.mqtt_client import _active_sessions
     from server.db import get_session_by_id
     import json, asyncio
+    try:
+        resolve_principal(websocket.headers.get("authorization") or (
+            f"Bearer {websocket.query_params['token']}" if websocket.query_params.get("token") else None
+        ))
+    except Exception:
+        await websocket.close(code=1008)
+        return
     await manager.connect(websocket)
     await asyncio.sleep(0.1)
     try:
@@ -110,15 +120,19 @@ async def websocket_endpoint(websocket: WebSocket):
             sessions_data[device_id] = row
             live_runtime[device_id] = state.get_parameters(device_id)
 
-        all_known_devices = set(list(_active_sessions.keys()) + list(state.parameters.keys()) + list(state.job_states.keys()))
-        job_states = {did: state.get_job_state(did) for did in all_known_devices}
+        all_known_devices = set(
+            list(_active_sessions.keys()) + list(state.parameters.keys()) + list(state.rmc_states.keys())
+        )
+        rmc_states = {did: state.get_rmc_state(did) for did in all_known_devices}
+        rmc_files = {did: state.get_rmc_files(did) for did in all_known_devices}
 
         await websocket.send_text(json.dumps({
             "type": "init",
             "active_sessions": _active_sessions,
             "sessions_data": sessions_data,
             "live_runtime": live_runtime,
-            "job_states": job_states,
+            "rmc_states": rmc_states,
+            "rmc_files": rmc_files,
         }))
     except Exception:
         pass
