@@ -28,7 +28,17 @@ from server.rmc_transfer import require_transfer_ready, save_uploaded_file, veri
 from fastapi.responses import Response, StreamingResponse
 from server.state_store import state
 from server.db import get_sessions_by_device, get_runtime_latest
-from server.media_gateway import health as media_health, playback_for_host, stream_for, stream_provider
+from server.media_gateway import (
+    configured_device_ids,
+    health as media_health,
+    hls_proxy_url,
+    hls_upstream_target,
+    open_hls_upstream,
+    playback_for_host,
+    stream_for,
+    stream_provider,
+    valid_hls_file,
+)
 from server import db
 from server.auth import (
     CONTROL_COOKIE_NAME,
@@ -575,6 +585,19 @@ def get_media_playback(device_id: str, request: Request):
         raise HTTPException(status_code=404, detail=str(exc)) from exc
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
+    if _is_https_request(request):
+        # WebRTC/UDP and :8889 are unreachable from the public https origin;
+        # serve MediaMTX's HLS player same-origin instead. "webrtc_url" stays the
+        # iframe player URL the dashboard already loads.
+        player_url = hls_proxy_url(device_id)
+        return {
+            "provider": "webrtc",
+            "transport": "hls",
+            "enabled": True,
+            "webrtc_url": player_url,
+            "hls_url": f"{player_url}index.m3u8",
+            "health": media_health(stream),
+        }
     return {
         "provider": "webrtc",
         "enabled": True,
@@ -582,6 +605,41 @@ def get_media_playback(device_id: str, request: Request):
         "hls_url": stream.hls_url,
         "health": media_health(stream),
     }
+
+def _is_https_request(request: Request) -> bool:
+    forwarded = request.headers.get("x-forwarded-proto", "").split(",")[0].strip().lower()
+    return request.url.scheme == "https" or forwarded == "https"
+
+
+def _is_known_media_device(device_id: str) -> bool:
+    if device_id in configured_device_ids():
+        return True
+    with sqlite3.connect(DB_PATH) as conn:
+        return conn.execute("SELECT 1 FROM devices WHERE device_id=?", (device_id,)).fetchone() is not None
+
+
+@router.get("/api/media/devices/{device_id}/hls/{file:path}", dependencies=[Depends(require_auth)])
+async def proxy_media_hls(device_id: str, file: str, request: Request):
+    """Relay MediaMTX HLS (player page, playlists, segments) same-origin."""
+    if not valid_hls_file(file):
+        raise HTTPException(status_code=400, detail="Invalid HLS path")
+    loop = asyncio.get_running_loop()
+    try:
+        known = await loop.run_in_executor(None, _is_known_media_device, device_id)
+        target = hls_upstream_target(device_id, file, dict(request.query_params))
+    except ValueError as exc:
+        raise HTTPException(status_code=404, detail="Unknown device") from exc
+    if not known:
+        raise HTTPException(status_code=404, detail="Unknown device")
+    try:
+        status, headers, body = await open_hls_upstream(target)
+    except (OSError, asyncio.TimeoutError, asyncio.IncompleteReadError, ValueError, IndexError):
+        raise HTTPException(status_code=502, detail="Media gateway unavailable") from None
+    if file == "" or file.endswith(".m3u8"):
+        headers["cache-control"] = "no-cache"
+    media_type = headers.pop("content-type", None)
+    return StreamingResponse(body, status_code=status, media_type=media_type, headers=headers)
+
 
 @router.get("/sessions/{session_id}/runtime", dependencies=[Depends(require_auth)])
 def get_session_runtime(session_id: str):

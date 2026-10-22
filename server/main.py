@@ -38,6 +38,8 @@ from server.auth import (
     create_access_token,
     create_control_token,
     credentials_match,
+    _unlock_failures,
+    _unlock_failures_lock,
     failed_control_unlock_retry_after,
     get_control_session,
     require_auth,
@@ -101,19 +103,42 @@ def login_page():
     return FileResponse("ui/login.html")
 
 
+_LOGIN_LIMIT_KEY = "\0login"  # cannot collide with a real username
+
+
 @app.post("/login")
-def login(credentials: LoginRequest):
+def login(credentials: LoginRequest, request: Request):
+    client_ip = _client_ip(request)
+    # Locked-out IPs are refused before the password is checked.
+    with _unlock_failures_lock:
+        attempts = _unlock_failures.get((_LOGIN_LIMIT_KEY, client_ip))
+        now = time.monotonic()
+        if attempts and len(attempts) >= 5 and now - attempts[0] < 300:
+            raise HTTPException(
+                status_code=429,
+                detail="Too many failed login attempts",
+                headers={"Retry-After": str(max(1, int(300 - (now - attempts[0])) + 1))},
+            )
     if not credentials_match(credentials.username, credentials.password):
-        logger.warning("Failed login attempt for username=%r", credentials.username)
+        # Same 5-failures/5-minutes window as control unlock, keyed per IP only.
+        retry_after = failed_control_unlock_retry_after(_LOGIN_LIMIT_KEY, client_ip)
+        logger.warning("Failed login attempt for username=%r ip=%s", credentials.username, client_ip)
+        if retry_after is not None:
+            raise HTTPException(
+                status_code=429,
+                detail="Too many failed login attempts",
+                headers={"Retry-After": str(retry_after)},
+            )
         raise HTTPException(status_code=401, detail="Invalid username or password")
+    clear_failed_control_unlocks(_LOGIN_LIMIT_KEY, client_ip)
     response = JSONResponse({"authenticated": True})
     response.set_cookie(
         key=AUTH_COOKIE_NAME,
         value=create_access_token(credentials.username),
         max_age=TOKEN_LIFETIME_HOURS * 60 * 60,
         httponly=True,
-        samesite="strict",
-        secure=cookie_secure(),
+        samesite="lax",
+        secure=request.url.scheme == "https" or cookie_secure(),
         path="/",
     )
     return response
@@ -226,8 +251,15 @@ async def websocket_endpoint(websocket: WebSocket):
     try:
         sessions_data = {}
         live_runtime = {}
-        for device_id, session_id in _active_sessions.items():
-            row = get_session_by_id(session_id) or {}
+        active_items = list(_active_sessions.items())
+        # SQLite lookups run in the default executor (as other blocking routes
+        # do); each call opens its own connection inside the worker thread.
+        loop = asyncio.get_running_loop()
+        session_rows = await loop.run_in_executor(
+            None, lambda: [get_session_by_id(sid) for _, sid in active_items]
+        )
+        for (device_id, session_id), row in zip(active_items, session_rows):
+            row = row or {}
             # Overlay the live current_file from state (updated by file_update MQTT)
             live_file = state.get_parameters(device_id).get("current_file")
             if live_file and live_file.lower() != "unknown":
