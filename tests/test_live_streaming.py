@@ -5,7 +5,7 @@ import unittest
 from unittest.mock import patch
 
 from server import mqtt_client
-from server.media_gateway import stream_for
+from server.media_gateway import playback_for_host, stream_for
 from server.state_store import StateStore
 from server.ws_manager import ConnectionManager
 
@@ -99,6 +99,21 @@ class MqttAndStateTests(unittest.TestCase):
 
 
 class MediaConfigurationTests(unittest.TestCase):
+    def test_websocket_mode_auto_configures_the_local_gateway(self):
+        with patch.dict(os.environ, {"UFAMEASY_MEDIA_DEVICES_JSON": "{}"}, clear=False):
+            stream = stream_for("device_001")
+        self.assertEqual(stream.path, "machines/device_001/main")
+        self.assertEqual(stream.control_url, "http://127.0.0.1:9997")
+
+    def test_playback_url_uses_dashboard_request_host(self):
+        config = json.dumps({"machine-a": {
+            "playback_url": "http://old-address:8889",
+            "path": "machines/machine-a/main",
+        }})
+        with patch.dict(os.environ, {"UFAMEASY_MEDIA_DEVICES_JSON": config}, clear=False):
+            stream = playback_for_host(stream_for("machine-a"), "192.168.31.237")
+        self.assertEqual(stream.webrtc_url, "http://192.168.31.237:8889/machines/machine-a/main")
+
     def test_stream_url_is_built_from_only_valid_device_config(self):
         config = json.dumps({"machine-a": {
             "playback_url": "https://gateway.example/",

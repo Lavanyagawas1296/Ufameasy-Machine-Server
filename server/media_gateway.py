@@ -11,11 +11,13 @@ from dataclasses import dataclass
 import json
 import os
 import re
+from urllib.parse import urlsplit
 from urllib.request import Request, urlopen
 from urllib.error import URLError
 
 
 _DEVICE_ID = re.compile(r"^[A-Za-z0-9_.-]{1,80}$")
+_HOST = re.compile(r"^[A-Za-z0-9.-]+$")
 
 
 @dataclass(frozen=True)
@@ -55,6 +57,17 @@ def stream_for(device_id: str) -> MediaStream:
         raise ValueError("Invalid device ID")
     entry = _device_config().get(device_id)
     if not isinstance(entry, dict):
+        # Normal UFAMeasy.exe operation starts the publisher and MediaMTX on
+        # this same edge PC.  Do not require a launcher-only environment JSON
+        # for that standard topology; dynamic paths safely isolate devices.
+        auto_config = os.getenv("UFAMEASY_MEDIA_AUTO_CONFIG", "1").strip().lower()
+        if auto_config not in {"0", "false", "no"}:
+            return MediaStream(
+                device_id=device_id,
+                path=f"machines/{device_id}/main",
+                playback_url="http://127.0.0.1:8889",
+                control_url="http://127.0.0.1:9997",
+            )
         raise LookupError(f"No MediaMTX gateway is configured for '{device_id}'")
     playback_url = str(entry.get("playback_url") or "").rstrip("/")
     path = str(entry.get("path") or f"machines/{device_id}/main").strip("/")
@@ -62,6 +75,20 @@ def stream_for(device_id: str) -> MediaStream:
         raise ValueError(f"Invalid MediaMTX configuration for '{device_id}'")
     control_url = str(entry.get("control_url") or "").rstrip("/") or None
     return MediaStream(device_id, path, playback_url, control_url)
+
+
+def playback_for_host(stream: MediaStream, host: str | None) -> MediaStream:
+    """Use the dashboard's current host for MediaMTX on a DHCP network."""
+    dynamic = os.getenv("UFAMEASY_MEDIA_DYNAMIC_PLAYBACK_HOST", "1").strip().lower()
+    if dynamic in {"0", "false", "no"} or not host or not _HOST.fullmatch(host):
+        return stream
+    configured = urlsplit(stream.playback_url)
+    return MediaStream(
+        stream.device_id,
+        stream.path,
+        f"{configured.scheme or 'http'}://{host}:8889",
+        stream.control_url,
+    )
 
 
 def health(stream: MediaStream, timeout: float = 2.0) -> dict:

@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8">
@@ -2556,6 +2556,7 @@
 
         <div class="topbar-time" id="topbarClock">-- : -- : --</div>
         <div class="user-avatar" title="UFAM Server">U</div>
+        <button id="logoutBtn" type="button" class="action-btn" style="padding:5px 10px;">Log out</button>
       </div>
     </header>
 
@@ -2895,6 +2896,9 @@
             <button class="action-btn" id="rmcReleaseLockBtn" type="button" style="display:none;" title="Release exclusive control lock">
               <span>Release Control</span>
             </button>
+            <span id="rmcControlStatus" class="rmc-tag tag-off">Controls locked</span>
+            <button class="action-btn primary" id="rmcUnlockControlBtn" type="button">Unlock Controls</button>
+            <button class="action-btn" id="rmcLockControlBtn" type="button" style="display:none;">Lock Controls</button>
           </div>
         </div>
       </div>
@@ -3377,6 +3381,19 @@
 </div>
 
 <!-- RMC Load File Modal -->
+<div id="rmcControlUnlockModal" class="rmc-modal-overlay" role="dialog" aria-modal="true" aria-labelledby="rmcControlUnlockTitle" style="display:none;">
+  <div class="rmc-modal" style="max-width:360px;">
+    <div class="rmc-modal-head">
+      <div><h3 id="rmcControlUnlockTitle">Unlock Machine Controls</h3><p>Enter the control password to enable hazardous RMC actions.</p></div>
+    </div>
+    <form id="rmcControlUnlockForm">
+      <input id="rmcControlPassword" type="password" autocomplete="current-password" placeholder="Control password" style="width:100%;box-sizing:border-box;padding:10px;margin:10px 0;background:#07192b;border:1px solid var(--border);border-radius:6px;color:#fff;">
+      <div id="rmcControlUnlockError" style="min-height:18px;color:var(--red);font-size:12px;"></div>
+      <div style="display:flex;justify-content:flex-end;gap:10px;margin-top:12px;"><button class="action-btn" id="rmcControlUnlockCancel" type="button">Cancel</button><button class="action-btn primary" type="submit">Unlock</button></div>
+    </form>
+  </div>
+</div>
+
 <div id="rmcLoadModal" class="rmc-modal-overlay" role="dialog" aria-modal="true" aria-labelledby="rmcLoadTitle">
   <div class="rmc-modal-box">
     <div class="rmc-modal-head">
@@ -3421,6 +3438,34 @@
 </div>
 
 <script>
+  const nativeFetch = window.fetch.bind(window);
+  let redirectingToLogin = false;
+  // Hung GETs on flaky Wi-Fi otherwise hold the browser's per-host connection
+  // slots indefinitely. Only idempotent GETs get a timeout; commands/locks
+  // (POST/DELETE) and legitimately slow transfers are left untouched.
+  const FETCH_TIMEOUT_MS = 10000;
+  const SLOW_GET_PATHS = ["/logs/", "/recordings", "/api/rmc/files", "/replay"];
+  window.fetch = async (input, init = {}) => {
+    const method = (init.method || "GET").toUpperCase();
+    const url = typeof input === "string" ? input : input.url;
+    let timer = null;
+    if (method === "GET" && !init.signal && !SLOW_GET_PATHS.some(p => url.includes(p))) {
+      const controller = new AbortController();
+      timer = setTimeout(() => controller.abort(), FETCH_TIMEOUT_MS);
+      init = { ...init, signal: controller.signal };
+    }
+    try {
+      const response = await nativeFetch(input, { ...init, credentials: "same-origin" });
+      if (response.status === 401 && !redirectingToLogin) {
+        redirectingToLogin = true;
+        window.location.replace("/login");
+      }
+      return response;
+    } finally {
+      if (timer) clearTimeout(timer);
+    }
+  };
+
   // DOM References
   const tableBody = document.getElementById("tableBody");
   const tableWrap = document.getElementById("tableWrap");
@@ -3453,6 +3498,14 @@
   const logsTableBody = document.getElementById("logsTableBody");
   const logsEmptyState = document.getElementById("logsEmptyState");
   const toast = document.getElementById("toast");
+
+  document.getElementById("logoutBtn")?.addEventListener("click", async () => {
+    try {
+      await fetch("/logout", { method: "POST" });
+    } finally {
+      window.location.replace("/login");
+    }
+  });
 
   // Camera DOM
   const cameraFeed = document.getElementById("cameraFeed");
@@ -3523,6 +3576,9 @@
   const rmcLockText = document.getElementById("rmcLockText");
   const rmcTakeLockBtn = document.getElementById("rmcTakeLockBtn");
   const rmcReleaseLockBtn = document.getElementById("rmcReleaseLockBtn");
+  const rmcControlStatus = document.getElementById("rmcControlStatus");
+  const rmcUnlockControlBtn = document.getElementById("rmcUnlockControlBtn");
+  const rmcLockControlBtn = document.getElementById("rmcLockControlBtn");
   const rmcTimelineMsg = document.getElementById("rmcTimelineMsg");
   const rmcTimelineBarFill = document.getElementById("rmcTimelineBarFill");
   const rmcStepSent = document.getElementById("rmcStepSent");
@@ -3549,6 +3605,11 @@
   const rmcServerFileList = document.getElementById("rmcServerFileList");
   const rmcLoadStageBar = document.getElementById("rmcLoadStageBar");
   const rmcLoadStageText = document.getElementById("rmcLoadStageText");
+  const rmcControlUnlockModal = document.getElementById("rmcControlUnlockModal");
+  const rmcControlUnlockForm = document.getElementById("rmcControlUnlockForm");
+  const rmcControlPassword = document.getElementById("rmcControlPassword");
+  const rmcControlUnlockError = document.getElementById("rmcControlUnlockError");
+  const rmcControlUnlockCancel = document.getElementById("rmcControlUnlockCancel");
 
   const rmcConfirmModal = document.getElementById("rmcConfirmModal");
   const rmcConfirmTitle = document.getElementById("rmcConfirmTitle");
@@ -3574,6 +3635,8 @@
   let rmcActionInFlight = false;
   let rmcSelectedFile = null;
   let rmcConfirmCallback = null;
+  let rmcControlExpiresAt = 0;
+  let rmcControlTimer = null;
 
   // State
   const rowsByKey = new Map();
@@ -3747,8 +3810,8 @@
         b = valObj[3] ?? 0;
         c = valObj[4] ?? 0;
       } else if (valObj.length >= 6) {
-        b = valObj[4] ?? 0;
-        c = valObj[5] ?? 0;
+        b = valObj[3] ?? 0;
+        c = valObj[4] ?? 0;
       }
     } else if (typeof valObj === 'object') {
       x = valObj.X ?? valObj.x ?? 0;
@@ -3781,7 +3844,17 @@
 
   // Update Runtime KPIs & Indicators
   function updateRuntime(data = {}) {
-    if (data.current_file) {
+    // Job state and build progress have one owner: a fresh RMC state.  Generic
+    // runtime telemetry is intentionally partial (and the idle equipment poll
+    // contains no job fields), so letting it redraw these values caused the
+    // dashboard to alternate between RMC RUNNING/progress and IDLE/0%.
+    const selectedDid = deviceSelect ? deviceSelect.value : null;
+    const selectedRmcState = selectedDid ? rmcStates[selectedDid] : null;
+    const rmcOwnsJobDisplay = Boolean(
+      selectedRmcState && !isDeviceStale(selectedRmcState, selectedDid)
+    );
+
+    if (data.current_file && !rmcOwnsJobDisplay) {
       const fn = String(data.current_file).trim();
       if (fn && fn.toLowerCase() !== 'unknown') {
         if (rtFile) rtFile.textContent = fn;
@@ -3817,10 +3890,12 @@
       rtPower.textContent = Number.isFinite(p) ? `${p.toFixed(1)}%` : '—';
     }
 
-    const isPrinting = isLaser || (data.current_layer != null && data.current_layer > 0);
-    if (rtState) rtState.innerHTML = `<span class="status-pill ${isPrinting ? 'on' : 'off'}">${isPrinting ? 'PRINTING' : 'IDLE'}</span>`;
-    if (rtStateVal) rtStateVal.textContent = isPrinting ? 'Printing' : 'Idle';
-    if (rtStateSub) rtStateSub.textContent = isPrinting ? 'Process active' : 'No active print job';
+    if (!rmcOwnsJobDisplay) {
+      const isPrinting = isLaser || (data.current_layer != null && data.current_layer > 0);
+      if (rtState) rtState.innerHTML = `<span class="status-pill ${isPrinting ? 'on' : 'off'}">${isPrinting ? 'PRINTING' : 'IDLE'}</span>`;
+      if (rtStateVal) rtStateVal.textContent = isPrinting ? 'Printing' : 'Idle';
+      if (rtStateSub) rtStateSub.textContent = isPrinting ? 'Process active' : 'No active print job';
+    }
 
     if (data.powder_usage != null && estPowder) estPowder.textContent = `${Number(data.powder_usage).toFixed(1)}g`;
     if (data.deposition_efficiency != null && estEfficiency) estEfficiency.textContent = `${(Number(data.deposition_efficiency) * 100).toFixed(1)}%`;
@@ -4383,7 +4458,7 @@
     const idleDesc = document.querySelector("#cameraCollapsed .idle-desc");
     if (idleDesc) {
       if (devIp) {
-        idleDesc.textContent = `Real-time machine monitoring camera feed for ${selectedDid} (${devIp}:8765). Connect to visually monitor deposition or melt pool.`;
+        idleDesc.textContent = `Real-time machine monitoring camera feed for ${selectedDid}`;
       } else {
         idleDesc.textContent = `No camera IP configured for ${selectedDid}. Enter ${selectedDid}'s machine IP in Machine Access.`;
       }
@@ -4924,24 +4999,73 @@
   });
 
   // ── Remote Machine Control (RMC Phase 5) ──────────────────────────────────
-  function getAuthHeaders() {
-    const urlParams = new URLSearchParams(window.location.search);
-    const token = urlParams.get("token");
-    const headers = { "Content-Type": "application/json" };
-    if (token) {
-      headers["Authorization"] = `Bearer ${token}`;
+  function isControlLocked(detail) {
+    return detail && typeof detail === "object" && detail.code === "CONTROL_LOCKED";
+  }
+
+  function updateControlStatus(expiresAt) {
+    if (expiresAt !== undefined) rmcControlExpiresAt = Number(expiresAt) * 1000 || 0;
+    if (!rmcControlTimer) rmcControlTimer = setInterval(updateControlStatus, 1000);
+    const remaining = Math.max(0, Math.ceil((rmcControlExpiresAt - Date.now()) / 1000));
+    const unlocked = remaining > 0;
+    if (rmcControlStatus) {
+      rmcControlStatus.className = `rmc-tag ${unlocked ? "tag-busy" : "tag-off"}`;
+      rmcControlStatus.textContent = unlocked ? `Controls unlocked · ${Math.ceil(remaining / 60)}m` : "Controls locked";
     }
-    return headers;
+    if (rmcUnlockControlBtn) rmcUnlockControlBtn.style.display = unlocked ? "none" : "inline-flex";
+    if (rmcLockControlBtn) rmcLockControlBtn.style.display = unlocked ? "inline-flex" : "none";
+  }
+
+  async function refreshControlStatus() {
+    const res = await fetch("/control-status");
+    if (!res.ok) return;
+    const data = await res.json();
+    updateControlStatus(data.expires_at || 0);
+  }
+
+  function showControlUnlockPrompt() {
+    if (rmcControlUnlockError) rmcControlUnlockError.textContent = "";
+    if (rmcControlPassword) rmcControlPassword.value = "";
+    if (rmcControlUnlockModal) rmcControlUnlockModal.style.display = "flex";
+    rmcControlPassword?.focus();
+  }
+
+  function closeControlUnlockPrompt() {
+    if (rmcControlUnlockModal) rmcControlUnlockModal.style.display = "none";
+  }
+
+  rmcUnlockControlBtn?.addEventListener("click", showControlUnlockPrompt);
+  rmcControlUnlockCancel?.addEventListener("click", closeControlUnlockPrompt);
+  rmcControlUnlockForm?.addEventListener("submit", async (event) => {
+    event.preventDefault();
+    const res = await fetch("/unlock-control", {
+      method: "POST",
+      headers: getAuthHeaders(),
+      body: JSON.stringify({ password: rmcControlPassword.value })
+    });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) {
+      rmcControlUnlockError.textContent = data.detail || "Unable to unlock controls.";
+      return;
+    }
+    updateControlStatus(data.expires_at);
+    closeControlUnlockPrompt();
+  });
+  rmcLockControlBtn?.addEventListener("click", async () => {
+    await fetch("/lock-control", { method: "POST" });
+    updateControlStatus(0);
+  });
+
+  function getAuthHeaders() {
+    return { "Content-Type": "application/json" };
   }
 
   function getCurrentUser() {
-    const urlParams = new URLSearchParams(window.location.search);
-    return urlParams.get("user") || "local-dev";
+    return "local-dev";
   }
 
   function isViewerMode() {
-    const urlParams = new URLSearchParams(window.location.search);
-    return urlParams.get("role") === "viewer";
+    return false;
   }
 
   const RMC_STALE_MS = 45000;
@@ -5355,6 +5479,10 @@
       const data = await res.json().catch(() => ({}));
 
       if (!res.ok) {
+        if (isControlLocked(data.detail)) {
+          showControlUnlockPrompt();
+          throw new Error("Unlock controls to continue.");
+        }
         let msg = data.detail || data.message || `Command failed (HTTP ${res.status})`;
         if (typeof data.detail === "object" && data.detail !== null) {
           if (data.detail.reason_code === "LOCKED_BY_OTHER") {
@@ -5376,6 +5504,7 @@
       }
 
       const cmdId = data.cmd_id;
+      if (data.control_expires_at) updateControlStatus(data.control_expires_at);
       const now = Date.now();
       const expiresAt = new Date(now + 60000).toISOString();
 
@@ -6008,14 +6137,10 @@
 
     const xhr = new XMLHttpRequest();
     xhr.open("POST", "/api/rmc/files", true);
+    xhr.withCredentials = true;
 
     // CRITICAL: Do NOT set Content-Type header on FormData uploads!
     // The browser automatically sets Content-Type: multipart/form-data with boundary.
-    const urlParams = new URLSearchParams(window.location.search);
-    const token = urlParams.get("token");
-    if (token) {
-      xhr.setRequestHeader("Authorization", `Bearer ${token}`);
-    }
 
     xhr.upload.onprogress = (e) => {
       if (e.lengthComputable && rmcUploadProgressFill) {
@@ -6033,9 +6158,12 @@
         if (rmcUploadProgressFill) rmcUploadProgressFill.style.width = "0%";
       }, 500);
 
-      if (xhr.status >= 200 && xhr.status < 300) {
+      if (xhr.status === 401) {
+        window.location.replace("/login");
+      } else if (xhr.status >= 200 && xhr.status < 300) {
         let resp = {};
         try { resp = JSON.parse(xhr.responseText); } catch(_) {}
+        if (resp.control_expires_at) updateControlStatus(resp.control_expires_at);
         showToast("File uploaded successfully to server registry");
         await fetchServerFiles();
         if (resp.file_id) {
@@ -6045,6 +6173,10 @@
         let resp = {};
         try { resp = JSON.parse(xhr.responseText); } catch(_) {}
         const detail = resp.detail || resp;
+        if (isControlLocked(detail)) {
+          showControlUnlockPrompt();
+          return;
+        }
         const existingId = detail.existing_file_id || (typeof detail === "object" ? detail.existing_file_id : null);
         showToast("Identical file already exists in server registry. Selecting existing file.");
         await fetchServerFiles();
@@ -6226,6 +6358,10 @@
       });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) {
+        if (isControlLocked(data.detail)) {
+          showControlUnlockPrompt();
+          throw new Error("Unlock controls to take control.");
+        }
         if (res.status === 423) {
           const issuer = data.detail?.issued_by || "another operator";
           rmcLocks[did] = { device_id: did, issued_by: issuer };
@@ -6235,6 +6371,7 @@
         throw new Error(data.detail || `Failed to acquire lock (HTTP ${res.status})`);
       }
       rmcLocks[did] = data;
+      if (data.control_expires_at) updateControlStatus(data.control_expires_at);
       showToast("Exclusive control lock acquired");
       updateRmcUI(did);
       startLockRenewal();
@@ -6566,8 +6703,12 @@
             light_enabled: "light_enabled" in d ? d.light_enabled : d.RT031,
             laser_power_pct: d.laser_power_pct ?? d.DS010
           });
+          const selectedRmcState = selected ? rmcStates[selected] : null;
+          const rmcOwnsJobDisplay = Boolean(
+            selectedRmcState && !isDeviceStale(selectedRmcState, selected)
+          );
           const pct = liveRuntimeData.progress_pct;
-          if (pct != null) {
+          if (!rmcOwnsJobDisplay && pct != null) {
             const p = Math.min(100, Math.max(0, Number(pct)));
             if (progressBar) progressBar.style.width = `${p}%`;
             if (progressPct) progressPct.textContent = `${p.toFixed(1)}%`;
@@ -6626,10 +6767,12 @@
   // The FreeCAD runtime MQTT topic only fires during active print jobs.
   // Poll /state every 3 s so gas/PF-gas indicators stay live during idle.
   let _equipPollTimer = null;
+  let _equipPollInFlight = false;
 
   async function pollEquipmentState() {
     const did = deviceSelect ? deviceSelect.value : null;
-    if (!did) return;
+    if (!did || document.hidden || _equipPollInFlight) return;
+    _equipPollInFlight = true;
     try {
       const res = await fetch(`/state?device_id=${encodeURIComponent(did)}`);
       const s = await res.json();
@@ -6643,7 +6786,14 @@
         laser_power_pct: s.laser_power_pct ?? s.DS010 ?? s.laser_power,
       });
     } catch (_) { /* silently ignore network errors */ }
+    finally { _equipPollInFlight = false; }
   }
+
+  // Refresh immediately when the tab becomes visible again instead of
+  // waiting up to a full interval.
+  document.addEventListener("visibilitychange", () => {
+    if (!document.hidden) pollEquipmentState();
+  });
 
   function startEquipPoll() {
     stopEquipPoll();
@@ -6658,6 +6808,7 @@
 
   // Initial Boot
   resetTrendHistory();
+  refreshControlStatus();
   loadDevices();
   connectWS();
   startEquipPoll();

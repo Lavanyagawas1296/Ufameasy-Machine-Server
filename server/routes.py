@@ -28,8 +28,15 @@ from server.rmc_transfer import require_transfer_ready, save_uploaded_file, veri
 from fastapi.responses import Response, StreamingResponse
 from server.state_store import state
 from server.db import get_sessions_by_device, get_runtime_latest
-from server.media_gateway import health as media_health, stream_for, stream_provider
+from server.media_gateway import health as media_health, playback_for_host, stream_for, stream_provider
 from server import db
+from server.auth import (
+    CONTROL_COOKIE_NAME,
+    get_control_session,
+    refresh_control_cookie,
+    require_auth,
+    require_control,
+)
 from server.rmc_auth import Principal, require_role, resolve_principal
 from server.rmc_service import rmc_service
 
@@ -471,7 +478,7 @@ def _safe_download_filename(remote_path: str) -> str:
     filename = posixpath.basename(remote_path)
     return "".join(char if char.isalnum() or char in ".-_" else "_" for char in filename) or "recording"
 
-@router.get("/state")
+@router.get("/state", dependencies=[Depends(require_auth)])
 def get_state(device_id: str):
     """
     Return all known machine parameters.
@@ -483,7 +490,7 @@ def get_state(device_id: str):
         return {"error": "invalid device_id"}
     return state.get_parameters(device_id)
 
-@router.get("/parameter/{name}")
+@router.get("/parameter/{name}", dependencies=[Depends(require_auth)])
 def get_parameter(name: str, device_id: str):
     """
     Return the latest value for a single machine parameter.
@@ -503,7 +510,7 @@ def get_parameter(name: str, device_id: str):
         "value": state.get_parameter(device_id, name)
     }
 
-@router.get("/ufameasy/parameter/{name}")
+@router.get("/ufameasy/parameter/{name}", dependencies=[Depends(require_auth)])
 def get_ufameasy_parameter(name: str, device_id: str):
     """
     Return the latest value for a single ufameasy parameter.
@@ -533,7 +540,7 @@ def health():
     """
     return {"status": "ok"}
 
-@router.get("/snapshots")
+@router.get("/snapshots", dependencies=[Depends(require_auth)])
 def get_snapshots(device_id: str):
     if not device_id or device_id.strip() == "":
         return {"error": "invalid device_id"}
@@ -542,7 +549,7 @@ def get_snapshots(device_id: str):
 DATA_DIR = os.path.join(os.path.dirname(__file__), "data")
 DB_PATH = os.path.join(DATA_DIR, "params.db")
 
-@router.get("/devices")
+@router.get("/devices", dependencies=[Depends(require_auth)])
 def get_devices():
     conn = sqlite3.connect(DB_PATH)
     conn.row_factory = sqlite3.Row
@@ -551,19 +558,19 @@ def get_devices():
     return [dict(r) for r in rows]
 
 
-@router.get("/devices/{device_id}/sessions")
+@router.get("/devices/{device_id}/sessions", dependencies=[Depends(require_auth)])
 def get_device_sessions(device_id: str):
     return get_sessions_by_device(device_id)
 
 
-@router.get("/api/media/devices/{device_id}/playback")
-def get_media_playback(device_id: str):
+@router.get("/api/media/devices/{device_id}/playback", dependencies=[Depends(require_auth)])
+def get_media_playback(device_id: str, request: Request):
     """Return an opt-in MediaMTX playback endpoint for the selected machine."""
     provider = stream_provider()
     if provider != "webrtc":
         return {"provider": "mjpeg", "enabled": False}
     try:
-        stream = stream_for(device_id)
+        stream = playback_for_host(stream_for(device_id), request.url.hostname)
     except LookupError as exc:
         raise HTTPException(status_code=404, detail=str(exc)) from exc
     except ValueError as exc:
@@ -576,13 +583,13 @@ def get_media_playback(device_id: str):
         "health": media_health(stream),
     }
 
-@router.get("/sessions/{session_id}/runtime")
+@router.get("/sessions/{session_id}/runtime", dependencies=[Depends(require_auth)])
 def get_session_runtime(session_id: str):
     if not session_id or session_id.strip() == "":
         return {"error": "invalid session_id"}
     return get_runtime_latest(session_id)
 
-@router.delete("/sessions/{session_id}")
+@router.delete("/sessions/{session_id}", dependencies=[Depends(require_auth)])
 def delete_session(session_id: str):
     if not session_id or session_id.strip() == "":
         return {"error": "invalid session_id"}
@@ -592,7 +599,7 @@ def delete_session(session_id: str):
         conn.execute("DELETE FROM sessions WHERE session_id=?", (session_id,))
     return {"deleted": session_id}
 
-@router.get("/logs/fetch")
+@router.get("/logs/fetch", dependencies=[Depends(require_auth)])
 async def fetch_logs(ip: str, port: int = 2121):
     ip = ip.strip()
     if not ip:
@@ -612,7 +619,7 @@ async def fetch_logs(ip: str, port: int = 2121):
         headers={"Content-Disposition": f"attachment; filename=ufameasy_logs_{ip}.csv"},
     )
 
-@router.get("/logs/view")
+@router.get("/logs/view", dependencies=[Depends(require_auth)])
 async def view_logs(ip: str, limit: int = 1000):
     ip = ip.strip()
     if not ip:
@@ -625,7 +632,7 @@ async def view_logs(ip: str, limit: int = 1000):
         raise HTTPException(status_code=exc.status_code, detail=exc.detail) from exc
     return {"logs": rows}
 
-@router.get("/camera/check")
+@router.get("/camera/check", dependencies=[Depends(require_auth)])
 async def check_camera(ip: str, port: int = 8765, device_id: str | None = None):
     ip = ip.strip()
     if not ip:
@@ -667,7 +674,7 @@ async def check_camera(ip: str, port: int = 8765, device_id: str | None = None):
 
     return await loop.run_in_executor(None, _check)
 
-@router.get("/recordings")
+@router.get("/recordings", dependencies=[Depends(require_auth)])
 async def get_recordings(ip: str, device_id: str | None = None):
     ip = ip.strip()
     if not ip:
@@ -679,7 +686,7 @@ async def get_recordings(ip: str, device_id: str | None = None):
     except RecordingFetchError as exc:
         raise HTTPException(status_code=exc.status_code, detail=exc.detail) from exc
 
-@router.get("/recordings/download")
+@router.get("/recordings/download", dependencies=[Depends(require_auth)])
 async def download_recording(ip: str, file: str, download: bool = False):
     ip = ip.strip()
     if not ip:
@@ -712,7 +719,7 @@ async def download_recording(ip: str, file: str, download: bool = False):
         headers={"Content-Disposition": f'{disposition}; filename="{filename}"'},
     )
 
-@router.delete("/recordings/{filename:path}")
+@router.delete("/recordings/{filename:path}", dependencies=[Depends(require_auth)])
 async def delete_recording(filename: str, ip: str):
     ip = ip.strip()
     if not ip:
@@ -728,7 +735,7 @@ async def delete_recording(filename: str, ip: str):
         raise HTTPException(status_code=exc.status_code, detail=exc.detail) from exc
     return {"deleted": filename}
 
-@router.get("/sessions")
+@router.get("/sessions", dependencies=[Depends(require_auth)])
 def list_sessions(device_id: str | None = None):
     conn = sqlite3.connect(DB_PATH)
     conn.row_factory = sqlite3.Row
@@ -742,7 +749,7 @@ def list_sessions(device_id: str | None = None):
     conn.close()
     return [dict(r) for r in rows]
 
-@router.get("/sessions/{session_id}")
+@router.get("/sessions/{session_id}", dependencies=[Depends(require_auth)])
 def get_session(session_id: str):
     if not session_id or session_id.strip() == "":
         return {"error": "invalid session_id"}
@@ -752,7 +759,7 @@ def get_session(session_id: str):
     conn.close()
     return dict(row) if row else {"error": "not found"}
 
-@router.get("/sessions/{session_id}/replay")
+@router.get("/sessions/{session_id}/replay", dependencies=[Depends(require_auth)])
 def get_session_replay(session_id: str):
     if not session_id or session_id.strip() == "":
         return {"error": "invalid session_id"}
@@ -796,19 +803,28 @@ def get_session_replay(session_id: str):
 # Remote Machine Control API
 # ---------------------------------------------------------------------------
 
-@router.post("/api/devices/{device_id}/commands")
+@router.post("/api/devices/{device_id}/commands", dependencies=[Depends(require_auth)])
 def issue_rmc_command(
     device_id: str,
     request: Request,
+    response: Response,
     body: dict = Body(...),
+    username: str = Depends(require_auth),
     principal: Principal = Depends(_rmc_principal),
 ):
     require_role(principal, "operator", "admin")
+    action = body.get("action") if isinstance(body, dict) else None
+    control_session = get_control_session(request.cookies.get(CONTROL_COOKIE_NAME), username)
+    if action in {"load", "start", "resume"}:
+        control_session = require_control(request.cookies.get(CONTROL_COOKIE_NAME), username)
     base_url = str(request.base_url).rstrip("/")
-    return rmc_service.issue_command(device_id, body, principal.name, request_base_url=base_url)
+    result = rmc_service.issue_command(device_id, body, principal.name, request_base_url=base_url)
+    if control_session:
+        result["control_expires_at"] = refresh_control_cookie(response, control_session)
+    return result
 
 
-@router.get("/api/devices/{device_id}/commands/{cmd_id}")
+@router.get("/api/devices/{device_id}/commands/{cmd_id}", dependencies=[Depends(require_auth)])
 def get_rmc_command(device_id: str, cmd_id: str, principal: Principal = Depends(_rmc_principal)):
     command = db.get_rmc_command(cmd_id)
     if command is None or command["device_id"] != device_id:
@@ -816,21 +832,31 @@ def get_rmc_command(device_id: str, cmd_id: str, principal: Principal = Depends(
     return command
 
 
-@router.get("/api/devices/{device_id}/commands")
+@router.get("/api/devices/{device_id}/commands", dependencies=[Depends(require_auth)])
 def list_rmc_commands(device_id: str, limit: int = 50, principal: Principal = Depends(_rmc_principal)):
     return db.list_rmc_commands(device_id, max(1, min(limit, 100)))
 
 
-@router.post("/api/devices/{device_id}/lock")
-def acquire_rmc_lock(device_id: str, body: dict = Body(default={}), principal: Principal = Depends(_rmc_principal)):
+@router.post("/api/devices/{device_id}/lock", dependencies=[Depends(require_auth)])
+def acquire_rmc_lock(
+    device_id: str,
+    request: Request,
+    response: Response,
+    body: dict = Body(default={}),
+    username: str = Depends(require_auth),
+    principal: Principal = Depends(_rmc_principal),
+):
     require_role(principal, "operator", "admin")
+    control_session = require_control(request.cookies.get(CONTROL_COOKIE_NAME), username)
     override = bool(body.get("override", False))
     if override:
         require_role(principal, "admin")
-    return rmc_service.acquire_lock(device_id, principal.name, admin_override=override)
+    result = rmc_service.acquire_lock(device_id, principal.name, admin_override=override)
+    result["control_expires_at"] = refresh_control_cookie(response, control_session)
+    return result
 
 
-@router.delete("/api/devices/{device_id}/lock")
+@router.delete("/api/devices/{device_id}/lock", dependencies=[Depends(require_auth)])
 def release_rmc_lock(device_id: str, override: bool = False, principal: Principal = Depends(_rmc_principal)):
     require_role(principal, "operator", "admin")
     if override:
@@ -839,7 +865,7 @@ def release_rmc_lock(device_id: str, override: bool = False, principal: Principa
     return {"released": True}
 
 
-@router.get("/api/devices/{device_id}/lock")
+@router.get("/api/devices/{device_id}/lock", dependencies=[Depends(require_auth)])
 def get_rmc_lock(device_id: str, principal: Principal = Depends(_rmc_principal)):
     return rmc_service.get_lock(device_id) or {"device_id": device_id, "issued_by": None}
 
@@ -848,21 +874,27 @@ def get_rmc_lock(device_id: str, principal: Principal = Depends(_rmc_principal))
 # RMC Server File Registry & Transfer Endpoints (Phase 6A)
 # ---------------------------------------------------------------------------
 
-@router.post("/api/rmc/files")
+@router.post("/api/rmc/files", dependencies=[Depends(require_auth)])
 async def upload_rmc_file(
+    request: Request,
+    response: Response,
     file: UploadFile = File(...),
+    username: str = Depends(require_auth),
     principal: Principal = Depends(_rmc_principal),
 ):
     require_role(principal, "operator", "admin")
-    return await save_uploaded_file(file, principal.name)
+    control_session = require_control(request.cookies.get(CONTROL_COOKIE_NAME), username)
+    result = await save_uploaded_file(file, principal.name)
+    result["control_expires_at"] = refresh_control_cookie(response, control_session)
+    return result
 
 
-@router.get("/api/rmc/files")
+@router.get("/api/rmc/files", dependencies=[Depends(require_auth)])
 def list_rmc_files(principal: Principal = Depends(_rmc_principal)):
     return db.list_rmc_server_files()
 
 
-@router.delete("/api/rmc/files/{file_id}")
+@router.delete("/api/rmc/files/{file_id}", dependencies=[Depends(require_auth)])
 def delete_rmc_file(file_id: str, principal: Principal = Depends(_rmc_principal)):
     require_role(principal, "operator", "admin")
     file_record = db.get_rmc_server_file(file_id)

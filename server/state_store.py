@@ -45,6 +45,15 @@ class StateStore:
             job_state = update_dict.get("job_state")
             if job_state is not None and job_state not in JOB_STATES:
                 raise ValueError(f"unsupported RMC job_state: {job_state}")
+            # MQTT delivery can be delayed or replay a retained state.  Never
+            # replace a newer machine snapshot with an older sequence.
+            try:
+                incoming_seq = int(update_dict.get("seq", 0))
+                current_seq = int(current.get("seq", 0))
+            except (TypeError, ValueError) as exc:
+                raise ValueError("RMC state seq must be an integer") from exc
+            if incoming_seq < current_seq:
+                return dict(current)
             current.update(update_dict)
             current["device_id"] = device_id
             return dict(current)

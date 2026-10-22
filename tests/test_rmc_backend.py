@@ -81,3 +81,19 @@ class RMCBackendTests(unittest.TestCase):
             self.service._validate_params("load", {"source": "ftp", "ftp_name": "../bad", "sha256": "x", "size": 1})
         params = self.service._validate_params("load", {"source": "ftp", "ftp_name": "jobs/a.nc", "sha256": "x", "size": 1})
         self.assertEqual(params["path"], "jobs/a.nc")
+
+    def test_stale_rmc_state_cannot_replace_newer_build_progress(self):
+        """Delayed MQTT state must not move a running build backwards."""
+        latest = state.update_rmc_state("machine-a", {
+            "device_id": "machine-a", "job_state": "running", "file": {"name": "x.nc"}, "progress": 4,
+            "last_cmd_id": None, "remote_control": "ask", "local_busy": False, "controlled_by": None,
+            "recorded_at": datetime.now(timezone.utc).isoformat(), "seq": 4,
+        })
+        stale = state.update_rmc_state("machine-a", {
+            "device_id": "machine-a", "job_state": "idle", "file": None, "progress": 0,
+            "last_cmd_id": None, "remote_control": "ask", "local_busy": False, "controlled_by": None,
+            "recorded_at": datetime.now(timezone.utc).isoformat(), "seq": 3,
+        })
+        self.assertEqual(latest["progress"], 4)
+        self.assertEqual(stale["job_state"], "running")
+        self.assertEqual(stale["progress"], 4)
