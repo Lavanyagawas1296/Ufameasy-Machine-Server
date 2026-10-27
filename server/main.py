@@ -6,6 +6,7 @@ startup, and exposes lightweight state and health-style endpoints. This
 module connects the HTTP layer to the shared in-memory state store.
 """
 
+import asyncio
 import logging
 import os
 import time
@@ -16,7 +17,7 @@ from dotenv import load_dotenv
 
 load_dotenv(Path(__file__).resolve().parent.parent / ".env", override=False)
 
-from fastapi import Depends, FastAPI, HTTPException, Request, WebSocket, WebSocketDisconnect
+from fastapi import Depends, FastAPI, Header, HTTPException, Request, WebSocket, WebSocketDisconnect
 from fastapi.responses import FileResponse, JSONResponse, RedirectResponse, Response
 from fastapi.staticfiles import StaticFiles
 from server.state_store import state
@@ -25,7 +26,9 @@ from server.mqtt_client import start_mqtt
 from server.routes import router
 from server.ws_manager import manager
 from server.db import init_db
-from server.db import mark_rmc_inflight_unknown
+from server.db import insert_net_event, mark_rmc_inflight_unknown
+from server.rmc_auth import Principal, require_role, resolve_principal
+from server.rmc_service import rmc_service
 from server.auth import (
     AUTH_COOKIE_NAME,
     CONTROL_COOKIE_NAME,
@@ -83,6 +86,40 @@ app = FastAPI(
 )
 app.mount("/static", StaticFiles(directory="static"), name="static")
 
+
+def _record_net_event(**event) -> None:
+    """Schedule persistence so request and websocket paths never wait on SQLite."""
+    asyncio.create_task(asyncio.to_thread(insert_net_event, **event))
+
+
+def _record_http_diagnostics(request: Request, path: str, latency: float, status_code: int) -> None:
+    event = {
+        "client_ip": _client_ip(request),
+        "client_id": request.headers.get("X-Client-Id"),
+        "value": latency,
+        "detail": f"{request.method} {path} status={status_code}",
+    }
+    _record_net_event(kind="request", **event)
+    if latency > 1.0:
+        _record_net_event(kind="slow_request", **event)
+    if status_code >= 500:
+        _record_net_event(kind="error_response", **event)
+
+
+@app.middleware("http")
+async def network_diagnostics_middleware(request: Request, call_next):
+    path = request.url.path
+    if path.startswith("/static") or path == "/ws" or path == "/diagnostics" or path.startswith("/api/diagnostics/"):
+        return await call_next(request)
+    started = time.perf_counter()
+    try:
+        response = await call_next(request)
+    except Exception:
+        _record_http_diagnostics(request, path, time.perf_counter() - started, 500)
+        raise
+    _record_http_diagnostics(request, path, time.perf_counter() - started, response.status_code)
+    return response
+
 @app.get("/")
 def root(request: Request):
     """
@@ -96,6 +133,15 @@ def root(request: Request):
     except HTTPException:
         return RedirectResponse("/login", status_code=303)
     return FileResponse("ui/index.html")
+
+
+@app.get("/diagnostics")
+def diagnostics_page(
+    username: str = Depends(require_auth),
+    principal: Principal = Depends(resolve_principal),
+):
+    require_role(principal, "operator", "admin")
+    return FileResponse("ui/network.html")
 
 
 @app.get("/login")
@@ -145,7 +191,12 @@ def login(credentials: LoginRequest, request: Request):
 
 
 @app.post("/logout")
-def logout():
+def logout(
+    username: str = Depends(require_auth),
+    client_id: str | None = Header(default=None, alias="X-Client-Id"),
+):
+    if client_id:
+        rmc_service.release_locks_for_owner(username, client_id)
     response = Response(status_code=204)
     response.delete_cookie(
         key=AUTH_COOKIE_NAME,
@@ -247,6 +298,12 @@ async def websocket_endpoint(websocket: WebSocket):
         await websocket.close(code=1008)
         return
     await manager.connect(websocket)
+    connected_at = time.monotonic()
+    _record_net_event(
+        kind="ws_connect",
+        client_ip=websocket.client.host if websocket.client else "unknown",
+        client_id=websocket.headers.get("X-Client-Id"),
+    )
     await asyncio.sleep(0.1)
     try:
         sessions_data = {}
@@ -291,5 +348,11 @@ async def websocket_endpoint(websocket: WebSocket):
         pass
     finally:
         await manager.disconnect(websocket)
+        _record_net_event(
+            kind="ws_disconnect",
+            client_ip=websocket.client.host if websocket.client else "unknown",
+            client_id=websocket.headers.get("X-Client-Id"),
+            value=time.monotonic() - connected_at,
+        )
 
 app.include_router(router)

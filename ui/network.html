@@ -1,0 +1,36 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Network diagnostics · UFAMeasy</title>
+  <style>
+    body { font: 14px system-ui,sans-serif; margin: 24px; color: #172033; background: #f6f8fb; }
+    header { display:flex; align-items:center; gap:16px; margin-bottom:20px; } h1 { margin:0; font-size:22px; }
+    button { padding:8px 12px; } section { background:#fff; border:1px solid #dce3ee; border-radius:8px; padding:16px; margin:16px 0; overflow:auto; }
+    table { border-collapse:collapse; width:100%; } th,td { text-align:left; padding:8px; border-bottom:1px solid #e7ecf3; white-space:nowrap; }
+    th { color:#526174; font-weight:600; } .alert { color:#a61b1b; font-weight:700; } #status { color:#526174; margin-left:auto; }
+  </style>
+</head>
+<body>
+  <header><h1>Network diagnostics</h1><a href="/">Dashboard</a><button id="download">Download CSV</button><span id="status"></span></header>
+  <section><h2>Clients</h2><table><thead><tr><th>Client IP</th><th>Requests</th><th>p50 latency</th><th>p95 latency</th><th>Slow requests</th><th>WS drops</th></tr></thead><tbody id="clients"></tbody></table></section>
+  <section><h2>Device state gaps</h2><table><thead><tr><th>Device</th><th>Max gap</th><th>p95 gap</th></tr></thead><tbody id="devices"></tbody></table></section>
+  <section><h2>Recent events</h2><table><thead><tr><th>Time</th><th>Kind</th><th>Client</th><th>Device</th><th>Value</th><th>Detail</th></tr></thead><tbody id="events"></tbody></table></section>
+  <script>
+    const seconds = value => value == null ? "—" : `${Number(value).toFixed(3)} s`;
+    const cell = (value, alert = false) => `<td${alert ? ' class="alert"' : ""}>${String(value ?? "—").replace(/[&<>]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;'}[c]))}</td>`;
+    async function refresh() {
+      try {
+        const data = await (await fetch("/api/diagnostics/network", { cache: "no-store" })).json();
+        document.querySelector("#clients").innerHTML = data.clients.map(c => `<tr>${cell(c.client_ip)}${cell(c.request_count)}${cell(seconds(c.p50_latency))}${cell(seconds(c.p95_latency), c.p95_latency > 1)}${cell(c.slow_count)}${cell(c.ws_drops, c.ws_drops > 0)}</tr>`).join("") || "<tr><td colspan=6>No client data in this window.</td></tr>";
+        document.querySelector("#devices").innerHTML = data.state_gaps.map(d => `<tr>${cell(d.device_id)}${cell(seconds(d.max_gap), d.max_gap > 20)}${cell(seconds(d.p95_gap), d.p95_gap > 20)}</tr>`).join("") || "<tr><td colspan=3>No state gaps in this window.</td></tr>";
+        document.querySelector("#events").innerHTML = data.last_events.map(e => `<tr>${cell(e.ts)}${cell(e.kind)}${cell(e.client_ip)}${cell(e.device_id)}${cell(e.value)}${cell(e.detail)}</tr>`).join("");
+        document.querySelector("#status").textContent = `MQTT disconnects: ${data.mqtt_disconnect_count} · updated ${new Date().toLocaleTimeString()}`;
+      } catch (_) { document.querySelector("#status").textContent = "Unable to refresh diagnostics"; }
+    }
+    document.querySelector("#download").onclick = () => { window.location.href = "/api/diagnostics/network.csv"; };
+    refresh(); setInterval(refresh, 10000);
+  </script>
+</body>
+</html>

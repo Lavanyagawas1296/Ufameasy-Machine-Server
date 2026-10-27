@@ -5,8 +5,10 @@ from __future__ import annotations
 from collections import defaultdict, deque
 from datetime import datetime, timedelta, timezone
 import json
+import logging
 import os
 from pathlib import PurePosixPath
+import re
 import threading
 import urllib.parse
 import uuid
@@ -26,6 +28,8 @@ from server.rmc_contract import (
 from server.rmc_transfer import sign_download_token
 from server.state_store import state
 
+logger = logging.getLogger(__name__)
+
 
 class RMCService:
     def __init__(self, *, publisher=None, broadcaster=None):
@@ -37,7 +41,7 @@ class RMCService:
         self.fresh_s = int(os.getenv("RMC_STATE_FRESH_S", "30"))
         self.received_timeout_s = int(os.getenv("RMC_RECEIVED_TIMEOUT_S", "10"))
         self.done_timeout_s = max(60, int(os.getenv("RMC_DONE_TIMEOUT_S", "120")))
-        self.lock_ttl_s = int(os.getenv("RMC_LOCK_TTL_S", "300"))
+        self.lock_ttl_s = 90
         self.rate_limit = int(os.getenv("RMC_RATE_LIMIT", "10"))
         self.rate_window_s = int(os.getenv("RMC_RATE_WINDOW_S", "60"))
 
@@ -60,14 +64,23 @@ class RMCService:
 
     def _device_state(self, device_id: str) -> dict:
         current = state.get_rmc_state(device_id)
-        if current.get("job_state") == "offline":
-            return current
+        recorded_at = current.get("recorded_at")
+        diagnostic = {
+            "recorded_at": recorded_at,
+            "seq": current.get("seq"),
+            "state_age_s": None,
+            "limit_s": self.fresh_s,
+        }
+        if current.get("job_state") == "offline" or not recorded_at:
+            return {**current, "_rmc_diagnostic": {**diagnostic, "reason_code": "NO_STATE"}}
         try:
-            recorded = datetime.fromisoformat(current["recorded_at"].replace("Z", "+00:00"))
+            recorded = datetime.fromisoformat(recorded_at.replace("Z", "+00:00"))
         except (AttributeError, ValueError):
-            return {**current, "job_state": "offline"}
-        if self._now() - recorded > timedelta(seconds=self.fresh_s):
-            return {**current, "job_state": "offline"}
+            return {**current, "job_state": "offline", "_rmc_diagnostic": {**diagnostic, "reason_code": "BAD_TIMESTAMP"}}
+        age_s = max(0.0, (self._now() - recorded).total_seconds())
+        diagnostic["state_age_s"] = round(age_s, 3)
+        if age_s > self.fresh_s:
+            return {**current, "job_state": "offline", "_rmc_diagnostic": {**diagnostic, "reason_code": "STALE"}}
         return current
 
     def _require_known_device(self, device_id: str) -> None:
@@ -90,6 +103,18 @@ class RMCService:
             raise HTTPException(status_code=429, detail="RMC command rate limit exceeded")
         bucket.append(now)
 
+    @staticmethod
+    def normalize_operator_name(value: str) -> str:
+        name = " ".join((value or "").split())
+        if not 1 <= len(name) <= 40 or not re.fullmatch(r"[A-Za-z0-9 ._'-]+", name):
+            raise HTTPException(status_code=422, detail="X-Operator-Name must be 1-40 safe characters")
+        return name
+
+    def _broadcast_lock(self, device_id: str, lock: dict | None, event: str) -> None:
+        self._broadcast({"type": "rmc_lock", "device_id": device_id, "event": event, "data": lock or {
+            "device_id": device_id, "issued_by": None, "client_id": None, "operator_name": None,
+        }})
+
     def _lock_is_stale(self, lock: dict) -> bool:
         try:
             touched = datetime.fromisoformat(lock["touched_at"])
@@ -97,23 +122,41 @@ class RMCService:
         except (KeyError, ValueError):
             return True
 
-    def acquire_lock(self, device_id: str, user: str, *, admin_override: bool = False) -> dict:
+    def acquire_lock(self, device_id: str, user: str, client_id: str = "legacy", operator_name: str = "legacy", *, admin_override: bool = False) -> dict:
+        operator_name = self.normalize_operator_name(operator_name)
         with self._lock:
             current = db.get_rmc_lock(device_id)
             if current and self._lock_is_stale(current):
                 db.delete_rmc_lock(device_id)
                 current = None
-            if current and current["issued_by"] != user and not admin_override:
+            if current and (current["issued_by"] != user or current["client_id"] != client_id) and not admin_override:
                 raise HTTPException(status_code=423, detail={"reason_code": "LOCKED_BY_OTHER", "issued_by": current["issued_by"]})
-            db.upsert_rmc_lock(device_id, user)
-            return db.get_rmc_lock(device_id)
+            db.upsert_rmc_lock(device_id, user, client_id, operator_name)
+            lock = db.get_rmc_lock(device_id)
+            event = "force_take" if admin_override else "acquired"
+            db.add_rmc_lock_event(device_id, event, user, operator_name)
+            self._broadcast_lock(device_id, lock, event)
+            return lock
 
-    def release_lock(self, device_id: str, user: str, *, admin_override: bool = False) -> None:
+    def release_lock(self, device_id: str, user: str, client_id: str, *, admin_override: bool = False) -> dict:
         with self._lock:
             current = db.get_rmc_lock(device_id)
-            if current and current["issued_by"] != user and not admin_override:
+            if current and (current["issued_by"] != user or current["client_id"] != client_id) and not admin_override:
                 raise HTTPException(status_code=423, detail={"reason_code": "LOCKED_BY_OTHER", "issued_by": current["issued_by"]})
             db.delete_rmc_lock(device_id)
+            lock = {"device_id": device_id, "issued_by": None, "client_id": None, "operator_name": None}
+            db.add_rmc_lock_event(device_id, "released", user, current.get("operator_name", ""))
+            self._broadcast_lock(device_id, lock, "released")
+            return lock
+
+    def request_release(self, device_id: str, user: str, operator_name: str) -> dict:
+        lock = self.get_lock(device_id)
+        if lock is None:
+            raise HTTPException(status_code=404, detail="No active control lock")
+        operator_name = self.normalize_operator_name(operator_name)
+        db.add_rmc_lock_event(device_id, "release_requested", user, operator_name)
+        self._broadcast_lock(device_id, lock, "release_requested")
+        return lock
 
     def get_lock(self, device_id: str) -> dict | None:
         with self._lock:
@@ -122,6 +165,28 @@ class RMCService:
                 db.delete_rmc_lock(device_id)
                 return None
             return current
+
+    def touch_lock(self, device_id: str, user: str, client_id: str, operator_name: str) -> dict:
+        """Refresh a lock held by this exact browser client."""
+        with self._lock:
+            self._require_lock_owner(device_id, user, client_id)
+            db.upsert_rmc_lock(device_id, user, client_id, self.normalize_operator_name(operator_name))
+            return db.get_rmc_lock(device_id)
+
+    def _require_lock_owner(self, device_id: str, user: str, client_id: str) -> dict:
+        current = self.get_lock(device_id)
+        if current is None:
+            raise HTTPException(status_code=423, detail={"reason_code": "LOCK_REQUIRED"})
+        if current["issued_by"] != user or current["client_id"] != client_id:
+            raise HTTPException(
+                status_code=423,
+                detail={"reason_code": "LOCKED_BY_OTHER", "issued_by": current["issued_by"]},
+            )
+        return current
+
+    def release_locks_for_owner(self, user: str, client_id: str) -> None:
+        if client_id:
+            db.delete_rmc_locks_for_owner(user, client_id)
 
     @staticmethod
     def _safe_ftp_name(value: str) -> str:
@@ -181,11 +246,14 @@ class RMCService:
                 device_id=device_id,
                 expiry=download_expiry or int(self._now().timestamp()) + 300,
             )
-            env_base = os.getenv("RMC_SERVER_BASE_URL", "").strip()
-            if env_base:
-                base_url = env_base.rstrip("/")
+            machine_base = os.getenv(
+                "RMC_MACHINE_BASE_URL", "http://192.168.31.237:8000"
+            ).strip()
+            if machine_base:
+                base_url = machine_base.rstrip("/")
             else:
-                candidate = (request_base_url or "").strip()
+                env_base = os.getenv("RMC_SERVER_BASE_URL", "").strip()
+                candidate = env_base or (request_base_url or "").strip()
                 if not candidate:
                     raise HTTPException(
                         status_code=400,
@@ -253,9 +321,12 @@ class RMCService:
         device_id: str,
         body: dict,
         user: str,
+        client_id: str = "legacy",
+        operator_name: str = "legacy",
         *,
         request_base_url: str | None = None,
     ) -> dict:
+        operator_name = self.normalize_operator_name(operator_name)
         self._require_known_device(device_id)
         action = body.get("action") if isinstance(body, dict) else None
         if action not in COMMAND_ACTIONS:
@@ -279,9 +350,18 @@ class RMCService:
         current = self._device_state(device_id)
         offline = current.get("job_state") == "offline"
         if offline and action != "stop":
-            raise HTTPException(status_code=409, detail="Device is offline or state is stale")
+            detail = current.get("_rmc_diagnostic", {
+                "reason_code": "NO_STATE", "state_age_s": None,
+                "limit_s": self.fresh_s, "recorded_at": None, "seq": None,
+            })
+            logger.warning("RMC command rejected: device=%s reason=%s age_s=%s limit_s=%s recorded_at=%s seq=%s",
+                           device_id, detail["reason_code"], detail["state_age_s"], detail["limit_s"],
+                           detail["recorded_at"], detail["seq"])
+            raise HTTPException(status_code=409, detail=detail)
         if action not in TRANSITIONS.get(current.get("job_state"), {}) and not (offline and action == "stop"):
             raise HTTPException(status_code=409, detail="Action is not valid for last known state")
+        if action != "stop":
+            self._require_lock_owner(device_id, user, client_id)
         self._rate_check(device_id, user)
         fingerprint = (device_id, user, action, json.dumps(params, sort_keys=True))
         recent = self._recent[("duplicate", fingerprint)]
@@ -290,7 +370,6 @@ class RMCService:
         if recent:
             raise HTTPException(status_code=409, detail={"reason_code": "DUPLICATE", "message": "Duplicate command request"})
         recent.append(now.timestamp())
-        self.acquire_lock(device_id, user)
         command = {
             "cmd_id": str(uuid.uuid4()), "device_id": device_id, "action": action, "params": params,
             "issued_by": user, "issued_at": now.isoformat(),
@@ -300,6 +379,8 @@ class RMCService:
         if not self._publish(device_id, command):
             db.update_rmc_command(command["cmd_id"], "failed", "FAULT", "MQTT publish failed")
             raise HTTPException(status_code=503, detail="Unable to publish command")
+        if action != "stop":
+            self.touch_lock(device_id, user, client_id, operator_name)
         self._schedule(command["cmd_id"], self.received_timeout_s, "received")
         warning = "Stop sent while device is offline" if offline else None
         self._broadcast_status(command["cmd_id"])

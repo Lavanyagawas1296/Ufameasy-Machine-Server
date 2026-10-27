@@ -1,6 +1,6 @@
 import json
 import sqlite3
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
 
@@ -143,11 +143,21 @@ def init_db():
             CREATE TABLE IF NOT EXISTS rmc_control_locks (
                 device_id TEXT PRIMARY KEY,
                 issued_by TEXT NOT NULL,
+                client_id TEXT NOT NULL DEFAULT '',
+                operator_name TEXT NOT NULL DEFAULT '',
                 acquired_at TEXT NOT NULL,
                 touched_at TEXT NOT NULL
             )
             """
         )
+        lock_columns = {row[1] for row in conn.execute("PRAGMA table_info(rmc_control_locks)")}
+        if "client_id" not in lock_columns:
+            conn.execute("ALTER TABLE rmc_control_locks ADD COLUMN client_id TEXT NOT NULL DEFAULT ''")
+        if "operator_name" not in lock_columns:
+            conn.execute("ALTER TABLE rmc_control_locks ADD COLUMN operator_name TEXT NOT NULL DEFAULT ''")
+        conn.execute("""CREATE TABLE IF NOT EXISTS rmc_lock_events (
+            id INTEGER PRIMARY KEY AUTOINCREMENT, device_id TEXT NOT NULL, event TEXT NOT NULL,
+            issued_by TEXT NOT NULL, operator_name TEXT NOT NULL, recorded_at TEXT NOT NULL)""")
         conn.execute(
             """
             CREATE TABLE IF NOT EXISTS rmc_server_files (
@@ -161,9 +171,69 @@ def init_db():
             )
             """
         )
+        conn.execute(
+            """
+            CREATE TABLE IF NOT EXISTS net_events (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                ts TEXT NOT NULL,
+                kind TEXT NOT NULL,
+                device_id TEXT,
+                client_ip TEXT,
+                client_id TEXT,
+                value REAL,
+                detail TEXT
+            )
+            """
+        )
+        conn.execute("CREATE INDEX IF NOT EXISTS idx_net_events_ts ON net_events(ts)")
+        conn.execute(
+            "DELETE FROM net_events WHERE ts < ?",
+            ((datetime.now(timezone.utc) - timedelta(days=14)).isoformat(),),
+        )
         conn.commit()
     finally:
         conn.close()
+
+
+def insert_net_event(
+    kind: str,
+    device_id: str | None = None,
+    client_ip: str | None = None,
+    client_id: str | None = None,
+    value: float | None = None,
+    detail: str | None = None,
+    ts: str | None = None,
+) -> None:
+    """Store one network diagnostic event without retaining a DB connection."""
+    conn = None
+    try:
+        conn = get_conn()
+        conn.execute(
+            """INSERT INTO net_events (ts, kind, device_id, client_ip, client_id, value, detail)
+               VALUES (?, ?, ?, ?, ?, ?, ?)""",
+            (ts or datetime.now(timezone.utc).isoformat(), kind, device_id, client_ip,
+             client_id, value, detail),
+        )
+        conn.commit()
+    finally:
+        if conn is not None:
+            conn.close()
+
+
+def query_net_events(since: str, limit: int | None = None) -> list[dict]:
+    """Return diagnostic events newer than *since*, newest first."""
+    conn = None
+    try:
+        conn = get_conn()
+        sql = "SELECT * FROM net_events WHERE ts >= ? ORDER BY ts DESC, id DESC"
+        params: tuple = (since,)
+        if limit is not None:
+            sql += " LIMIT ?"
+            params += (limit,)
+        return [dict(row) for row in conn.execute(sql, params).fetchall()]
+    finally:
+        if conn is not None:
+            conn.close()
 
 
 def register_device(device_id, name):
@@ -523,15 +593,15 @@ def get_rmc_lock(device_id: str) -> dict | None:
             conn.close()
 
 
-def upsert_rmc_lock(device_id: str, issued_by: str) -> None:
+def upsert_rmc_lock(device_id: str, issued_by: str, client_id: str, operator_name: str) -> None:
     conn = None
     now = datetime.now(timezone.utc).isoformat()
     try:
         conn = get_conn()
         conn.execute(
-            """INSERT INTO rmc_control_locks (device_id, issued_by, acquired_at, touched_at) VALUES (?, ?, ?, ?)
-               ON CONFLICT(device_id) DO UPDATE SET issued_by = excluded.issued_by, touched_at = excluded.touched_at""",
-            (device_id, issued_by, now, now),
+            """INSERT INTO rmc_control_locks (device_id, issued_by, client_id, operator_name, acquired_at, touched_at) VALUES (?, ?, ?, ?, ?, ?)
+               ON CONFLICT(device_id) DO UPDATE SET issued_by = excluded.issued_by, client_id = excluded.client_id, operator_name = excluded.operator_name, touched_at = excluded.touched_at""",
+            (device_id, issued_by, client_id, operator_name, now, now),
         )
         conn.commit()
     finally:
@@ -548,6 +618,30 @@ def delete_rmc_lock(device_id: str) -> None:
     finally:
         if conn is not None:
             conn.close()
+
+
+def delete_rmc_locks_for_owner(issued_by: str, client_id: str) -> None:
+    conn = None
+    try:
+        conn = get_conn()
+        conn.execute(
+            "DELETE FROM rmc_control_locks WHERE issued_by = ? AND client_id = ?",
+            (issued_by, client_id),
+        )
+        conn.commit()
+    finally:
+        if conn is not None:
+            conn.close()
+
+
+def add_rmc_lock_event(device_id: str, event: str, issued_by: str, operator_name: str) -> None:
+    conn = get_conn()
+    try:
+        conn.execute("INSERT INTO rmc_lock_events (device_id, event, issued_by, operator_name, recorded_at) VALUES (?, ?, ?, ?, ?)",
+                     (device_id, event, issued_by, operator_name, datetime.now(timezone.utc).isoformat()))
+        conn.commit()
+    finally:
+        conn.close()
 
 
 def create_rmc_server_file(

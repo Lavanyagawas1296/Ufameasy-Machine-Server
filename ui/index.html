@@ -2896,6 +2896,8 @@
             <button class="action-btn" id="rmcReleaseLockBtn" type="button" style="display:none;" title="Release exclusive control lock">
               <span>Release Control</span>
             </button>
+            <button class="action-btn" id="rmcRequestReleaseBtn" type="button" style="display:none;">Request release</button>
+            <button class="action-btn" id="rmcForceTakeBtn" type="button" style="display:none;">Force take</button>
             <span id="rmcControlStatus" class="rmc-tag tag-off">Controls locked</span>
             <button class="action-btn primary" id="rmcUnlockControlBtn" type="button">Unlock Controls</button>
             <button class="action-btn" id="rmcLockControlBtn" type="button" style="display:none;">Lock Controls</button>
@@ -3440,6 +3442,29 @@
 <script>
   const nativeFetch = window.fetch.bind(window);
   let redirectingToLogin = false;
+  const networkEventQueue = [];
+  const diagnosticsEventUrl = "/api/diagnostics/client-events";
+  function queueNetworkEvent(kind, value, detail) {
+    if (networkEventQueue.length < 50) {
+      networkEventQueue.push({ kind, value, detail: String(detail || "").slice(0, 500), ts: new Date().toISOString() });
+    }
+  }
+  async function flushNetworkEvents() {
+    if (!networkEventQueue.length) return;
+    const events = networkEventQueue.splice(0, 50);
+    try {
+      await nativeFetch(diagnosticsEventUrl, {
+        method: "POST", credentials: "same-origin", keepalive: true,
+        headers: { "Content-Type": "application/json", "X-Client-Id": myClientId || "" },
+        body: JSON.stringify(events),
+      });
+    } catch (_) {
+      // Diagnostics must never interfere with the operator UI.
+      networkEventQueue.unshift(...events);
+      networkEventQueue.length = Math.min(networkEventQueue.length, 50);
+    }
+  }
+  setInterval(flushNetworkEvents, 30000);
   // Hung GETs on flaky Wi-Fi otherwise hold the browser's per-host connection
   // slots indefinitely. Only idempotent GETs get a timeout; commands/locks
   // (POST/DELETE) and legitimately slow transfers are left untouched.
@@ -3448,6 +3473,8 @@
   window.fetch = async (input, init = {}) => {
     const method = (init.method || "GET").toUpperCase();
     const url = typeof input === "string" ? input : input.url;
+    const isDiagnosticsFlush = String(url).includes(diagnosticsEventUrl);
+    const started = performance.now();
     let timer = null;
     if (method === "GET" && !init.signal && !SLOW_GET_PATHS.some(p => url.includes(p))) {
       const controller = new AbortController();
@@ -3456,11 +3483,17 @@
     }
     try {
       const response = await nativeFetch(input, { ...init, credentials: "same-origin" });
+      const elapsed = (performance.now() - started) / 1000;
+      if (!isDiagnosticsFlush && elapsed > 2) queueNetworkEvent("fetch_slow", elapsed, `${method} ${url}`);
+      if (!isDiagnosticsFlush && !response.ok) queueNetworkEvent("fetch_fail", elapsed, `${method} ${url} status=${response.status}`);
       if (response.status === 401 && !redirectingToLogin) {
         redirectingToLogin = true;
         window.location.replace("/login");
       }
       return response;
+    } catch (error) {
+      if (!isDiagnosticsFlush) queueNetworkEvent("fetch_fail", (performance.now() - started) / 1000, `${method} ${url}`);
+      throw error;
     } finally {
       if (timer) clearTimeout(timer);
     }
@@ -3501,7 +3534,7 @@
 
   document.getElementById("logoutBtn")?.addEventListener("click", async () => {
     try {
-      await fetch("/logout", { method: "POST" });
+      await fetch("/logout", { method: "POST", headers: { "X-Client-Id": myClientId } });
     } finally {
       window.location.replace("/login");
     }
@@ -3576,6 +3609,8 @@
   const rmcLockText = document.getElementById("rmcLockText");
   const rmcTakeLockBtn = document.getElementById("rmcTakeLockBtn");
   const rmcReleaseLockBtn = document.getElementById("rmcReleaseLockBtn");
+  const rmcRequestReleaseBtn = document.getElementById("rmcRequestReleaseBtn");
+  const rmcForceTakeBtn = document.getElementById("rmcForceTakeBtn");
   const rmcControlStatus = document.getElementById("rmcControlStatus");
   const rmcUnlockControlBtn = document.getElementById("rmcUnlockControlBtn");
   const rmcLockControlBtn = document.getElementById("rmcLockControlBtn");
@@ -3621,7 +3656,7 @@
   // RMC State Stores (Keyed strictly by device_id)
   const rmcStates = {};        // did -> state object
   const rmcFiles = {};         // did -> files list
-  const rmcLocks = {};         // did -> lock object { device_id, issued_by }
+  const rmcLocks = {};         // did -> lock object { device_id, issued_by, client_id }
   const rmcCommands = {};      // did -> array of recent commands
   const rmcActiveCmd = {};     // did -> active command object
   const rmcLastSeq = {};       // did -> monotonic sequence number
@@ -3637,6 +3672,24 @@
   let rmcConfirmCallback = null;
   let rmcControlExpiresAt = 0;
   let rmcControlTimer = null;
+  function createClientId() {
+    if (window.crypto?.randomUUID) return window.crypto.randomUUID();
+    if (window.crypto?.getRandomValues) {
+      const bytes = window.crypto.getRandomValues(new Uint8Array(16));
+      bytes[6] = (bytes[6] & 0x0f) | 0x40;
+      bytes[8] = (bytes[8] & 0x3f) | 0x80;
+      return [...bytes].map((byte, index) =>
+        [4, 6, 8, 10].includes(index) ? `-${byte.toString(16).padStart(2, "0")}` : byte.toString(16).padStart(2, "0")
+      ).join("");
+    }
+    return `client-${Date.now()}-${Math.random().toString(16).slice(2)}`;
+  }
+  let myClientId = sessionStorage.getItem("ufameasy_rmc_client_id");
+  if (!myClientId) {
+    myClientId = createClientId();
+    sessionStorage.setItem("ufameasy_rmc_client_id", myClientId);
+  }
+  let rmcOperatorName = localStorage.getItem("ufameasy_rmc_operator_name") || "";
 
   // State
   const rowsByKey = new Map();
@@ -4421,9 +4474,9 @@
     }
 
     const prevDid = localStorage.getItem("ufameasy_selected_device");
-    if (prevDid && prevDid !== selectedDid && rmcLocks[prevDid]?.issued_by === getCurrentUser()) {
+    if (prevDid && prevDid !== selectedDid && rmcLocks[prevDid]?.client_id === myClientId) {
       try {
-        fetch(`/api/devices/${encodeURIComponent(prevDid)}/lock`, { method: "DELETE", headers: getAuthHeaders() });
+        fetch(`/api/devices/${encodeURIComponent(prevDid)}/lock`, { method: "DELETE", headers: getRmcHeaders() });
         delete rmcLocks[prevDid];
       } catch (_) {}
     }
@@ -5060,6 +5113,10 @@
     return { "Content-Type": "application/json" };
   }
 
+  function getRmcHeaders() {
+    return { ...getAuthHeaders(), "X-Client-Id": myClientId, "X-Operator-Name": rmcOperatorName };
+  }
+
   function getCurrentUser() {
     return "local-dev";
   }
@@ -5068,7 +5125,18 @@
     return false;
   }
 
-  const RMC_STALE_MS = 45000;
+  let RMC_STALE_MS = 30000;
+
+  async function fetchRmcConfig() {
+    try {
+      const res = await fetch("/api/rmc/config", { headers: getAuthHeaders() });
+      const data = await res.json();
+      const freshSeconds = Number(data.state_fresh_s);
+      if (Number.isFinite(freshSeconds) && freshSeconds > 0) {
+        RMC_STALE_MS = freshSeconds * 1000;
+      }
+    } catch (_) {}
+  }
 
   const RMC_REASON_TEXTS = {
     INVALID_STATE: "Machine is not in a valid state for this action",
@@ -5084,6 +5152,7 @@
     DUPLICATE: "Duplicate file or command request",
     UNAUTHORIZED: "Unauthorized command request",
     LOCKED_BY_OTHER: "Machine is locked by another operator",
+    LOCK_REQUIRED: "Take Control before sending this command",
     FILE_TOO_LARGE: "File exceeds maximum allowed size (200 MB)",
     UNSUPPORTED_TYPE: "Unsupported file type. Only .gcode and .nc files are allowed",
     FILE_CHANGED: "File on disk has been modified or size does not match",
@@ -5128,7 +5197,7 @@
     }
   }
 
-  function getRmcButtonStates(st, isStale, isLockedByOther, isCmdPending, isReadOnly) {
+  function getRmcButtonStates(st, isStale, isLockedByMe, isCmdPending, isReadOnly) {
     const res = {
       load:   { enabled: false, reason: "" },
       start:  { enabled: false, reason: "" },
@@ -5149,15 +5218,13 @@
       return res;
     }
 
-    if (isLockedByOther) {
-      const r = `Locked by ${st.controlled_by || "another operator"}`;
-      res.load.reason = r; res.start.reason = r; res.pause.reason = r; res.resume.reason = r; res.stop.reason = r;
-      return res;
-    }
-
     if (isCmdPending) {
       const r = "Command in progress";
       res.load.reason = r; res.start.reason = r; res.pause.reason = r; res.resume.reason = r; res.stop.reason = r;
+      if (["running", "paused", "fault"].includes((st.job_state || "").toLowerCase())) {
+        res.stop.enabled = true;
+        res.stop.reason = "";
+      }
       return res;
     }
 
@@ -5219,6 +5286,13 @@
         break;
     }
 
+    if (!isLockedByMe) {
+      const r = "Take Control before sending this command";
+      res.load.enabled = false; res.load.reason = r;
+      res.start.enabled = false; res.start.reason = r;
+      res.pause.enabled = false; res.pause.reason = r;
+      res.resume.enabled = false; res.resume.reason = r;
+    }
     return res;
   }
 
@@ -5252,10 +5326,10 @@
 
     const stale = !currentMachineConnected || isDeviceStale(st, did);
     const lock = rmcLocks[did] || {};
-    const lockedBy = st.controlled_by || lock.issued_by;
+    const lockedBy = lock.operator_name || lock.issued_by;
     const myUser = getCurrentUser();
-    const isLockedByOther = Boolean(lockedBy && lockedBy !== myUser);
-    const isLockedByMe = Boolean(lockedBy && lockedBy === myUser);
+    const isLockedByMe = Boolean(lock.client_id && lock.client_id === myClientId);
+    const isLockedByOther = Boolean(lockedBy && !isLockedByMe);
     const isReadOnly = isViewerMode();
 
     // Offline Banner
@@ -5284,21 +5358,27 @@
     if (rmcLockBadge && rmcLockText && rmcTakeLockBtn && rmcReleaseLockBtn) {
       if (isLockedByMe) {
         rmcLockBadge.className = "rmc-tag tag-busy";
-        rmcLockText.textContent = `Control: You (${escapeHtml(myUser)})`;
+        rmcLockText.textContent = `Control: You (${escapeHtml(lockedBy || myUser)})`;
         rmcTakeLockBtn.style.display = "none";
         rmcReleaseLockBtn.style.display = "inline-flex";
+        rmcRequestReleaseBtn.style.display = "none";
+        rmcForceTakeBtn.style.display = "none";
         startLockRenewal();
       } else if (isLockedByOther) {
         rmcLockBadge.className = "rmc-tag tag-off";
         rmcLockText.textContent = `Locked by ${escapeHtml(lockedBy)}`;
         rmcTakeLockBtn.style.display = "none";
         rmcReleaseLockBtn.style.display = "none";
+        rmcRequestReleaseBtn.style.display = "inline-flex";
+        rmcForceTakeBtn.style.display = "inline-flex";
         stopLockRenewal();
       } else {
         rmcLockBadge.className = "rmc-tag tag-off";
         rmcLockText.textContent = "Unlocked";
         rmcTakeLockBtn.style.display = isReadOnly ? "none" : "inline-flex";
         rmcReleaseLockBtn.style.display = "none";
+        rmcRequestReleaseBtn.style.display = "none";
+        rmcForceTakeBtn.style.display = "none";
         stopLockRenewal();
       }
     }
@@ -5366,7 +5446,7 @@
     const isCmdPending = Boolean(actCmd && !["done", "rejected", "expired", "timeout", "failed"].includes(actCmd.status));
 
     // Enable / Disable Table
-    const btnStates = getRmcButtonStates(st, stale, isLockedByOther, isCmdPending, isReadOnly);
+    const btnStates = getRmcButtonStates(st, stale, isLockedByMe, isCmdPending, isReadOnly);
 
     const btnConfig = [
       { id: "load", el: rmcBtnLoad, label: "Load" },
@@ -5458,6 +5538,11 @@
       showToast("Please select a device first", true);
       return;
     }
+    if (action !== "stop" && rmcLocks[did]?.client_id !== myClientId) {
+      const error = new Error("Take Control before sending this command");
+      showToast(`Error: ${error.message}`, true);
+      throw error;
+    }
 
     if (rmcActionInFlight) return;
     rmcActionInFlight = true;
@@ -5468,7 +5553,7 @@
     try {
       const res = await fetch(`/api/devices/${encodeURIComponent(did)}/commands`, {
         method: "POST",
-        headers: getAuthHeaders(),
+        headers: getRmcHeaders(),
         body: JSON.stringify({
           action,
           params,
@@ -5488,6 +5573,9 @@
           if (data.detail.reason_code === "LOCKED_BY_OTHER") {
             msg = `Locked by other user (${data.detail.issued_by})`;
             rmcLocks[did] = { device_id: did, issued_by: data.detail.issued_by };
+          } else if (["NO_STATE", "BAD_TIMESTAMP", "STALE"].includes(data.detail.reason_code)) {
+            const age = data.detail.state_age_s == null ? "unknown" : `${data.detail.state_age_s}s`;
+            msg = `${data.detail.reason_code}: state age ${age} (limit ${data.detail.limit_s}s)`;
           } else {
             msg = formatReasonCode(data.detail.reason_code, data.detail.message || JSON.stringify(data.detail));
           }
@@ -5532,6 +5620,8 @@
       throw err;
     } finally {
       rmcActionInFlight = false;
+      await fetchRmcLock(did);
+      updateRmcUI(did);
     }
   }
 
@@ -6317,22 +6407,22 @@
   // Lock Actions & Periodic Renewal
   function renewLockIfHeld() {
     const did = deviceSelect ? deviceSelect.value : null;
-    const myUser = getCurrentUser();
-    if (!did || !rmcLocks[did] || rmcLocks[did].issued_by !== myUser) {
+    if (!did || !rmcLocks[did] || rmcLocks[did].client_id !== myClientId) {
       stopLockRenewal();
       return;
     }
-    fetch(`/api/devices/${encodeURIComponent(did)}/lock`, {
+    fetch(`/api/devices/${encodeURIComponent(did)}/lock/heartbeat`, {
       method: "POST",
-      headers: getAuthHeaders(),
-      body: JSON.stringify({})
+      headers: getRmcHeaders()
     }).then(res => {
       if (res.ok) return res.json();
     }).then(data => {
       if (data && data.issued_by) {
         rmcLocks[did] = data;
+        if (data.control_expires_at) updateControlStatus(data.control_expires_at);
+        updateRmcUI(did);
       }
-    }).catch(() => {});
+    }).catch(() => { fetchRmcLock(did); });
   }
 
   function startLockRenewal() {
@@ -6350,10 +6440,16 @@
   rmcTakeLockBtn?.addEventListener("click", async () => {
     const did = deviceSelect.value;
     if (!did) return;
+    if (!rmcOperatorName) {
+      const name = window.prompt("Operator name (1-40 characters):", "");
+      if (!name) return;
+      rmcOperatorName = name.trim();
+      localStorage.setItem("ufameasy_rmc_operator_name", rmcOperatorName);
+    }
     try {
       const res = await fetch(`/api/devices/${encodeURIComponent(did)}/lock`, {
         method: "POST",
-        headers: getAuthHeaders(),
+        headers: getRmcHeaders(),
         body: JSON.stringify({})
       });
       const data = await res.json().catch(() => ({}));
@@ -6366,7 +6462,7 @@
           const issuer = data.detail?.issued_by || "another operator";
           rmcLocks[did] = { device_id: did, issued_by: issuer };
           updateRmcUI(did);
-          throw new Error(`Device is already locked by ${issuer}`);
+          throw new Error(formatReasonCode(data.detail?.reason_code, `Device is already locked by ${issuer}`));
         }
         throw new Error(data.detail || `Failed to acquire lock (HTTP ${res.status})`);
       }
@@ -6386,13 +6482,16 @@
     try {
       const res = await fetch(`/api/devices/${encodeURIComponent(did)}/lock`, {
         method: "DELETE",
-        headers: getAuthHeaders()
+        headers: getRmcHeaders()
       });
       if (!res.ok) {
         const data = await res.json().catch(() => ({}));
-        throw new Error(data.detail || `Failed to release lock (HTTP ${res.status})`);
+        const detail = data.detail;
+        throw new Error(typeof detail === "object"
+          ? formatReasonCode(detail.reason_code, detail.message || `Failed to release lock (HTTP ${res.status})`)
+          : (detail || `Failed to release lock (HTTP ${res.status})`));
       }
-      delete rmcLocks[did];
+      rmcLocks[did] = await res.json().catch(() => ({ device_id: did, issued_by: null, client_id: null, operator_name: null }));
       showToast("Control lock released");
       updateRmcUI(did);
       stopLockRenewal();
@@ -6401,14 +6500,26 @@
     }
   });
 
+  rmcRequestReleaseBtn?.addEventListener("click", async () => {
+    const did = deviceSelect.value;
+    const res = await fetch(`/api/devices/${encodeURIComponent(did)}/lock/request-release`, { method: "POST", headers: getRmcHeaders() });
+    showToast(res.ok ? "Release request sent" : "Unable to request release", !res.ok);
+  });
+  rmcForceTakeBtn?.addEventListener("click", async () => {
+    const did = deviceSelect.value;
+    const res = await fetch(`/api/devices/${encodeURIComponent(did)}/lock`, { method: "POST", headers: getRmcHeaders(), body: JSON.stringify({ override: true }) });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) return showToast(data.detail || "Force take requires admin", true);
+    rmcLocks[did] = data; updateRmcUI(did); showToast("Control taken");
+  });
+
   window.addEventListener("beforeunload", () => {
     const did = deviceSelect ? deviceSelect.value : null;
-    const myUser = getCurrentUser();
-    if (did && rmcLocks[did] && rmcLocks[did].issued_by === myUser) {
+    if (did && rmcLocks[did] && rmcLocks[did].client_id === myClientId) {
       try {
         fetch(`/api/devices/${encodeURIComponent(did)}/lock`, {
           method: "DELETE",
-          headers: getAuthHeaders(),
+          headers: getRmcHeaders(),
           keepalive: true
         });
       } catch (_) {}
@@ -6420,7 +6531,7 @@
     if (!did) return;
     try {
       const res = await fetch(`/api/devices/${encodeURIComponent(did)}/commands?limit=50`, {
-        headers: getAuthHeaders()
+        headers: getRmcHeaders()
       });
       if (!res.ok) return;
       const list = await res.json();
@@ -6481,26 +6592,29 @@
     if (did) fetchRmcCommands(did);
   });
 
-  async function fetchRmcDeviceData(did) {
+  async function fetchRmcLock(did) {
     if (!did) return;
     try {
       const lockRes = await fetch(`/api/devices/${encodeURIComponent(did)}/lock`, {
-        headers: getAuthHeaders()
+        headers: getRmcHeaders()
       });
-      if (lockRes.ok) {
-        const lockData = await lockRes.json();
-        rmcLocks[did] = lockData;
-      }
+      if (lockRes.ok) rmcLocks[did] = await lockRes.json();
     } catch (_) {}
+  }
+
+  async function fetchRmcDeviceData(did) {
+    if (!did) return;
+    await fetchRmcLock(did);
     await fetchRmcCommands(did);
     updateRmcUI(did);
   }
 
   function startRmcStaleChecker() {
     if (rmcStaleCheckTimer) clearInterval(rmcStaleCheckTimer);
-    rmcStaleCheckTimer = setInterval(() => {
+    rmcStaleCheckTimer = setInterval(async () => {
       const did = deviceSelect ? deviceSelect.value : null;
-      if (did && rmcStates[did]) {
+      if (did) {
+        await fetchRmcLock(did);
         updateRmcUI(did);
       }
     }, 3000);
@@ -6530,7 +6644,7 @@
       const selected = deviceSelect.value;
 
       // RMC events are isolated and keyed per device_id:
-      const isRmcEvent = ["rmc_state", "rmc_files", "rmc_ack", "rmc_cmd_status"].includes(msg.type);
+      const isRmcEvent = ["rmc_state", "rmc_files", "rmc_ack", "rmc_cmd_status", "rmc_lock"].includes(msg.type);
 
       if (!isRmcEvent && msg.type !== "init") {
         // Drop telemetry/runtime events that do not belong to the selected device
@@ -6541,6 +6655,11 @@
       }
 
       switch (msg.type) {
+        case "rmc_lock":
+          rmcLocks[msg.device_id] = msg.data;
+          if (msg.device_id === selected) updateRmcUI(msg.device_id);
+          if (msg.event === "release_requested" && msg.data?.client_id === myClientId) showToast("Another operator requested release of control");
+          break;
         case "init": {
           const sessions = msg.active_sessions || {};
           lastInitSessionsData = msg.sessions_data || {};
@@ -6553,7 +6672,9 @@
             if (st) {
               rmcStates[did] = st;
               rmcLastSeq[did] = Number(st.seq) || 0;
-              rmcLastStateReceivedAt[did] = Date.now();
+              const recordedAt = new Date(st.recorded_at).getTime();
+              if (Number.isFinite(recordedAt)) rmcLastStateReceivedAt[did] = recordedAt;
+              else delete rmcLastStateReceivedAt[did];
             }
           });
           Object.entries(rmcInitFiles).forEach(([did, files]) => {
@@ -6753,6 +6874,7 @@
 
     socket.onerror = () => setConn(false);
     socket.onclose = () => {
+      queueNetworkEvent("ws_drop", null, "WebSocket closed");
       setConn(false);
       if (reconnectTimer) clearTimeout(reconnectTimer);
       reconnectTimer = setTimeout(connectWS, 3000);
@@ -6808,11 +6930,13 @@
 
   // Initial Boot
   resetTrendHistory();
-  refreshControlStatus();
-  loadDevices();
-  connectWS();
-  startEquipPoll();
-  startRmcStaleChecker();
+  fetchRmcConfig().finally(() => {
+    refreshControlStatus();
+    loadDevices();
+    connectWS();
+    startEquipPoll();
+    startRmcStaleChecker();
+  });
 </script>
 </body>
 </html>

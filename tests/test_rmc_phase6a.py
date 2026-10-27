@@ -174,6 +174,7 @@ class RMCPhase6ATests(unittest.IsolatedAsyncioTestCase):
             "last_cmd_id": None, "remote_control": "ask", "local_busy": False,
             "controlled_by": None, "recorded_at": datetime.now(timezone.utc).isoformat(), "seq": 1,
         })
+        self.service.acquire_lock("machine-a", "operator-1")
 
         # Issue load command referencing the server file
         cmd_result = self.service.issue_command(
@@ -213,6 +214,7 @@ class RMCPhase6ATests(unittest.IsolatedAsyncioTestCase):
             "local_busy": False, "controlled_by": None,
             "recorded_at": datetime.now(timezone.utc).isoformat(), "seq": 1,
         })
+        self.service.acquire_lock("machine-a", "op")
         cmd_result = self.service.issue_command("machine-a", {"action": "pause", "params": {}}, "op")
         cmd_id = cmd_result["cmd_id"]
 
@@ -264,6 +266,7 @@ class RMCPhase6ATests(unittest.IsolatedAsyncioTestCase):
             "last_cmd_id": None, "remote_control": "ask", "local_busy": False,
             "controlled_by": None, "recorded_at": datetime.now(timezone.utc).isoformat(), "seq": 1,
         })
+        self.service.acquire_lock("machine-a", "op")
         state.update_rmc_files("machine-a", [
             {"file_id": "machine_sample_1", "name": "sample.gcode", "size": 1024, "sha256": "abc"},
         ])
@@ -312,6 +315,7 @@ class RMCPhase6ATests(unittest.IsolatedAsyncioTestCase):
             "last_cmd_id": None, "remote_control": "ask", "local_busy": False,
             "controlled_by": None, "recorded_at": datetime.now(timezone.utc).isoformat(), "seq": 1,
         })
+        self.service.acquire_lock("machine-a", "op")
 
         # Load command for machine-a
         res = self.service.issue_command(
@@ -352,6 +356,7 @@ class RMCPhase6ATests(unittest.IsolatedAsyncioTestCase):
             "local_busy": False, "controlled_by": None,
             "recorded_at": datetime.now(timezone.utc).isoformat(), "seq": 1,
         })
+        self.service.acquire_lock("machine-a", "op")
         res1 = self.service.issue_command(
             "machine-a",
             {"action": "load", "params": {"source": "ftp", "ftp_name": "job.gcode", "size": 100, "sha256": "abc"}},
@@ -405,9 +410,10 @@ class RMCPhase6ATests(unittest.IsolatedAsyncioTestCase):
             "last_cmd_id": None, "remote_control": "ask", "local_busy": False,
             "controlled_by": None, "recorded_at": datetime.now(timezone.utc).isoformat(), "seq": 1,
         })
+        self.service.acquire_lock("machine-a", "op")
 
-        # 1. RMC_SERVER_BASE_URL is set: always use it, ignoring request_base_url (even if localhost)
-        os.environ["RMC_SERVER_BASE_URL"] = "http://my-public-domain.com:9000"
+        # 1. RMC_MACHINE_BASE_URL is the machine-reachable default, ignoring request_base_url.
+        os.environ["RMC_MACHINE_BASE_URL"] = "http://192.168.31.237:8000"
         res = self.service.issue_command(
             "machine-a",
             {"action": "load", "params": {"source": "server", "file_id": file_id}},
@@ -416,11 +422,22 @@ class RMCPhase6ATests(unittest.IsolatedAsyncioTestCase):
         )
         self.assertEqual(res["status"], "sent")
         published_url = self.published[-1][1]["params"]["download_url"]
-        self.assertTrue(published_url.startswith("http://my-public-domain.com:9000/api/rmc/files/"))
+        self.assertTrue(published_url.startswith("http://192.168.31.237:8000/api/rmc/files/"))
 
-        # 2. RMC_SERVER_BASE_URL is unset: localhost/127.0.0.1/::1 raise 400
+        # 2. An explicit empty machine URL preserves the previous URL selection behavior.
+        os.environ["RMC_MACHINE_BASE_URL"] = ""
+        os.environ["RMC_SERVER_BASE_URL"] = "http://my-public-domain.com:9000"
+        self.service.issue_command(
+            "machine-a",
+            {"action": "load", "params": {"source": "server", "file_id": file_id}},
+            "op",
+            request_base_url="http://localhost:8000",
+        )
+        fallback_url = self.published[-1][1]["params"]["download_url"]
+        self.assertTrue(fallback_url.startswith("http://my-public-domain.com:9000/api/rmc/files/"))
         del os.environ["RMC_SERVER_BASE_URL"]
 
+        # 3. With no fallback base configured, loopback requests still fail.
         for loopback_url in ["http://localhost:8000", "http://127.0.0.1:8000", "http://[::1]:8000"]:
             with self.assertRaises(HTTPException) as ctx:
                 self.service.issue_command(
@@ -432,7 +449,7 @@ class RMCPhase6ATests(unittest.IsolatedAsyncioTestCase):
             self.assertEqual(ctx.exception.status_code, 400)
             self.assertIn("RMC_SERVER_BASE_URL", str(ctx.exception.detail))
 
-        # 3. RMC_SERVER_BASE_URL is unset: non-loopback request_base_url succeeds
+        # 4. Non-loopback request_base_url still succeeds when the machine URL is empty.
         res_ext = self.service.issue_command(
             "machine-a",
             {"action": "load", "params": {"source": "server", "file_id": file_id}},
@@ -442,6 +459,7 @@ class RMCPhase6ATests(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(res_ext["status"], "sent")
         published_url_ext = self.published[-1][1]["params"]["download_url"]
         self.assertTrue(published_url_ext.startswith("http://192.168.1.50:8000/api/rmc/files/"))
+        del os.environ["RMC_MACHINE_BASE_URL"]
 
     def test_ftp_load_validation(self):
         """FTP load requires valid ftp_name, size (int >= 0), and sha256 (non-empty str)."""
@@ -450,6 +468,7 @@ class RMCPhase6ATests(unittest.IsolatedAsyncioTestCase):
             "last_cmd_id": None, "remote_control": "ask", "local_busy": False,
             "controlled_by": None, "recorded_at": datetime.now(timezone.utc).isoformat(), "seq": 1,
         })
+        self.service.acquire_lock("machine-a", "op")
 
         # Missing size
         with self.assertRaises(HTTPException) as ctx:
@@ -506,6 +525,7 @@ class RMCPhase6ATests(unittest.IsolatedAsyncioTestCase):
             "last_cmd_id": None, "remote_control": "ask", "local_busy": False,
             "controlled_by": None, "recorded_at": datetime.now(timezone.utc).isoformat(), "seq": 1,
         })
+        self.service.acquire_lock("machine-a", "op")
         state.update_rmc_files("machine-a", [
             {"file_id": "uuid-1234", "name": "sample_part.gcode", "size": 500, "sha256": "h1"},
             "plain_string_name.gcode",

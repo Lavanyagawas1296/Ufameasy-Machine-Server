@@ -40,6 +40,10 @@ class RMCBackendTests(unittest.TestCase):
     def test_validation_and_device_isolation(self):
         with self.assertRaises(HTTPException):
             self.service.issue_command("unknown", {"action": "start", "params": {}}, "u")
+        with self.assertRaises(HTTPException) as ctx:
+            self.service.issue_command("machine-a", {"action": "start", "params": {}}, "u")
+        self.assertEqual(ctx.exception.detail["reason_code"], "LOCK_REQUIRED")
+        self.service.acquire_lock("machine-a", "u")
         result = self.service.issue_command("machine-a", {"action": "start", "params": {}}, "u")
         self.assertEqual(self.published[0][0], "machine-a")
         self.assertEqual(db.get_rmc_command(result["cmd_id"])["device_id"], "machine-a")
@@ -48,11 +52,15 @@ class RMCBackendTests(unittest.TestCase):
         self.service.acquire_lock("machine-a", "one")
         with self.assertRaises(HTTPException):
             self.service.acquire_lock("machine-a", "two")
+        with self.assertRaises(HTTPException) as ctx:
+            self.service.issue_command("machine-a", {"action": "start", "params": {}}, "one", "other-tab")
+        self.assertEqual(ctx.exception.detail["reason_code"], "LOCKED_BY_OTHER")
         result = self.service.issue_command("machine-a", {"action": "start", "params": {}}, "one")
         audit = db.get_rmc_command(result["cmd_id"])
         self.assertEqual(audit["history"][0]["status"], "sent")
 
     def test_ack_tracker_and_timeout(self):
+        self.service.acquire_lock("machine-a", "u")
         result = self.service.issue_command("machine-a", {"action": "start", "params": {}}, "u")
         self.service._timeout(result["cmd_id"], "received")
         self.assertEqual(db.get_rmc_command(result["cmd_id"])["status"], "timeout")

@@ -11,6 +11,7 @@ import csv
 import ftplib
 import io
 import json
+import math
 import mimetypes
 import os
 import posixpath
@@ -19,7 +20,7 @@ import socket
 import sqlite3
 import tempfile
 import threading
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from fastapi.responses import FileResponse
 
@@ -550,6 +551,134 @@ def health():
     """
     return {"status": "ok"}
 
+
+_CLIENT_EVENT_KINDS = {"fetch_fail", "fetch_slow", "ws_drop"}
+
+
+def _client_ip(request: Request) -> str:
+    return request.client.host if request.client else "unknown"
+
+
+def _percentile(values: list[float], percentile: float) -> float | None:
+    if not values:
+        return None
+    ordered = sorted(values)
+    index = max(0, min(len(ordered) - 1, math.ceil(len(ordered) * percentile) - 1))
+    return ordered[index]
+
+
+def _network_summary(events: list[dict]) -> dict:
+    clients: dict[str, dict] = {}
+    state_gaps: dict[str, list[float]] = {}
+    mqtt_disconnects = 0
+    for event in events:
+        client_ip = event.get("client_ip") or "unknown"
+        if event["kind"] in {"request", "slow_request"}:
+            client = clients.setdefault(client_ip, {"client_ip": client_ip, "latencies": [], "slow_count": 0, "ws_drops": 0})
+            if event["kind"] == "request" and event.get("value") is not None:
+                client["latencies"].append(float(event["value"]))
+            if event["kind"] == "slow_request":
+                client["slow_count"] += 1
+        elif event["kind"] == "ws_drop":
+            client = clients.setdefault(client_ip, {"client_ip": client_ip, "latencies": [], "slow_count": 0, "ws_drops": 0})
+            client["ws_drops"] += 1
+        elif event["kind"] == "mqtt_disconnect":
+            mqtt_disconnects += 1
+        elif event["kind"] == "state_gap" and event.get("device_id") and event.get("value") is not None:
+            state_gaps.setdefault(event["device_id"], []).append(float(event["value"]))
+
+    client_rows = []
+    for client in clients.values():
+        latencies = client.pop("latencies")
+        client["request_count"] = len(latencies)
+        client["p50_latency"] = _percentile(latencies, 0.50)
+        client["p95_latency"] = _percentile(latencies, 0.95)
+        client_rows.append(client)
+    gap_rows = [
+        {"device_id": device_id, "max_gap": max(gaps), "p95_gap": _percentile(gaps, 0.95)}
+        for device_id, gaps in state_gaps.items()
+    ]
+    return {
+        "clients": sorted(client_rows, key=lambda item: item["client_ip"]),
+        "mqtt_disconnect_count": mqtt_disconnects,
+        "state_gaps": sorted(gap_rows, key=lambda item: item["device_id"]),
+        "last_events": events[:50],
+    }
+
+
+def _diagnostic_events_since(hours: int) -> list[dict]:
+    since = (datetime.now(timezone.utc) - timedelta(hours=hours)).isoformat()
+    return db.query_net_events(since)
+
+
+def _insert_client_network_events(validated: list[tuple], client_ip: str, client_id: str | None) -> None:
+    for kind, value, detail, ts in validated:
+        db.insert_net_event(
+            kind, client_ip=client_ip, client_id=client_id,
+            value=value, detail=detail, ts=ts,
+        )
+
+
+@router.get("/api/diagnostics/network", dependencies=[Depends(require_auth)])
+def network_diagnostics(
+    hours: int = Query(default=24, ge=1, le=24 * 14),
+    principal: Principal = Depends(_rmc_principal),
+):
+    require_role(principal, "operator", "admin")
+    return _network_summary(_diagnostic_events_since(hours))
+
+
+@router.get("/api/diagnostics/network.csv", dependencies=[Depends(require_auth)])
+def network_diagnostics_csv(
+    hours: int = Query(default=24, ge=1, le=24 * 14),
+    principal: Principal = Depends(_rmc_principal),
+):
+    require_role(principal, "operator", "admin")
+    buffer = io.StringIO()
+    fields = ("id", "ts", "kind", "device_id", "client_ip", "client_id", "value", "detail")
+    writer = csv.DictWriter(buffer, fieldnames=fields)
+    writer.writeheader()
+    writer.writerows(_diagnostic_events_since(hours))
+    return Response(
+        content=buffer.getvalue(),
+        media_type="text/csv",
+        headers={"Content-Disposition": 'attachment; filename="network-diagnostics.csv"'},
+    )
+
+
+@router.post("/api/diagnostics/client-events", dependencies=[Depends(require_auth)])
+async def save_client_network_events(
+    request: Request,
+    events: list = Body(...),
+    client_id: str | None = Header(default=None, alias="X-Client-Id"),
+    principal: Principal = Depends(_rmc_principal),
+):
+    require_role(principal, "operator", "admin")
+    if len(events) > 50:
+        raise HTTPException(status_code=400, detail="At most 50 events are allowed")
+    validated = []
+    for event in events:
+        if not isinstance(event, dict) or event.get("kind") not in _CLIENT_EVENT_KINDS:
+            raise HTTPException(status_code=400, detail="Invalid client event kind")
+        detail = event.get("detail")
+        if detail is not None and (not isinstance(detail, str) or len(detail) > 500):
+            raise HTTPException(status_code=400, detail="Invalid event detail")
+        value = event.get("value")
+        if value is not None and (isinstance(value, bool) or not isinstance(value, (int, float)) or not math.isfinite(value)):
+            raise HTTPException(status_code=400, detail="Invalid event value")
+        ts = event.get("ts")
+        if ts is not None:
+            if not isinstance(ts, str) or len(ts) > 64:
+                raise HTTPException(status_code=400, detail="Invalid event timestamp")
+            try:
+                datetime.fromisoformat(ts.replace("Z", "+00:00"))
+            except ValueError as exc:
+                raise HTTPException(status_code=400, detail="Invalid event timestamp") from exc
+        validated.append((event["kind"], float(value) if value is not None else None, detail, ts))
+    client_ip = _client_ip(request)
+    asyncio.create_task(asyncio.to_thread(_insert_client_network_events, validated, client_ip, client_id))
+    return {"accepted": len(validated)}
+
 @router.get("/snapshots", dependencies=[Depends(require_auth)])
 def get_snapshots(device_id: str):
     if not device_id or device_id.strip() == "":
@@ -861,12 +990,19 @@ def get_session_replay(session_id: str):
 # Remote Machine Control API
 # ---------------------------------------------------------------------------
 
+@router.get("/api/rmc/config", dependencies=[Depends(require_auth)])
+def get_rmc_config():
+    return {"state_fresh_s": rmc_service.fresh_s}
+
+
 @router.post("/api/devices/{device_id}/commands", dependencies=[Depends(require_auth)])
 def issue_rmc_command(
     device_id: str,
     request: Request,
     response: Response,
     body: dict = Body(...),
+    client_id: str = Header(..., alias="X-Client-Id"),
+    operator_name: str = Header(..., alias="X-Operator-Name"),
     username: str = Depends(require_auth),
     principal: Principal = Depends(_rmc_principal),
 ):
@@ -876,7 +1012,7 @@ def issue_rmc_command(
     if action in {"load", "start", "resume"}:
         control_session = require_control(request.cookies.get(CONTROL_COOKIE_NAME), username)
     base_url = str(request.base_url).rstrip("/")
-    result = rmc_service.issue_command(device_id, body, principal.name, request_base_url=base_url)
+    result = rmc_service.issue_command(device_id, body, principal.name, client_id, operator_name, request_base_url=base_url)
     if control_session:
         result["control_expires_at"] = refresh_control_cookie(response, control_session)
     return result
@@ -901,6 +1037,8 @@ def acquire_rmc_lock(
     request: Request,
     response: Response,
     body: dict = Body(default={}),
+    client_id: str = Header(..., alias="X-Client-Id"),
+    operator_name: str = Header(..., alias="X-Operator-Name"),
     username: str = Depends(require_auth),
     principal: Principal = Depends(_rmc_principal),
 ):
@@ -909,23 +1047,49 @@ def acquire_rmc_lock(
     override = bool(body.get("override", False))
     if override:
         require_role(principal, "admin")
-    result = rmc_service.acquire_lock(device_id, principal.name, admin_override=override)
+    result = rmc_service.acquire_lock(device_id, principal.name, client_id, operator_name, admin_override=override)
     result["control_expires_at"] = refresh_control_cookie(response, control_session)
     return result
 
 
 @router.delete("/api/devices/{device_id}/lock", dependencies=[Depends(require_auth)])
-def release_rmc_lock(device_id: str, override: bool = False, principal: Principal = Depends(_rmc_principal)):
+def release_rmc_lock(device_id: str, override: bool = False, client_id: str = Header(..., alias="X-Client-Id"), principal: Principal = Depends(_rmc_principal)):
     require_role(principal, "operator", "admin")
     if override:
         require_role(principal, "admin")
-    rmc_service.release_lock(device_id, principal.name, admin_override=override)
-    return {"released": True}
+    return rmc_service.release_lock(device_id, principal.name, client_id, admin_override=override)
+
+
+@router.post("/api/devices/{device_id}/lock/request-release", dependencies=[Depends(require_auth)])
+def request_rmc_lock_release(
+    device_id: str,
+    operator_name: str = Header(..., alias="X-Operator-Name"),
+    principal: Principal = Depends(_rmc_principal),
+):
+    require_role(principal, "operator", "admin")
+    return rmc_service.request_release(device_id, principal.name, operator_name)
+
+
+@router.post("/api/devices/{device_id}/lock/heartbeat", dependencies=[Depends(require_auth)])
+def touch_rmc_lock(
+    device_id: str,
+    request: Request,
+    response: Response,
+    client_id: str = Header(..., alias="X-Client-Id"),
+    operator_name: str = Header(..., alias="X-Operator-Name"),
+    username: str = Depends(require_auth),
+    principal: Principal = Depends(_rmc_principal),
+):
+    require_role(principal, "operator", "admin")
+    control_session = require_control(request.cookies.get(CONTROL_COOKIE_NAME), username)
+    result = rmc_service.touch_lock(device_id, principal.name, client_id, operator_name)
+    result["control_expires_at"] = refresh_control_cookie(response, control_session)
+    return result
 
 
 @router.get("/api/devices/{device_id}/lock", dependencies=[Depends(require_auth)])
 def get_rmc_lock(device_id: str, principal: Principal = Depends(_rmc_principal)):
-    return rmc_service.get_lock(device_id) or {"device_id": device_id, "issued_by": None}
+    return rmc_service.get_lock(device_id) or {"device_id": device_id, "issued_by": None, "client_id": None, "operator_name": None}
 
 
 # ---------------------------------------------------------------------------
