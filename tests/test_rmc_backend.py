@@ -40,6 +40,10 @@ class RMCBackendTests(unittest.TestCase):
     def test_validation_and_device_isolation(self):
         with self.assertRaises(HTTPException):
             self.service.issue_command("unknown", {"action": "start", "params": {}}, "u")
+        with self.assertRaises(HTTPException) as ctx:
+            self.service.issue_command("machine-a", {"action": "start", "params": {}}, "u")
+        self.assertEqual(ctx.exception.detail["reason_code"], "LOCK_REQUIRED")
+        self.service.acquire_lock("machine-a", "u")
         result = self.service.issue_command("machine-a", {"action": "start", "params": {}}, "u")
         self.assertEqual(self.published[0][0], "machine-a")
         self.assertEqual(db.get_rmc_command(result["cmd_id"])["device_id"], "machine-a")
@@ -48,11 +52,15 @@ class RMCBackendTests(unittest.TestCase):
         self.service.acquire_lock("machine-a", "one")
         with self.assertRaises(HTTPException):
             self.service.acquire_lock("machine-a", "two")
+        with self.assertRaises(HTTPException) as ctx:
+            self.service.issue_command("machine-a", {"action": "start", "params": {}}, "one", "other-tab")
+        self.assertEqual(ctx.exception.detail["reason_code"], "LOCKED_BY_OTHER")
         result = self.service.issue_command("machine-a", {"action": "start", "params": {}}, "one")
         audit = db.get_rmc_command(result["cmd_id"])
         self.assertEqual(audit["history"][0]["status"], "sent")
 
     def test_ack_tracker_and_timeout(self):
+        self.service.acquire_lock("machine-a", "u")
         result = self.service.issue_command("machine-a", {"action": "start", "params": {}}, "u")
         self.service._timeout(result["cmd_id"], "received")
         self.assertEqual(db.get_rmc_command(result["cmd_id"])["status"], "timeout")
@@ -81,3 +89,19 @@ class RMCBackendTests(unittest.TestCase):
             self.service._validate_params("load", {"source": "ftp", "ftp_name": "../bad", "sha256": "x", "size": 1})
         params = self.service._validate_params("load", {"source": "ftp", "ftp_name": "jobs/a.nc", "sha256": "x", "size": 1})
         self.assertEqual(params["path"], "jobs/a.nc")
+
+    def test_stale_rmc_state_cannot_replace_newer_build_progress(self):
+        """Delayed MQTT state must not move a running build backwards."""
+        latest = state.update_rmc_state("machine-a", {
+            "device_id": "machine-a", "job_state": "running", "file": {"name": "x.nc"}, "progress": 4,
+            "last_cmd_id": None, "remote_control": "ask", "local_busy": False, "controlled_by": None,
+            "recorded_at": datetime.now(timezone.utc).isoformat(), "seq": 4,
+        })
+        stale = state.update_rmc_state("machine-a", {
+            "device_id": "machine-a", "job_state": "idle", "file": None, "progress": 0,
+            "last_cmd_id": None, "remote_control": "ask", "local_busy": False, "controlled_by": None,
+            "recorded_at": datetime.now(timezone.utc).isoformat(), "seq": 3,
+        })
+        self.assertEqual(latest["progress"], 4)
+        self.assertEqual(stale["job_state"], "running")
+        self.assertEqual(stale["progress"], 4)

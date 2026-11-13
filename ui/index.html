@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8">
@@ -259,6 +259,12 @@
       border-radius: 50%;
       background: currentColor;
     }
+
+    .network-badge { position: relative; }
+    .network-badge button { font: inherit; color: inherit; background: transparent; border: 0; cursor: pointer; padding: 0; }
+    .network-badge.warn { background: rgba(255, 190, 70, 0.12); border-color: rgba(255, 190, 70, 0.3); color: #f4bc45; }
+    .network-badge.bad { background: rgba(255, 92, 114, 0.1); border-color: rgba(255, 92, 114, 0.25); color: var(--red); }
+    .network-details { position: absolute; z-index: 20; top: calc(100% + 8px); left: 0; width: 245px; padding: 10px; border: 1px solid var(--border); border-radius: 8px; background: var(--panel); color: var(--text); box-shadow: 0 10px 24px rgba(0,0,0,.25); font-size: 12px; line-height: 1.6; }
 
     .topbar-right {
       display: flex;
@@ -2053,7 +2059,7 @@
       .side-footer .status-row span:last-child {
         display: none;
       }
-      #sideMachineIp {
+      #sideMachineIp, #sideIpManual {
         display: none;
       }
       .topbar {
@@ -2475,6 +2481,10 @@
         max-width: 130px;
       }
     }
+    .side-ip-manual { display: flex; align-items: center; justify-content: center; gap: 6px; margin-top: 4px; font-size: 11px; }
+    .side-ip-manual[hidden] { display: none; }
+    .side-ip-manual-tag { padding: 1px 6px; border-radius: 4px; background: rgba(245, 158, 11, 0.15); color: #f59e0b; }
+    .side-ip-manual button { background: none; border: 1px solid currentColor; border-radius: 4px; color: inherit; font-size: 11px; padding: 0 6px; cursor: pointer; }
   </style>
 </head>
 <body>
@@ -2522,7 +2532,11 @@
         <span class="pulse-dot"></span>
         <span>Machine Online</span>
       </div>
-      <div id="sideMachineIp">192.168.0.104:8000</div>
+      <div id="sideMachineIp">—</div>
+      <div id="sideIpManual" class="side-ip-manual" hidden>
+        <span class="side-ip-manual-tag">manual</span>
+        <button id="sideIpReset" type="button" title="Use the IP reported by the machine">reset</button>
+      </div>
     </div>
   </aside>
 
@@ -2545,6 +2559,10 @@
           <span class="dot" id="statusDot"></span>
           <span id="statusText">Disconnected</span>
         </div>
+        <div id="networkBadge" class="topbar-status-badge network-badge bad" title="Network diagnostics">
+          <button id="networkBadgeButton" type="button" aria-expanded="false" aria-controls="networkDetails"><span class="dot"></span><span id="networkBadgeText">Network: checking</span></button>
+          <div id="networkDetails" class="network-details" hidden></div>
+        </div>
       </div>
 
       <div class="topbar-right">
@@ -2556,6 +2574,7 @@
 
         <div class="topbar-time" id="topbarClock">-- : -- : --</div>
         <div class="user-avatar" title="UFAM Server">U</div>
+        <button id="logoutBtn" type="button" class="action-btn" style="padding:5px 10px;">Log out</button>
       </div>
     </header>
 
@@ -2581,6 +2600,15 @@
           </div>
           <div class="kpi-val" id="kpiConnVal" style="color:var(--green);">Connected</div>
           <div class="kpi-sub" id="kpiConnSub">WebSocket live</div>
+        </div>
+
+        <div class="kpi-card">
+          <div class="kpi-header">
+            <span>Machine hrs</span>
+            <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>
+          </div>
+          <div class="kpi-val" id="machineOverviewHours">—</div>
+          <div class="kpi-sub">Machine uptime</div>
         </div>
 
         <!-- Current File -->
@@ -2895,6 +2923,11 @@
             <button class="action-btn" id="rmcReleaseLockBtn" type="button" style="display:none;" title="Release exclusive control lock">
               <span>Release Control</span>
             </button>
+            <button class="action-btn" id="rmcRequestReleaseBtn" type="button" style="display:none;">Request release</button>
+            <button class="action-btn" id="rmcForceTakeBtn" type="button" style="display:none;">Force take</button>
+            <span id="rmcControlStatus" class="rmc-tag tag-off">Controls locked</span>
+            <button class="action-btn primary" id="rmcUnlockControlBtn" type="button">Unlock Controls</button>
+            <button class="action-btn" id="rmcLockControlBtn" type="button" style="display:none;">Lock Controls</button>
           </div>
         </div>
       </div>
@@ -3377,6 +3410,19 @@
 </div>
 
 <!-- RMC Load File Modal -->
+<div id="rmcControlUnlockModal" class="rmc-modal-overlay" role="dialog" aria-modal="true" aria-labelledby="rmcControlUnlockTitle" style="display:none;">
+  <div class="rmc-modal" style="max-width:360px;">
+    <div class="rmc-modal-head">
+      <div><h3 id="rmcControlUnlockTitle">Unlock Machine Controls</h3><p>Enter the control password to enable hazardous RMC actions.</p></div>
+    </div>
+    <form id="rmcControlUnlockForm">
+      <input id="rmcControlPassword" type="password" autocomplete="current-password" placeholder="Control password" style="width:100%;box-sizing:border-box;padding:10px;margin:10px 0;background:#07192b;border:1px solid var(--border);border-radius:6px;color:#fff;">
+      <div id="rmcControlUnlockError" style="min-height:18px;color:var(--red);font-size:12px;"></div>
+      <div style="display:flex;justify-content:flex-end;gap:10px;margin-top:12px;"><button class="action-btn" id="rmcControlUnlockCancel" type="button">Cancel</button><button class="action-btn primary" type="submit">Unlock</button></div>
+    </form>
+  </div>
+</div>
+
 <div id="rmcLoadModal" class="rmc-modal-overlay" role="dialog" aria-modal="true" aria-labelledby="rmcLoadTitle">
   <div class="rmc-modal-box">
     <div class="rmc-modal-head">
@@ -3421,6 +3467,156 @@
 </div>
 
 <script>
+  const nativeFetch = window.fetch.bind(window);
+  let redirectingToLogin = false;
+  const networkEventQueue = [];
+  const diagnosticsEventUrl = "/api/diagnostics/client-events";
+  let flushingNetworkEvents = false;
+  function queueNetworkEvent(kind, value, detail) {
+    if (networkEventQueue.length < 100) {
+      networkEventQueue.push({ kind, value, detail: String(detail || "").slice(0, 500), ts: new Date().toISOString() });
+    }
+  }
+  async function flushNetworkEvents() {
+    if (flushingNetworkEvents || !networkEventQueue.length || !navigator.onLine) return;
+    flushingNetworkEvents = true;
+    const events = networkEventQueue.splice(0, 50);
+    try {
+      const response = await nativeFetch(diagnosticsEventUrl, {
+        method: "POST", credentials: "same-origin", keepalive: true,
+        headers: { "Content-Type": "application/json", "X-Client-Id": myClientId || "" },
+        body: JSON.stringify(events),
+      });
+      if (!response.ok) throw new Error(`Diagnostics upload failed: ${response.status}`);
+    } catch (_) {
+      // Diagnostics must never interfere with the operator UI.
+      networkEventQueue.unshift(...events);
+      networkEventQueue.length = Math.min(networkEventQueue.length, 100);
+    } finally {
+      flushingNetworkEvents = false;
+    }
+  }
+  setInterval(flushNetworkEvents, 30000);
+  window.addEventListener("online", () => { flushNetworkEvents(); sampleRtt(); });
+  // Hung GETs on flaky Wi-Fi otherwise hold the browser's per-host connection
+  // slots indefinitely. Only idempotent GETs get a timeout; commands/locks
+  // (POST/DELETE) and legitimately slow transfers are left untouched.
+  const FETCH_TIMEOUT_MS = 10000;
+  const SLOW_GET_PATHS = ["/logs/", "/recordings", "/api/rmc/files", "/replay"];
+  window.fetch = async (input, init = {}) => {
+    const method = (init.method || "GET").toUpperCase();
+    const url = typeof input === "string" ? input : input.url;
+    const isDiagnosticsFlush = String(url).includes(diagnosticsEventUrl);
+    const started = performance.now();
+    let timer = null;
+    if (method === "GET" && !init.signal && !SLOW_GET_PATHS.some(p => url.includes(p))) {
+      const controller = new AbortController();
+      timer = setTimeout(() => controller.abort(), FETCH_TIMEOUT_MS);
+      init = { ...init, signal: controller.signal };
+    }
+    try {
+      const response = await nativeFetch(input, { ...init, credentials: "same-origin" });
+      const elapsed = (performance.now() - started) / 1000;
+      if (!isDiagnosticsFlush && elapsed > 2) queueNetworkEvent("fetch_slow", elapsed, `${method} ${url}`);
+      if (!isDiagnosticsFlush && !response.ok) queueNetworkEvent("fetch_fail", elapsed, `${method} ${url} status=${response.status}`);
+      if (response.status === 401 && !redirectingToLogin) {
+        redirectingToLogin = true;
+        window.location.replace("/login");
+      }
+      return response;
+    } catch (error) {
+      if (!isDiagnosticsFlush) queueNetworkEvent("fetch_fail", (performance.now() - started) / 1000, `${method} ${url}`);
+      throw error;
+    } finally {
+      if (timer) clearTimeout(timer);
+    }
+  };
+
+  const rttSamples = [];
+  let latestSpeedMbps = null;
+  let speedTestInProgress = false;
+  const networkBadge = document.getElementById("networkBadge");
+  const networkBadgeText = document.getElementById("networkBadgeText");
+  const networkDetails = document.getElementById("networkDetails");
+  const networkBadgeButton = document.getElementById("networkBadgeButton");
+  const median = values => {
+    if (!values.length) return null;
+    const sorted = [...values].sort((a, b) => a - b);
+    const middle = Math.floor(sorted.length / 2);
+    return sorted.length % 2 ? sorted[middle] : (sorted[middle - 1] + sorted[middle]) / 2;
+  };
+  function rttStats() {
+    const successes = rttSamples.filter(Number.isFinite);
+    const differences = successes.slice(1).map((value, index) => Math.abs(value - successes[index]));
+    return {
+      median: median(successes), min: successes.length ? Math.min(...successes) : null,
+      max: successes.length ? Math.max(...successes) : null,
+      jitter: differences.length ? differences.reduce((sum, value) => sum + value, 0) / differences.length : 0,
+      loss_pct: rttSamples.length ? ((rttSamples.length - successes.length) * 100) / rttSamples.length : 100,
+      n: successes.length,
+    };
+  }
+  function updateNetworkBadge() {
+    const stats = rttStats();
+    const online = navigator.onLine;
+    const state = online && stats.median !== null && stats.median < 100 && stats.loss_pct === 0 ? "ok"
+      : online && stats.median !== null && stats.median < 300 && stats.loss_pct < 5 ? "warn" : "bad";
+    networkBadge.className = `topbar-status-badge network-badge ${state}`;
+    networkBadgeText.textContent = stats.median === null ? "Network: unavailable" : `Network: ${stats.median.toFixed(1)} ms`;
+    const connection = navigator.connection;
+    const connectionText = connection ? `${connection.effectiveType || "unknown"}, ${connection.downlink ?? "—"} Mbps, ${connection.rtt ?? "—"} ms` : "Unavailable";
+    networkDetails.textContent = `Median: ${stats.median === null ? "—" : `${stats.median.toFixed(1)} ms`} · Jitter: ${stats.jitter.toFixed(1)} ms · Max: ${stats.max === null ? "—" : `${stats.max.toFixed(1)} ms`} · Loss: ${stats.loss_pct.toFixed(1)}% · Speed: ${latestSpeedMbps === null ? "—" : `${latestSpeedMbps.toFixed(2)} Mbps`} · Browser connection: ${connectionText}`;
+  }
+  async function sampleRtt() {
+    const controller = new AbortController();
+    const started = performance.now();
+    const timeout = setTimeout(() => controller.abort(), 3000);
+    let sample = null;
+    try {
+      const response = await nativeFetch("/api/ping", { cache: "no-store", credentials: "same-origin", signal: controller.signal });
+      if (!response.ok) throw new Error(`Ping failed: ${response.status}`);
+      await response.json();
+      sample = performance.now() - started;
+    } catch (_) {
+      // A failed or timed-out probe is explicitly retained as loss.
+    } finally {
+      clearTimeout(timeout);
+      rttSamples.push(sample);
+      if (rttSamples.length > 20) rttSamples.shift();
+      const stats = rttStats();
+      queueNetworkEvent("rtt", stats.median, JSON.stringify({ min: stats.min, max: stats.max, jitter: stats.jitter, loss_pct: stats.loss_pct, n: stats.n }));
+      updateNetworkBadge();
+      flushNetworkEvents();
+    }
+  }
+  async function sampleSpeed() {
+    if (speedTestInProgress || document.visibilityState !== "visible" || !navigator.onLine) return;
+    speedTestInProgress = true;
+    const started = performance.now();
+    try {
+      const response = await nativeFetch("/api/speedtest?kb=256", { cache: "no-store", credentials: "same-origin" });
+      if (!response.ok) throw new Error(`Speed test failed: ${response.status}`);
+      const bytes = (await response.arrayBuffer()).byteLength;
+      latestSpeedMbps = (bytes * 8) / ((performance.now() - started) / 1000) / 1000000;
+      if (Number.isFinite(latestSpeedMbps)) queueNetworkEvent("speed", latestSpeedMbps, "");
+    } catch (_) {
+      // The speed probe is optional and must never disrupt the UI.
+    } finally {
+      speedTestInProgress = false;
+      updateNetworkBadge();
+      flushNetworkEvents();
+    }
+  }
+  networkBadgeButton.addEventListener("click", () => {
+    networkDetails.hidden = !networkDetails.hidden;
+    networkBadgeButton.setAttribute("aria-expanded", String(!networkDetails.hidden));
+  });
+  updateNetworkBadge();
+  sampleRtt();
+  setInterval(sampleRtt, 10000);
+  setInterval(sampleSpeed, 60000);
+  document.addEventListener("visibilitychange", () => { if (document.visibilityState === "visible") sampleSpeed(); });
+
   // DOM References
   const tableBody = document.getElementById("tableBody");
   const tableWrap = document.getElementById("tableWrap");
@@ -3453,6 +3649,14 @@
   const logsTableBody = document.getElementById("logsTableBody");
   const logsEmptyState = document.getElementById("logsEmptyState");
   const toast = document.getElementById("toast");
+
+  document.getElementById("logoutBtn")?.addEventListener("click", async () => {
+    try {
+      await fetch("/logout", { method: "POST", headers: { "X-Client-Id": myClientId } });
+    } finally {
+      window.location.replace("/login");
+    }
+  });
 
   // Camera DOM
   const cameraFeed = document.getElementById("cameraFeed");
@@ -3500,6 +3704,35 @@
   const kpiConnVal = document.getElementById("kpiConnVal");
   const kpiConnSub = document.getElementById("kpiConnSub");
   const topbarClock = document.getElementById("topbarClock");
+  const machineOverviewHours = document.getElementById("machineOverviewHours");
+  let machineOverviewRequestInFlight = false;
+
+  function formatMachineHours(hours) {
+    const numeric = Number(hours);
+    if (!Number.isFinite(numeric) || numeric < 0) return "—";
+    const totalMinutes = Math.floor(numeric * 60);
+    return `${Math.floor(totalMinutes / 60)}h ${totalMinutes % 60}m`;
+  }
+
+  function clearMachineOverviewMetrics() {
+    if (machineOverviewHours) machineOverviewHours.textContent = "—";
+  }
+
+  async function refreshMachineHours() {
+    const did = deviceSelect?.value;
+    if (!did || machineOverviewRequestInFlight) return;
+    machineOverviewRequestInFlight = true;
+    try {
+      const response = await fetch(`/api/devices/${encodeURIComponent(did)}/overview`);
+      if (!response.ok) throw new Error("Machine overview request failed");
+      const overview = await response.json();
+      if (machineOverviewHours) machineOverviewHours.textContent = formatMachineHours(overview.machine_hours);
+    } catch (_) {
+      clearMachineOverviewMetrics();
+    } finally {
+      machineOverviewRequestInFlight = false;
+    }
+  }
 
   // RMC DOM Elements
   const rmcJobBadge = document.getElementById("rmcJobBadge");
@@ -3523,6 +3756,11 @@
   const rmcLockText = document.getElementById("rmcLockText");
   const rmcTakeLockBtn = document.getElementById("rmcTakeLockBtn");
   const rmcReleaseLockBtn = document.getElementById("rmcReleaseLockBtn");
+  const rmcRequestReleaseBtn = document.getElementById("rmcRequestReleaseBtn");
+  const rmcForceTakeBtn = document.getElementById("rmcForceTakeBtn");
+  const rmcControlStatus = document.getElementById("rmcControlStatus");
+  const rmcUnlockControlBtn = document.getElementById("rmcUnlockControlBtn");
+  const rmcLockControlBtn = document.getElementById("rmcLockControlBtn");
   const rmcTimelineMsg = document.getElementById("rmcTimelineMsg");
   const rmcTimelineBarFill = document.getElementById("rmcTimelineBarFill");
   const rmcStepSent = document.getElementById("rmcStepSent");
@@ -3549,6 +3787,11 @@
   const rmcServerFileList = document.getElementById("rmcServerFileList");
   const rmcLoadStageBar = document.getElementById("rmcLoadStageBar");
   const rmcLoadStageText = document.getElementById("rmcLoadStageText");
+  const rmcControlUnlockModal = document.getElementById("rmcControlUnlockModal");
+  const rmcControlUnlockForm = document.getElementById("rmcControlUnlockForm");
+  const rmcControlPassword = document.getElementById("rmcControlPassword");
+  const rmcControlUnlockError = document.getElementById("rmcControlUnlockError");
+  const rmcControlUnlockCancel = document.getElementById("rmcControlUnlockCancel");
 
   const rmcConfirmModal = document.getElementById("rmcConfirmModal");
   const rmcConfirmTitle = document.getElementById("rmcConfirmTitle");
@@ -3560,7 +3803,7 @@
   // RMC State Stores (Keyed strictly by device_id)
   const rmcStates = {};        // did -> state object
   const rmcFiles = {};         // did -> files list
-  const rmcLocks = {};         // did -> lock object { device_id, issued_by }
+  const rmcLocks = {};         // did -> lock object { device_id, issued_by, client_id }
   const rmcCommands = {};      // did -> array of recent commands
   const rmcActiveCmd = {};     // did -> active command object
   const rmcLastSeq = {};       // did -> monotonic sequence number
@@ -3574,6 +3817,26 @@
   let rmcActionInFlight = false;
   let rmcSelectedFile = null;
   let rmcConfirmCallback = null;
+  let rmcControlExpiresAt = 0;
+  let rmcControlTimer = null;
+  function createClientId() {
+    if (window.crypto?.randomUUID) return window.crypto.randomUUID();
+    if (window.crypto?.getRandomValues) {
+      const bytes = window.crypto.getRandomValues(new Uint8Array(16));
+      bytes[6] = (bytes[6] & 0x0f) | 0x40;
+      bytes[8] = (bytes[8] & 0x3f) | 0x80;
+      return [...bytes].map((byte, index) =>
+        [4, 6, 8, 10].includes(index) ? `-${byte.toString(16).padStart(2, "0")}` : byte.toString(16).padStart(2, "0")
+      ).join("");
+    }
+    return `client-${Date.now()}-${Math.random().toString(16).slice(2)}`;
+  }
+  let myClientId = sessionStorage.getItem("ufameasy_rmc_client_id");
+  if (!myClientId) {
+    myClientId = createClientId();
+    sessionStorage.setItem("ufameasy_rmc_client_id", myClientId);
+  }
+  let rmcOperatorName = localStorage.getItem("ufameasy_rmc_operator_name") || "";
 
   // State
   const rowsByKey = new Map();
@@ -3747,8 +4010,8 @@
         b = valObj[3] ?? 0;
         c = valObj[4] ?? 0;
       } else if (valObj.length >= 6) {
-        b = valObj[4] ?? 0;
-        c = valObj[5] ?? 0;
+        b = valObj[3] ?? 0;
+        c = valObj[4] ?? 0;
       }
     } else if (typeof valObj === 'object') {
       x = valObj.X ?? valObj.x ?? 0;
@@ -3781,7 +4044,17 @@
 
   // Update Runtime KPIs & Indicators
   function updateRuntime(data = {}) {
-    if (data.current_file) {
+    // Job state and build progress have one owner: a fresh RMC state.  Generic
+    // runtime telemetry is intentionally partial (and the idle equipment poll
+    // contains no job fields), so letting it redraw these values caused the
+    // dashboard to alternate between RMC RUNNING/progress and IDLE/0%.
+    const selectedDid = deviceSelect ? deviceSelect.value : null;
+    const selectedRmcState = selectedDid ? rmcStates[selectedDid] : null;
+    const rmcOwnsJobDisplay = Boolean(
+      selectedRmcState && !isDeviceStale(selectedRmcState, selectedDid)
+    );
+
+    if (data.current_file && !rmcOwnsJobDisplay) {
       const fn = String(data.current_file).trim();
       if (fn && fn.toLowerCase() !== 'unknown') {
         if (rtFile) rtFile.textContent = fn;
@@ -3817,10 +4090,12 @@
       rtPower.textContent = Number.isFinite(p) ? `${p.toFixed(1)}%` : '—';
     }
 
-    const isPrinting = isLaser || (data.current_layer != null && data.current_layer > 0);
-    if (rtState) rtState.innerHTML = `<span class="status-pill ${isPrinting ? 'on' : 'off'}">${isPrinting ? 'PRINTING' : 'IDLE'}</span>`;
-    if (rtStateVal) rtStateVal.textContent = isPrinting ? 'Printing' : 'Idle';
-    if (rtStateSub) rtStateSub.textContent = isPrinting ? 'Process active' : 'No active print job';
+    if (!rmcOwnsJobDisplay) {
+      const isPrinting = isLaser || (data.current_layer != null && data.current_layer > 0);
+      if (rtState) rtState.innerHTML = `<span class="status-pill ${isPrinting ? 'on' : 'off'}">${isPrinting ? 'PRINTING' : 'IDLE'}</span>`;
+      if (rtStateVal) rtStateVal.textContent = isPrinting ? 'Printing' : 'Idle';
+      if (rtStateSub) rtStateSub.textContent = isPrinting ? 'Process active' : 'No active print job';
+    }
 
     if (data.powder_usage != null && estPowder) estPowder.textContent = `${Number(data.powder_usage).toFixed(1)}g`;
     if (data.deposition_efficiency != null && estEfficiency) estEfficiency.textContent = `${(Number(data.deposition_efficiency) * 100).toFixed(1)}%`;
@@ -4243,38 +4518,65 @@
   }
 
   // Per-Device IP Management (Prevents device cross-talk)
-  function getDeviceIp(did) {
-    if (!did) did = deviceSelect.value;
-    if (!did) return "";
+  // One-time cleanup of the old machine-IP cache (stale IPs showed in the sidebar).
+  // Only "ufameasy_machine_ip*" keys are removed; operator name / selected device stay.
+  const IP_OVERRIDE_PREFIX = "ufameasy_machine_ip_override_";
+  if (!localStorage.getItem("ufameasy_ip_cache_v2")) {
+    Object.keys(localStorage)
+      .filter(k => k.startsWith("ufameasy_machine_ip") && !k.startsWith(IP_OVERRIDE_PREFIX))
+      .forEach(k => localStorage.removeItem(k));
+    localStorage.setItem("ufameasy_ip_cache_v2", "1");
+  }
+
+  function getIpOverride(did) {
+    return did ? (localStorage.getItem(IP_OVERRIDE_PREFIX + did) || "").trim() : "";
+  }
+
+  // Automatic IP: (a) machine_ip from the devices API, (b) device_001 only: address-bar host.
+  function getAutoDeviceIp(did) {
     const d = devicesById.get(did);
     if (d && typeof d === 'object') {
-      const ip = d.machine_ip || d.ip || d.host;
+      const ip = d.machine_ip;
       if (ip) return String(ip).trim();
     }
-    const savedDevIp = localStorage.getItem(`ufameasy_machine_ip_${did}`);
-    if (savedDevIp && savedDevIp.trim()) return savedDevIp.trim();
-
-    // Default 192.168.0.104 ONLY applies to device_001
     if (did === "device_001") {
-      const legacySaved = localStorage.getItem("ufameasy_machine_ip");
-      if (legacySaved && legacySaved.trim()) return legacySaved.trim();
       const host = window.location.hostname;
       if (host && host !== "localhost" && host !== "127.0.0.1") return host;
-      return "192.168.0.104";
     }
-
-    // For any other device (e.g. nidhi), NEVER default to device_001's IP
     return "";
   }
 
+  function getDeviceIp(did) {
+    if (!did) did = deviceSelect.value;
+    if (!did) return "";
+    return getIpOverride(did) || getAutoDeviceIp(did);
+  }
+
+  // Manual edit: stored only as an explicit override; matching the auto IP clears it.
   function setDeviceIp(did, ip) {
     if (!did) did = deviceSelect.value;
     if (!did || !ip) return;
-    localStorage.setItem(`ufameasy_machine_ip_${did}`, ip.trim());
-    if (did === "device_001") {
-      localStorage.setItem("ufameasy_machine_ip", ip.trim());
-    }
+    ip = ip.trim();
+    if (ip === getAutoDeviceIp(did)) localStorage.removeItem(IP_OVERRIDE_PREFIX + did);
+    else localStorage.setItem(IP_OVERRIDE_PREFIX + did, ip);
+    renderSideMachineIp(did);
   }
+
+  function renderSideMachineIp(did) {
+    const ip = getDeviceIp(did);
+    const sideIp = document.getElementById("sideMachineIp");
+    if (sideIp) sideIp.textContent = ip ? `${ip}:8000` : "—";
+    const manual = document.getElementById("sideIpManual");
+    if (manual) manual.hidden = !getIpOverride(did);
+  }
+
+  document.getElementById("sideIpReset")?.addEventListener("click", () => {
+    const did = deviceSelect.value;
+    if (!did) return;
+    localStorage.removeItem(IP_OVERRIDE_PREFIX + did);
+    if (sharedIpInput) sharedIpInput.value = getDeviceIp(did);
+    renderSideMachineIp(did);
+  });
 
   function getSharedIp() {
     const did = deviceSelect.value;
@@ -4332,6 +4634,7 @@
     if (!selectedDid) {
       stopCamera();
       clearRuntime();
+      clearMachineOverviewMetrics();
       resetTrendHistory();
       liveRuntimeData = {};
       latestPositionSets = { xma: null, xmr: null, xwa: null, xwr: null };
@@ -4346,9 +4649,9 @@
     }
 
     const prevDid = localStorage.getItem("ufameasy_selected_device");
-    if (prevDid && prevDid !== selectedDid && rmcLocks[prevDid]?.issued_by === getCurrentUser()) {
+    if (prevDid && prevDid !== selectedDid && rmcLocks[prevDid]?.client_id === myClientId) {
       try {
-        fetch(`/api/devices/${encodeURIComponent(prevDid)}/lock`, { method: "DELETE", headers: getAuthHeaders() });
+        fetch(`/api/devices/${encodeURIComponent(prevDid)}/lock`, { method: "DELETE", headers: getRmcHeaders() });
         delete rmcLocks[prevDid];
       } catch (_) {}
     }
@@ -4359,6 +4662,7 @@
 
     // 2. CRITICAL: Clear all prior runtime KPIs, positions & trends
     clearRuntime();
+    clearMachineOverviewMetrics();
     resetTrendHistory();
     liveRuntimeData = {};
     latestPositionSets = { xma: null, xmr: null, xwa: null, xwr: null };
@@ -4377,13 +4681,12 @@
       sharedIpInput.value = devIp;
       sharedIpInput.placeholder = devIp ? "e.g. 192.168.0.104" : `Enter IP for ${selectedDid} (e.g. 192.168.1.100)`;
     }
-    const sideIp = document.getElementById("sideMachineIp");
-    if (sideIp) sideIp.textContent = devIp ? `${devIp}:8000` : "No IP configured";
+    renderSideMachineIp(selectedDid);
 
     const idleDesc = document.querySelector("#cameraCollapsed .idle-desc");
     if (idleDesc) {
       if (devIp) {
-        idleDesc.textContent = `Real-time machine monitoring camera feed for ${selectedDid} (${devIp}:8765). Connect to visually monitor deposition or melt pool.`;
+        idleDesc.textContent = `Real-time machine monitoring camera feed for ${selectedDid}`;
       } else {
         idleDesc.textContent = `No camera IP configured for ${selectedDid}. Enter ${selectedDid}'s machine IP in Machine Access.`;
       }
@@ -4444,6 +4747,7 @@
 
     // 8. Fetch RMC device data (lock, commands audit) and render card
     await fetchRmcDeviceData(selectedDid);
+    await refreshMachineHours();
 
     logEvent("device_selected", selectedDid);
   }
@@ -4924,27 +5228,92 @@
   });
 
   // ── Remote Machine Control (RMC Phase 5) ──────────────────────────────────
-  function getAuthHeaders() {
-    const urlParams = new URLSearchParams(window.location.search);
-    const token = urlParams.get("token");
-    const headers = { "Content-Type": "application/json" };
-    if (token) {
-      headers["Authorization"] = `Bearer ${token}`;
+  function isControlLocked(detail) {
+    return detail && typeof detail === "object" && detail.code === "CONTROL_LOCKED";
+  }
+
+  function updateControlStatus(expiresAt) {
+    if (expiresAt !== undefined) rmcControlExpiresAt = Number(expiresAt) * 1000 || 0;
+    if (!rmcControlTimer) rmcControlTimer = setInterval(updateControlStatus, 1000);
+    const remaining = Math.max(0, Math.ceil((rmcControlExpiresAt - Date.now()) / 1000));
+    const unlocked = remaining > 0;
+    if (rmcControlStatus) {
+      rmcControlStatus.className = `rmc-tag ${unlocked ? "tag-busy" : "tag-off"}`;
+      rmcControlStatus.textContent = unlocked ? `Controls unlocked · ${Math.ceil(remaining / 60)}m` : "Controls locked";
     }
-    return headers;
+    if (rmcUnlockControlBtn) rmcUnlockControlBtn.style.display = unlocked ? "none" : "inline-flex";
+    if (rmcLockControlBtn) rmcLockControlBtn.style.display = unlocked ? "inline-flex" : "none";
+  }
+
+  async function refreshControlStatus() {
+    const res = await fetch("/control-status");
+    if (!res.ok) return;
+    const data = await res.json();
+    updateControlStatus(data.expires_at || 0);
+  }
+
+  function showControlUnlockPrompt() {
+    if (rmcControlUnlockError) rmcControlUnlockError.textContent = "";
+    if (rmcControlPassword) rmcControlPassword.value = "";
+    if (rmcControlUnlockModal) rmcControlUnlockModal.style.display = "flex";
+    rmcControlPassword?.focus();
+  }
+
+  function closeControlUnlockPrompt() {
+    if (rmcControlUnlockModal) rmcControlUnlockModal.style.display = "none";
+  }
+
+  rmcUnlockControlBtn?.addEventListener("click", showControlUnlockPrompt);
+  rmcControlUnlockCancel?.addEventListener("click", closeControlUnlockPrompt);
+  rmcControlUnlockForm?.addEventListener("submit", async (event) => {
+    event.preventDefault();
+    const res = await fetch("/unlock-control", {
+      method: "POST",
+      headers: getAuthHeaders(),
+      body: JSON.stringify({ password: rmcControlPassword.value })
+    });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) {
+      rmcControlUnlockError.textContent = data.detail || "Unable to unlock controls.";
+      return;
+    }
+    updateControlStatus(data.expires_at);
+    closeControlUnlockPrompt();
+  });
+  rmcLockControlBtn?.addEventListener("click", async () => {
+    await fetch("/lock-control", { method: "POST" });
+    updateControlStatus(0);
+  });
+
+  function getAuthHeaders() {
+    return { "Content-Type": "application/json" };
+  }
+
+  function getRmcHeaders() {
+    return { ...getAuthHeaders(), "X-Client-Id": myClientId, "X-Operator-Name": rmcOperatorName };
   }
 
   function getCurrentUser() {
-    const urlParams = new URLSearchParams(window.location.search);
-    return urlParams.get("user") || "local-dev";
+    return "local-dev";
   }
 
   function isViewerMode() {
-    const urlParams = new URLSearchParams(window.location.search);
-    return urlParams.get("role") === "viewer";
+    return false;
   }
 
-  const RMC_STALE_MS = 45000;
+  // Fallback used only until /api/rmc/config responds.
+  let RMC_STALE_MS = 90000;
+
+  async function fetchRmcConfig() {
+    try {
+      const res = await fetch("/api/rmc/config", { headers: getAuthHeaders() });
+      const data = await res.json();
+      const freshSeconds = Number(data.state_fresh_s);
+      if (Number.isFinite(freshSeconds) && freshSeconds > 0) {
+        RMC_STALE_MS = freshSeconds * 1000;
+      }
+    } catch (_) {}
+  }
 
   const RMC_REASON_TEXTS = {
     INVALID_STATE: "Machine is not in a valid state for this action",
@@ -4960,6 +5329,7 @@
     DUPLICATE: "Duplicate file or command request",
     UNAUTHORIZED: "Unauthorized command request",
     LOCKED_BY_OTHER: "Machine is locked by another operator",
+    LOCK_REQUIRED: "Take Control before sending this command",
     FILE_TOO_LARGE: "File exceeds maximum allowed size (200 MB)",
     UNSUPPORTED_TYPE: "Unsupported file type. Only .gcode and .nc files are allowed",
     FILE_CHANGED: "File on disk has been modified or size does not match",
@@ -5004,7 +5374,7 @@
     }
   }
 
-  function getRmcButtonStates(st, isStale, isLockedByOther, isCmdPending, isReadOnly) {
+  function getRmcButtonStates(st, isStale, isLockedByMe, isCmdPending, isReadOnly) {
     const res = {
       load:   { enabled: false, reason: "" },
       start:  { enabled: false, reason: "" },
@@ -5025,15 +5395,13 @@
       return res;
     }
 
-    if (isLockedByOther) {
-      const r = `Locked by ${st.controlled_by || "another operator"}`;
-      res.load.reason = r; res.start.reason = r; res.pause.reason = r; res.resume.reason = r; res.stop.reason = r;
-      return res;
-    }
-
     if (isCmdPending) {
       const r = "Command in progress";
       res.load.reason = r; res.start.reason = r; res.pause.reason = r; res.resume.reason = r; res.stop.reason = r;
+      if (["running", "paused", "fault"].includes((st.job_state || "").toLowerCase())) {
+        res.stop.enabled = true;
+        res.stop.reason = "";
+      }
       return res;
     }
 
@@ -5095,6 +5463,13 @@
         break;
     }
 
+    if (!isLockedByMe) {
+      const r = "Take Control before sending this command";
+      res.load.enabled = false; res.load.reason = r;
+      res.start.enabled = false; res.start.reason = r;
+      res.pause.enabled = false; res.pause.reason = r;
+      res.resume.enabled = false; res.resume.reason = r;
+    }
     return res;
   }
 
@@ -5128,10 +5503,10 @@
 
     const stale = !currentMachineConnected || isDeviceStale(st, did);
     const lock = rmcLocks[did] || {};
-    const lockedBy = st.controlled_by || lock.issued_by;
+    const lockedBy = lock.operator_name || lock.issued_by;
     const myUser = getCurrentUser();
-    const isLockedByOther = Boolean(lockedBy && lockedBy !== myUser);
-    const isLockedByMe = Boolean(lockedBy && lockedBy === myUser);
+    const isLockedByMe = Boolean(lock.client_id && lock.client_id === myClientId);
+    const isLockedByOther = Boolean(lockedBy && !isLockedByMe);
     const isReadOnly = isViewerMode();
 
     // Offline Banner
@@ -5160,21 +5535,27 @@
     if (rmcLockBadge && rmcLockText && rmcTakeLockBtn && rmcReleaseLockBtn) {
       if (isLockedByMe) {
         rmcLockBadge.className = "rmc-tag tag-busy";
-        rmcLockText.textContent = `Control: You (${escapeHtml(myUser)})`;
+        rmcLockText.textContent = `Control: You (${escapeHtml(lockedBy || myUser)})`;
         rmcTakeLockBtn.style.display = "none";
         rmcReleaseLockBtn.style.display = "inline-flex";
+        rmcRequestReleaseBtn.style.display = "none";
+        rmcForceTakeBtn.style.display = "none";
         startLockRenewal();
       } else if (isLockedByOther) {
         rmcLockBadge.className = "rmc-tag tag-off";
         rmcLockText.textContent = `Locked by ${escapeHtml(lockedBy)}`;
         rmcTakeLockBtn.style.display = "none";
         rmcReleaseLockBtn.style.display = "none";
+        rmcRequestReleaseBtn.style.display = "inline-flex";
+        rmcForceTakeBtn.style.display = "inline-flex";
         stopLockRenewal();
       } else {
         rmcLockBadge.className = "rmc-tag tag-off";
         rmcLockText.textContent = "Unlocked";
         rmcTakeLockBtn.style.display = isReadOnly ? "none" : "inline-flex";
         rmcReleaseLockBtn.style.display = "none";
+        rmcRequestReleaseBtn.style.display = "none";
+        rmcForceTakeBtn.style.display = "none";
         stopLockRenewal();
       }
     }
@@ -5242,7 +5623,7 @@
     const isCmdPending = Boolean(actCmd && !["done", "rejected", "expired", "timeout", "failed"].includes(actCmd.status));
 
     // Enable / Disable Table
-    const btnStates = getRmcButtonStates(st, stale, isLockedByOther, isCmdPending, isReadOnly);
+    const btnStates = getRmcButtonStates(st, stale, isLockedByMe, isCmdPending, isReadOnly);
 
     const btnConfig = [
       { id: "load", el: rmcBtnLoad, label: "Load" },
@@ -5334,6 +5715,11 @@
       showToast("Please select a device first", true);
       return;
     }
+    if (action !== "stop" && rmcLocks[did]?.client_id !== myClientId) {
+      const error = new Error("Take Control before sending this command");
+      showToast(`Error: ${error.message}`, true);
+      throw error;
+    }
 
     if (rmcActionInFlight) return;
     rmcActionInFlight = true;
@@ -5344,7 +5730,7 @@
     try {
       const res = await fetch(`/api/devices/${encodeURIComponent(did)}/commands`, {
         method: "POST",
-        headers: getAuthHeaders(),
+        headers: getRmcHeaders(),
         body: JSON.stringify({
           action,
           params,
@@ -5355,11 +5741,18 @@
       const data = await res.json().catch(() => ({}));
 
       if (!res.ok) {
+        if (isControlLocked(data.detail)) {
+          showControlUnlockPrompt();
+          throw new Error("Unlock controls to continue.");
+        }
         let msg = data.detail || data.message || `Command failed (HTTP ${res.status})`;
         if (typeof data.detail === "object" && data.detail !== null) {
           if (data.detail.reason_code === "LOCKED_BY_OTHER") {
             msg = `Locked by other user (${data.detail.issued_by})`;
             rmcLocks[did] = { device_id: did, issued_by: data.detail.issued_by };
+          } else if (["NO_STATE", "BAD_TIMESTAMP", "STALE"].includes(data.detail.reason_code)) {
+            const age = data.detail.state_age_s == null ? "unknown" : `${data.detail.state_age_s}s`;
+            msg = `${data.detail.reason_code}: state age ${age} (limit ${data.detail.limit_s}s)`;
           } else {
             msg = formatReasonCode(data.detail.reason_code, data.detail.message || JSON.stringify(data.detail));
           }
@@ -5376,6 +5769,7 @@
       }
 
       const cmdId = data.cmd_id;
+      if (data.control_expires_at) updateControlStatus(data.control_expires_at);
       const now = Date.now();
       const expiresAt = new Date(now + 60000).toISOString();
 
@@ -5403,6 +5797,8 @@
       throw err;
     } finally {
       rmcActionInFlight = false;
+      await fetchRmcLock(did);
+      updateRmcUI(did);
     }
   }
 
@@ -6008,14 +6404,10 @@
 
     const xhr = new XMLHttpRequest();
     xhr.open("POST", "/api/rmc/files", true);
+    xhr.withCredentials = true;
 
     // CRITICAL: Do NOT set Content-Type header on FormData uploads!
     // The browser automatically sets Content-Type: multipart/form-data with boundary.
-    const urlParams = new URLSearchParams(window.location.search);
-    const token = urlParams.get("token");
-    if (token) {
-      xhr.setRequestHeader("Authorization", `Bearer ${token}`);
-    }
 
     xhr.upload.onprogress = (e) => {
       if (e.lengthComputable && rmcUploadProgressFill) {
@@ -6033,9 +6425,12 @@
         if (rmcUploadProgressFill) rmcUploadProgressFill.style.width = "0%";
       }, 500);
 
-      if (xhr.status >= 200 && xhr.status < 300) {
+      if (xhr.status === 401) {
+        window.location.replace("/login");
+      } else if (xhr.status >= 200 && xhr.status < 300) {
         let resp = {};
         try { resp = JSON.parse(xhr.responseText); } catch(_) {}
+        if (resp.control_expires_at) updateControlStatus(resp.control_expires_at);
         showToast("File uploaded successfully to server registry");
         await fetchServerFiles();
         if (resp.file_id) {
@@ -6045,6 +6440,10 @@
         let resp = {};
         try { resp = JSON.parse(xhr.responseText); } catch(_) {}
         const detail = resp.detail || resp;
+        if (isControlLocked(detail)) {
+          showControlUnlockPrompt();
+          return;
+        }
         const existingId = detail.existing_file_id || (typeof detail === "object" ? detail.existing_file_id : null);
         showToast("Identical file already exists in server registry. Selecting existing file.");
         await fetchServerFiles();
@@ -6185,22 +6584,22 @@
   // Lock Actions & Periodic Renewal
   function renewLockIfHeld() {
     const did = deviceSelect ? deviceSelect.value : null;
-    const myUser = getCurrentUser();
-    if (!did || !rmcLocks[did] || rmcLocks[did].issued_by !== myUser) {
+    if (!did || !rmcLocks[did] || rmcLocks[did].client_id !== myClientId) {
       stopLockRenewal();
       return;
     }
-    fetch(`/api/devices/${encodeURIComponent(did)}/lock`, {
+    fetch(`/api/devices/${encodeURIComponent(did)}/lock/heartbeat`, {
       method: "POST",
-      headers: getAuthHeaders(),
-      body: JSON.stringify({})
+      headers: getRmcHeaders()
     }).then(res => {
       if (res.ok) return res.json();
     }).then(data => {
       if (data && data.issued_by) {
         rmcLocks[did] = data;
+        if (data.control_expires_at) updateControlStatus(data.control_expires_at);
+        updateRmcUI(did);
       }
-    }).catch(() => {});
+    }).catch(() => { fetchRmcLock(did); });
   }
 
   function startLockRenewal() {
@@ -6218,23 +6617,34 @@
   rmcTakeLockBtn?.addEventListener("click", async () => {
     const did = deviceSelect.value;
     if (!did) return;
+    if (!rmcOperatorName) {
+      const name = window.prompt("Operator name (1-40 characters):", "");
+      if (!name) return;
+      rmcOperatorName = name.trim();
+      localStorage.setItem("ufameasy_rmc_operator_name", rmcOperatorName);
+    }
     try {
       const res = await fetch(`/api/devices/${encodeURIComponent(did)}/lock`, {
         method: "POST",
-        headers: getAuthHeaders(),
+        headers: getRmcHeaders(),
         body: JSON.stringify({})
       });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) {
+        if (isControlLocked(data.detail)) {
+          showControlUnlockPrompt();
+          throw new Error("Unlock controls to take control.");
+        }
         if (res.status === 423) {
           const issuer = data.detail?.issued_by || "another operator";
           rmcLocks[did] = { device_id: did, issued_by: issuer };
           updateRmcUI(did);
-          throw new Error(`Device is already locked by ${issuer}`);
+          throw new Error(formatReasonCode(data.detail?.reason_code, `Device is already locked by ${issuer}`));
         }
         throw new Error(data.detail || `Failed to acquire lock (HTTP ${res.status})`);
       }
       rmcLocks[did] = data;
+      if (data.control_expires_at) updateControlStatus(data.control_expires_at);
       showToast("Exclusive control lock acquired");
       updateRmcUI(did);
       startLockRenewal();
@@ -6249,13 +6659,16 @@
     try {
       const res = await fetch(`/api/devices/${encodeURIComponent(did)}/lock`, {
         method: "DELETE",
-        headers: getAuthHeaders()
+        headers: getRmcHeaders()
       });
       if (!res.ok) {
         const data = await res.json().catch(() => ({}));
-        throw new Error(data.detail || `Failed to release lock (HTTP ${res.status})`);
+        const detail = data.detail;
+        throw new Error(typeof detail === "object"
+          ? formatReasonCode(detail.reason_code, detail.message || `Failed to release lock (HTTP ${res.status})`)
+          : (detail || `Failed to release lock (HTTP ${res.status})`));
       }
-      delete rmcLocks[did];
+      rmcLocks[did] = await res.json().catch(() => ({ device_id: did, issued_by: null, client_id: null, operator_name: null }));
       showToast("Control lock released");
       updateRmcUI(did);
       stopLockRenewal();
@@ -6264,14 +6677,26 @@
     }
   });
 
+  rmcRequestReleaseBtn?.addEventListener("click", async () => {
+    const did = deviceSelect.value;
+    const res = await fetch(`/api/devices/${encodeURIComponent(did)}/lock/request-release`, { method: "POST", headers: getRmcHeaders() });
+    showToast(res.ok ? "Release request sent" : "Unable to request release", !res.ok);
+  });
+  rmcForceTakeBtn?.addEventListener("click", async () => {
+    const did = deviceSelect.value;
+    const res = await fetch(`/api/devices/${encodeURIComponent(did)}/lock`, { method: "POST", headers: getRmcHeaders(), body: JSON.stringify({ override: true }) });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) return showToast(data.detail || "Force take requires admin", true);
+    rmcLocks[did] = data; updateRmcUI(did); showToast("Control taken");
+  });
+
   window.addEventListener("beforeunload", () => {
     const did = deviceSelect ? deviceSelect.value : null;
-    const myUser = getCurrentUser();
-    if (did && rmcLocks[did] && rmcLocks[did].issued_by === myUser) {
+    if (did && rmcLocks[did] && rmcLocks[did].client_id === myClientId) {
       try {
         fetch(`/api/devices/${encodeURIComponent(did)}/lock`, {
           method: "DELETE",
-          headers: getAuthHeaders(),
+          headers: getRmcHeaders(),
           keepalive: true
         });
       } catch (_) {}
@@ -6283,7 +6708,7 @@
     if (!did) return;
     try {
       const res = await fetch(`/api/devices/${encodeURIComponent(did)}/commands?limit=50`, {
-        headers: getAuthHeaders()
+        headers: getRmcHeaders()
       });
       if (!res.ok) return;
       const list = await res.json();
@@ -6344,26 +6769,29 @@
     if (did) fetchRmcCommands(did);
   });
 
-  async function fetchRmcDeviceData(did) {
+  async function fetchRmcLock(did) {
     if (!did) return;
     try {
       const lockRes = await fetch(`/api/devices/${encodeURIComponent(did)}/lock`, {
-        headers: getAuthHeaders()
+        headers: getRmcHeaders()
       });
-      if (lockRes.ok) {
-        const lockData = await lockRes.json();
-        rmcLocks[did] = lockData;
-      }
+      if (lockRes.ok) rmcLocks[did] = await lockRes.json();
     } catch (_) {}
+  }
+
+  async function fetchRmcDeviceData(did) {
+    if (!did) return;
+    await fetchRmcLock(did);
     await fetchRmcCommands(did);
     updateRmcUI(did);
   }
 
   function startRmcStaleChecker() {
     if (rmcStaleCheckTimer) clearInterval(rmcStaleCheckTimer);
-    rmcStaleCheckTimer = setInterval(() => {
+    rmcStaleCheckTimer = setInterval(async () => {
       const did = deviceSelect ? deviceSelect.value : null;
-      if (did && rmcStates[did]) {
+      if (did) {
+        await fetchRmcLock(did);
         updateRmcUI(did);
       }
     }, 3000);
@@ -6393,7 +6821,7 @@
       const selected = deviceSelect.value;
 
       // RMC events are isolated and keyed per device_id:
-      const isRmcEvent = ["rmc_state", "rmc_files", "rmc_ack", "rmc_cmd_status"].includes(msg.type);
+      const isRmcEvent = ["rmc_state", "rmc_files", "rmc_ack", "rmc_cmd_status", "rmc_lock"].includes(msg.type);
 
       if (!isRmcEvent && msg.type !== "init") {
         // Drop telemetry/runtime events that do not belong to the selected device
@@ -6404,6 +6832,11 @@
       }
 
       switch (msg.type) {
+        case "rmc_lock":
+          rmcLocks[msg.device_id] = msg.data;
+          if (msg.device_id === selected) updateRmcUI(msg.device_id);
+          if (msg.event === "release_requested" && msg.data?.client_id === myClientId) showToast("Another operator requested release of control");
+          break;
         case "init": {
           const sessions = msg.active_sessions || {};
           lastInitSessionsData = msg.sessions_data || {};
@@ -6416,7 +6849,9 @@
             if (st) {
               rmcStates[did] = st;
               rmcLastSeq[did] = Number(st.seq) || 0;
-              rmcLastStateReceivedAt[did] = Date.now();
+              const recordedAt = new Date(st.received_at || st.recorded_at).getTime();
+              if (Number.isFinite(recordedAt)) rmcLastStateReceivedAt[did] = recordedAt;
+              else delete rmcLastStateReceivedAt[did];
             }
           });
           Object.entries(rmcInitFiles).forEach(([did, files]) => {
@@ -6566,8 +7001,12 @@
             light_enabled: "light_enabled" in d ? d.light_enabled : d.RT031,
             laser_power_pct: d.laser_power_pct ?? d.DS010
           });
+          const selectedRmcState = selected ? rmcStates[selected] : null;
+          const rmcOwnsJobDisplay = Boolean(
+            selectedRmcState && !isDeviceStale(selectedRmcState, selected)
+          );
           const pct = liveRuntimeData.progress_pct;
-          if (pct != null) {
+          if (!rmcOwnsJobDisplay && pct != null) {
             const p = Math.min(100, Math.max(0, Number(pct)));
             if (progressBar) progressBar.style.width = `${p}%`;
             if (progressPct) progressPct.textContent = `${p.toFixed(1)}%`;
@@ -6612,6 +7051,7 @@
 
     socket.onerror = () => setConn(false);
     socket.onclose = () => {
+      queueNetworkEvent("ws_drop", null, "WebSocket closed");
       setConn(false);
       if (reconnectTimer) clearTimeout(reconnectTimer);
       reconnectTimer = setTimeout(connectWS, 3000);
@@ -6626,10 +7066,12 @@
   // The FreeCAD runtime MQTT topic only fires during active print jobs.
   // Poll /state every 3 s so gas/PF-gas indicators stay live during idle.
   let _equipPollTimer = null;
+  let _equipPollInFlight = false;
 
   async function pollEquipmentState() {
     const did = deviceSelect ? deviceSelect.value : null;
-    if (!did) return;
+    if (!did || document.hidden || _equipPollInFlight) return;
+    _equipPollInFlight = true;
     try {
       const res = await fetch(`/state?device_id=${encodeURIComponent(did)}`);
       const s = await res.json();
@@ -6642,8 +7084,16 @@
         light_enabled:   s.light_enabled   ?? s.RT031,
         laser_power_pct: s.laser_power_pct ?? s.DS010 ?? s.laser_power,
       });
+      await refreshMachineHours();
     } catch (_) { /* silently ignore network errors */ }
+    finally { _equipPollInFlight = false; }
   }
+
+  // Refresh immediately when the tab becomes visible again instead of
+  // waiting up to a full interval.
+  document.addEventListener("visibilitychange", () => {
+    if (!document.hidden) pollEquipmentState();
+  });
 
   function startEquipPoll() {
     stopEquipPoll();
@@ -6658,10 +7108,13 @@
 
   // Initial Boot
   resetTrendHistory();
-  loadDevices();
-  connectWS();
-  startEquipPoll();
-  startRmcStaleChecker();
+  fetchRmcConfig().finally(() => {
+    refreshControlStatus();
+    loadDevices();
+    connectWS();
+    startEquipPoll();
+    startRmcStaleChecker();
+  });
 </script>
 </body>
 </html>

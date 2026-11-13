@@ -7,7 +7,9 @@ ingest side of the MQTT -> StateStore -> API architecture.
 """
 import asyncio
 import json
+import re
 import threading
+import time
 import paho.mqtt.client as mqtt
 
 from server.db import (
@@ -16,9 +18,11 @@ from server.db import (
     insert_runtime_log,
     insert_slice_data,
     register_device,
+    set_device_ip,
     update_session_file_name,
     update_session_total_layers,
     get_running_sessions,
+    insert_net_event,
 )
 from server.state_store import state
 from server.ws_manager import manager
@@ -27,6 +31,26 @@ from server.rmc_contract import ACK_SEGMENT, FILES_SEGMENT, STATE_SEGMENT
 
 mqtt_event_loop = None
 _active_sessions = {}
+_last_rmc_state_at: dict[str, float] = {}
+_last_machine_ip: dict[str, str] = {}
+
+# Controller saves RMC downloads as "<12-hex>_<original>"; show the original name
+_FILE_PREFIX_RE = re.compile(r"^[0-9a-fA-F]{12}_")
+_FILE_NAME_KEYS = ("file_name", "current_file", "RT013")
+
+
+def _clean_file_name(name):
+    if isinstance(name, str):
+        return _FILE_PREFIX_RE.sub("", name.strip())
+    return name
+
+
+def _clean_file_fields(data):
+    if isinstance(data, dict):
+        for key in _FILE_NAME_KEYS:
+            if key in data:
+                data[key] = _clean_file_name(data[key])
+    return data
 
 
 def _log_broadcast_error(future):
@@ -66,9 +90,15 @@ def on_connect(client, userdata, flags, reason_code, properties=None):
         Prints connection status and registers a wildcard topic subscription.
     """
     print("Connected to MQTT broker")
+    insert_net_event("mqtt_connect", detail=f"rc={reason_code}")
     # One wildcard subscription keeps routing centralized in on_message.
     # client.subscribe("ufameasy/#")
     client.subscribe("ufameasy/#")
+
+
+def on_disconnect(client, userdata, disconnect_flags, reason_code, properties=None):
+    """Record broker disconnects reported by Paho's v2 callback API."""
+    insert_net_event("mqtt_disconnect", detail=f"rc={reason_code}")
 
 
 def on_message(client, userdata, msg):
@@ -114,8 +144,27 @@ def on_message(client, userdata, msg):
             data = json.loads(payload)
 
             if channel == STATE_SEGMENT:
+                now = time.monotonic()
+                previous = _last_rmc_state_at.get(device_id)
+                _last_rmc_state_at[device_id] = now
+                if previous is not None and now - previous > 20.0:
+                    insert_net_event(
+                        "state_gap", device_id=device_id, value=now - previous,
+                        detail="rmc/state",
+                    )
                 updated = state.update_rmc_state(device_id, data)
                 register_device(device_id, device_id)
+                machine_ip = data.get("machine_ip")
+                if isinstance(machine_ip, str) and machine_ip and _last_machine_ip.get(device_id) != machine_ip:
+                    set_device_ip(device_id, machine_ip)  # write only when it changes
+                    _last_machine_ip[device_id] = machine_ip
+                kept, sent = updated.get("seq"), data.get("seq")
+                if isinstance(kept, int) and isinstance(sent, int) and kept > sent:
+                    # Out-of-order snapshot was ignored; don't make the dashboard
+                    # treat it as a fresh heartbeat.
+                    print(f"[RMC] Ignored out-of-order state: device={device_id} "
+                          f"seq={data.get('seq')} current={updated.get('seq')}")
+                    return
                 _broadcast({
                     "type": "rmc_state",
                     "device_id": device_id,
@@ -146,7 +195,7 @@ def on_message(client, userdata, msg):
 
         if topic_parts[2:] == ["file", "update"]:
             data = json.loads(payload)
-            file_name = data.get("file_name")
+            file_name = _clean_file_name(data.get("file_name"))
 
             # Persist to DB so page reloads show the correct file name
             session_id = _active_sessions.get(device_id)
@@ -222,7 +271,7 @@ def on_message(client, userdata, msg):
         if topic_parts[2:] == ["session", "start"]:
             data = json.loads(payload)
             session_id = data.get("session_id")
-            file_name = data.get("file_name")
+            file_name = _clean_file_name(data.get("file_name"))
             total_layers = data.get("total_layers")
 
             try:
@@ -264,7 +313,7 @@ def on_message(client, userdata, msg):
             return
 
         if topic_parts[2:] == ["runtime"]:
-            data = json.loads(payload)
+            data = _clean_file_fields(json.loads(payload))
             session_id = data.get("session_id") or _active_sessions.get(device_id)
 
             for key, value in data.items():
@@ -292,7 +341,7 @@ def on_message(client, userdata, msg):
             # UFAMeasy publishes Process Parameters separately from its
             # high-rate runtime topic.  Treat them as live state and broadcast
             # them through the same dashboard update channel.
-            data = json.loads(payload)
+            data = _clean_file_fields(json.loads(payload))
             session_id = data.get("session_id") or _active_sessions.get(device_id)
             for key, value in data.items():
                 state.update_parameter(device_id, key, value)
@@ -406,6 +455,7 @@ def on_message(client, userdata, msg):
 client = mqtt.Client(mqtt.CallbackAPIVersion.VERSION2)
 
 client.on_connect = on_connect
+client.on_disconnect = on_disconnect
 client.on_message = on_message
 
 def start_mqtt():

@@ -6,6 +6,7 @@ import base64
 from datetime import datetime, timezone
 import hashlib
 import hmac
+import logging
 import os
 from pathlib import Path
 import secrets
@@ -23,6 +24,9 @@ from server.rmc_contract import (
     MAX_JOB_FILE_MB,
     RMC_TRANSFER_SECRET,
 )
+from server.gcode_ingest import ingest_gcode_file
+
+logger = logging.getLogger(__name__)
 
 _PROCESS_FALLBACK_SECRET = secrets.token_hex(32)
 
@@ -172,6 +176,13 @@ async def save_uploaded_file(file: UploadFile, uploader: str) -> dict:
                 status_code=507,
                 detail={"reason_code": "DISK_FULL", "message": "Insufficient server disk space"},
             )
+
+        # The upload has completed. G-code archival is best-effort and must not
+        # change the registry upload result or the machine job state.
+        try:
+            ingest_gcode_file(temp_path, sanitized_name)
+        except Exception:
+            logger.exception("Unable to ingest completed G-code upload %s", sanitized_name)
 
         sha256 = hasher.hexdigest()
 

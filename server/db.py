@@ -1,17 +1,50 @@
 import json
 import sqlite3
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
+from threading import Lock
 
 
 DB_PATH = Path(__file__).resolve().parent / "data" / "params.db"
+DATA_DIR = Path(__file__).resolve().parent / "data"
 RMC_FILES_DIR = Path(__file__).resolve().parent / "data" / "rmc_files"
+_telemetry_index_attempted: set[Path] = set()
+_telemetry_index_lock = Lock()
 
 
 def get_conn():
     conn = sqlite3.connect(DB_PATH)
     conn.row_factory = sqlite3.Row
     return conn
+
+
+def ensure_telemetry_timestamp_index(db_path: Path) -> None:
+    """Add the telemetry timestamp index only when the external DB lacks one."""
+    path = Path(db_path).resolve()
+    if not path.is_file():
+        return
+    with _telemetry_index_lock:
+        if path in _telemetry_index_attempted:
+            return
+        _telemetry_index_attempted.add(path)
+    conn = None
+    try:
+        conn = sqlite3.connect(f"{path.as_uri()}?mode=rw", uri=True, timeout=0)
+        indexes = conn.execute("PRAGMA index_list(telemetry_events)").fetchall()
+        for index in indexes:
+            index_name = index[1]
+            columns = conn.execute(f'PRAGMA index_info("{index_name}")').fetchall()
+            if columns and columns[0][2] == "timestamp":
+                return
+        conn.execute("CREATE INDEX IF NOT EXISTS idx_telemetry_timestamp ON telemetry_events(timestamp)")
+        conn.commit()
+    except (sqlite3.Error, OSError):
+        # The active workbench database may be exclusively locked.  Customer
+        # reads remain available through the immutable read-only connection.
+        return
+    finally:
+        if conn is not None:
+            conn.close()
 
 
 def init_db():
@@ -143,11 +176,24 @@ def init_db():
             CREATE TABLE IF NOT EXISTS rmc_control_locks (
                 device_id TEXT PRIMARY KEY,
                 issued_by TEXT NOT NULL,
+                client_id TEXT NOT NULL DEFAULT '',
+                operator_name TEXT NOT NULL DEFAULT '',
                 acquired_at TEXT NOT NULL,
                 touched_at TEXT NOT NULL
             )
             """
         )
+        device_columns = {row[1] for row in conn.execute("PRAGMA table_info(devices)")}
+        if "machine_ip" not in device_columns:
+            conn.execute("ALTER TABLE devices ADD COLUMN machine_ip TEXT")
+        lock_columns = {row[1] for row in conn.execute("PRAGMA table_info(rmc_control_locks)")}
+        if "client_id" not in lock_columns:
+            conn.execute("ALTER TABLE rmc_control_locks ADD COLUMN client_id TEXT NOT NULL DEFAULT ''")
+        if "operator_name" not in lock_columns:
+            conn.execute("ALTER TABLE rmc_control_locks ADD COLUMN operator_name TEXT NOT NULL DEFAULT ''")
+        conn.execute("""CREATE TABLE IF NOT EXISTS rmc_lock_events (
+            id INTEGER PRIMARY KEY AUTOINCREMENT, device_id TEXT NOT NULL, event TEXT NOT NULL,
+            issued_by TEXT NOT NULL, operator_name TEXT NOT NULL, recorded_at TEXT NOT NULL)""")
         conn.execute(
             """
             CREATE TABLE IF NOT EXISTS rmc_server_files (
@@ -161,9 +207,81 @@ def init_db():
             )
             """
         )
+        conn.execute(
+            """
+            CREATE TABLE IF NOT EXISTS gcode_files (
+                sha256 TEXT PRIMARY KEY,
+                file_name TEXT NOT NULL,
+                size INTEGER NOT NULL,
+                first_seen TEXT NOT NULL,
+                last_seen TEXT NOT NULL,
+                device_id TEXT
+            )
+            """
+        )
+        conn.execute(
+            """
+            CREATE TABLE IF NOT EXISTS net_events (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                ts TEXT NOT NULL,
+                kind TEXT NOT NULL,
+                device_id TEXT,
+                client_ip TEXT,
+                client_id TEXT,
+                value REAL,
+                detail TEXT
+            )
+            """
+        )
+        conn.execute("CREATE INDEX IF NOT EXISTS idx_net_events_ts ON net_events(ts)")
+        conn.execute(
+            "DELETE FROM net_events WHERE ts < ?",
+            ((datetime.now(timezone.utc) - timedelta(days=14)).isoformat(),),
+        )
         conn.commit()
     finally:
         conn.close()
+
+
+def insert_net_event(
+    kind: str,
+    device_id: str | None = None,
+    client_ip: str | None = None,
+    client_id: str | None = None,
+    value: float | None = None,
+    detail: str | None = None,
+    ts: str | None = None,
+) -> None:
+    """Store one network diagnostic event without retaining a DB connection."""
+    conn = None
+    try:
+        conn = get_conn()
+        conn.execute(
+            """INSERT INTO net_events (ts, kind, device_id, client_ip, client_id, value, detail)
+               VALUES (?, ?, ?, ?, ?, ?, ?)""",
+            (ts or datetime.now(timezone.utc).isoformat(), kind, device_id, client_ip,
+             client_id, value, detail),
+        )
+        conn.commit()
+    finally:
+        if conn is not None:
+            conn.close()
+
+
+def query_net_events(since: str, limit: int | None = None) -> list[dict]:
+    """Return diagnostic events newer than *since*, newest first."""
+    conn = None
+    try:
+        conn = get_conn()
+        sql = "SELECT * FROM net_events WHERE ts >= ? ORDER BY ts DESC, id DESC"
+        params: tuple = (since,)
+        if limit is not None:
+            sql += " LIMIT ?"
+            params += (limit,)
+        return [dict(row) for row in conn.execute(sql, params).fetchall()]
+    finally:
+        if conn is not None:
+            conn.close()
 
 
 def register_device(device_id, name):
@@ -185,6 +303,18 @@ def register_device(device_id, name):
     finally:
         if conn is not None:
             conn.close()
+
+
+def set_device_ip(device_id, machine_ip):
+    """Store the LAN IP the machine reported for itself (replaces hard-coded IPs)."""
+    with sqlite3.connect(DB_PATH) as conn:
+        conn.execute("UPDATE devices SET machine_ip = ? WHERE device_id = ?", (machine_ip, device_id))
+
+
+def get_device_by_ip(machine_ip):
+    with sqlite3.connect(DB_PATH) as conn:
+        row = conn.execute("SELECT device_id FROM devices WHERE machine_ip = ?", (machine_ip,)).fetchone()
+    return row[0] if row else None
 
 
 def create_session(session_id, device_id, file_name, total_layers):
@@ -523,15 +653,15 @@ def get_rmc_lock(device_id: str) -> dict | None:
             conn.close()
 
 
-def upsert_rmc_lock(device_id: str, issued_by: str) -> None:
+def upsert_rmc_lock(device_id: str, issued_by: str, client_id: str, operator_name: str) -> None:
     conn = None
     now = datetime.now(timezone.utc).isoformat()
     try:
         conn = get_conn()
         conn.execute(
-            """INSERT INTO rmc_control_locks (device_id, issued_by, acquired_at, touched_at) VALUES (?, ?, ?, ?)
-               ON CONFLICT(device_id) DO UPDATE SET issued_by = excluded.issued_by, touched_at = excluded.touched_at""",
-            (device_id, issued_by, now, now),
+            """INSERT INTO rmc_control_locks (device_id, issued_by, client_id, operator_name, acquired_at, touched_at) VALUES (?, ?, ?, ?, ?, ?)
+               ON CONFLICT(device_id) DO UPDATE SET issued_by = excluded.issued_by, client_id = excluded.client_id, operator_name = excluded.operator_name, touched_at = excluded.touched_at""",
+            (device_id, issued_by, client_id, operator_name, now, now),
         )
         conn.commit()
     finally:
@@ -548,6 +678,30 @@ def delete_rmc_lock(device_id: str) -> None:
     finally:
         if conn is not None:
             conn.close()
+
+
+def delete_rmc_locks_for_owner(issued_by: str, client_id: str) -> None:
+    conn = None
+    try:
+        conn = get_conn()
+        conn.execute(
+            "DELETE FROM rmc_control_locks WHERE issued_by = ? AND client_id = ?",
+            (issued_by, client_id),
+        )
+        conn.commit()
+    finally:
+        if conn is not None:
+            conn.close()
+
+
+def add_rmc_lock_event(device_id: str, event: str, issued_by: str, operator_name: str) -> None:
+    conn = get_conn()
+    try:
+        conn.execute("INSERT INTO rmc_lock_events (device_id, event, issued_by, operator_name, recorded_at) VALUES (?, ?, ?, ?, ?)",
+                     (device_id, event, issued_by, operator_name, datetime.now(timezone.utc).isoformat()))
+        conn.commit()
+    finally:
+        conn.close()
 
 
 def create_rmc_server_file(

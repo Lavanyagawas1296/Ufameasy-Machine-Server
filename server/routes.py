@@ -11,6 +11,7 @@ import csv
 import ftplib
 import io
 import json
+import math
 import mimetypes
 import os
 import posixpath
@@ -19,7 +20,7 @@ import socket
 import sqlite3
 import tempfile
 import threading
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from fastapi.responses import FileResponse
 
@@ -28,8 +29,25 @@ from server.rmc_transfer import require_transfer_ready, save_uploaded_file, veri
 from fastapi.responses import Response, StreamingResponse
 from server.state_store import state
 from server.db import get_sessions_by_device, get_runtime_latest
-from server.media_gateway import health as media_health, stream_for, stream_provider
+from server.media_gateway import (
+    configured_device_ids,
+    health as media_health,
+    hls_proxy_url,
+    hls_upstream_target,
+    open_hls_upstream,
+    playback_for_host,
+    stream_for,
+    stream_provider,
+    valid_hls_file,
+)
 from server import db
+from server.auth import (
+    CONTROL_COOKIE_NAME,
+    get_control_session,
+    refresh_control_cookie,
+    require_auth,
+    require_control,
+)
 from server.rmc_auth import Principal, require_role, resolve_principal
 from server.rmc_service import rmc_service
 
@@ -46,6 +64,18 @@ UFAMEASY_HOME = Path.home() / ".ufameasy"
 LOCAL_RECORDINGS_ROOT = UFAMEASY_HOME / "recordings"
 LOCAL_TELEMETRY_DIR = UFAMEASY_HOME / "telemetry"
 LOCAL_TELEMETRY_DB_NAMES = ("ufameasy_sys.u5d", "ufameasy_sys.U5LOG", "ufameasy_logs.db")
+ODOMETER_PATH = UFAMEASY_HOME / "odometer.json"
+MACHINE_OVERVIEW_TELEMETRY_DB = LOCAL_TELEMETRY_DIR / "ufameasy_sys.U5LOG"
+MACHINE_OVERVIEW_WINDOWS = {
+    "24h": timedelta(hours=24),
+    "7d": timedelta(days=7),
+    "30d": timedelta(days=30),
+}
+_PRINT_JOB_EVENT_TYPE = "PrintJobEvent"
+_JOB_START_STATUS = "started"
+# The workbench records a normal finish as "completed" and an operator stop
+# as "stopped" (adapters/gcode_executor.py).
+_JOB_END_STATUSES = ("stopped", "completed")
 
 
 class LogFetchError(Exception):
@@ -60,6 +90,63 @@ class RecordingFetchError(Exception):
         super().__init__(detail)
         self.status_code = status_code
         self.detail = detail
+
+
+def _parse_telemetry_timestamp(value: str) -> datetime | None:
+    """Parse the timestamp format written by the UFAMeasy telemetry consumer."""
+    for fmt in ("%d/%m/%Y %I:%M:%S.%f %p", "%d/%m/%Y %I:%M:%S %p"):
+        try:
+            return datetime.strptime(value, fmt)
+        except (TypeError, ValueError):
+            pass
+    return None
+
+
+def _machine_hours_from_odometer() -> float | None:
+    """Use the same persisted source/formula as OdometerManager.get_metrics()."""
+    try:
+        data = json.loads(ODOMETER_PATH.read_text(encoding="utf-8"))
+        return float(data.get("machine_seconds", 0.0)) / 3600.0
+    except (OSError, ValueError, TypeError, json.JSONDecodeError):
+        return None
+
+
+def _count_finished_jobs(db_path: Path, window: timedelta, *, now: datetime | None = None) -> int | None:
+    """Count start -> stopped/completed pairs whose end is inside *window*."""
+    if not db_path.is_file():
+        return None
+    conn = None
+    try:
+        conn = sqlite3.connect(f"{db_path.as_uri()}?mode=ro", uri=True, timeout=2)
+        rows = conn.execute(
+            """
+            SELECT id, timestamp, json_extract(payload, '$.status') AS status
+            FROM telemetry_events
+            WHERE event_type = ?
+              AND json_extract(payload, '$.status') IN (?, ?, ?)
+            ORDER BY id ASC
+            """,
+            (_PRINT_JOB_EVENT_TYPE, _JOB_START_STATUS, *_JOB_END_STATUSES),
+        ).fetchall()
+    except (sqlite3.DatabaseError, OSError):
+        return None
+    finally:
+        if conn is not None:
+            conn.close()
+
+    cutoff = (now or datetime.now()) - window
+    open_starts = 0
+    completed = 0
+    for _, timestamp, status in rows:
+        if status == _JOB_START_STATUS:
+            open_starts += 1
+            continue
+        if status in _JOB_END_STATUSES and open_starts:
+            open_starts -= 1
+            ended_at = _parse_telemetry_timestamp(timestamp)
+            if ended_at is not None and ended_at >= cutoff:
+                completed += 1
+    return completed
 
 
 def _download_log_bytes(ip: str, port: int) -> bytes:
@@ -471,7 +558,7 @@ def _safe_download_filename(remote_path: str) -> str:
     filename = posixpath.basename(remote_path)
     return "".join(char if char.isalnum() or char in ".-_" else "_" for char in filename) or "recording"
 
-@router.get("/state")
+@router.get("/state", dependencies=[Depends(require_auth)])
 def get_state(device_id: str):
     """
     Return all known machine parameters.
@@ -483,7 +570,22 @@ def get_state(device_id: str):
         return {"error": "invalid device_id"}
     return state.get_parameters(device_id)
 
-@router.get("/parameter/{name}")
+
+@router.get("/api/devices/{device_id}/overview", dependencies=[Depends(require_auth)])
+def get_device_overview(device_id: str, window: str = Query(default="7d")):
+    """Return host-local odometer and completed-job metrics for a device view."""
+    if not device_id.strip():
+        raise HTTPException(status_code=400, detail="device_id is required")
+    interval = MACHINE_OVERVIEW_WINDOWS.get(window)
+    if interval is None:
+        raise HTTPException(status_code=400, detail="window must be one of 24h, 7d, 30d")
+    return {
+        "device_id": device_id,
+        "machine_hours": _machine_hours_from_odometer(),
+        "jobs_run": _count_finished_jobs(MACHINE_OVERVIEW_TELEMETRY_DB, interval),
+    }
+
+@router.get("/parameter/{name}", dependencies=[Depends(require_auth)])
 def get_parameter(name: str, device_id: str):
     """
     Return the latest value for a single machine parameter.
@@ -503,7 +605,7 @@ def get_parameter(name: str, device_id: str):
         "value": state.get_parameter(device_id, name)
     }
 
-@router.get("/ufameasy/parameter/{name}")
+@router.get("/ufameasy/parameter/{name}", dependencies=[Depends(require_auth)])
 def get_ufameasy_parameter(name: str, device_id: str):
     """
     Return the latest value for a single ufameasy parameter.
@@ -533,7 +635,214 @@ def health():
     """
     return {"status": "ok"}
 
-@router.get("/snapshots")
+
+_CLIENT_EVENT_KINDS = {"fetch_fail", "fetch_slow", "ws_drop", "rtt", "speed"}
+_NETWORK_HOURS = {1, 6, 24, 168}
+_RECENT_PROBLEM_KINDS = {"slow_request", "fetch_fail", "fetch_slow", "ws_drop", "state_gap", "mqtt_disconnect"}
+
+
+def _client_ip(request: Request) -> str:
+    return request.client.host if request.client else "unknown"
+
+
+def _percentile(values: list[float], percentile: float) -> float | None:
+    if not values:
+        return None
+    ordered = sorted(values)
+    index = max(0, min(len(ordered) - 1, math.ceil(len(ordered) * percentile) - 1))
+    return ordered[index]
+
+
+def _network_summary(events: list[dict]) -> dict:
+    clients: dict[str, dict] = {}
+    devices: dict[str, dict] = {}
+    mqtt_disconnects = 0
+
+    def client_row(client_ip: str) -> dict:
+        return clients.setdefault(client_ip, {
+            "client_ip": client_ip, "latencies": [], "slow_count": 0,
+            "ws_drops": 0, "fetch_fail_count": 0, "rtts": [], "speeds": [],
+            "last_seen": None, "last_rtt": None,
+        })
+
+    def device_row(device_id: str) -> dict:
+        return devices.setdefault(device_id, {"device_id": device_id, "gaps": [], "mqtt_disconnect_count": 0})
+
+    for event in events:
+        client_ip = event.get("client_ip") or "unknown"
+        ts = event.get("ts")
+        if event["kind"] in {"request", "slow_request"}:
+            client = client_row(client_ip)
+            if event["kind"] == "request" and event.get("value") is not None:
+                client["latencies"].append(float(event["value"]))
+            if event["kind"] == "slow_request":
+                client["slow_count"] += 1
+        elif event["kind"] in {"ws_drop", "fetch_fail", "fetch_slow", "rtt", "speed"}:
+            client = client_row(client_ip)
+            if event["kind"] == "ws_drop":
+                client["ws_drops"] += 1
+            elif event["kind"] == "fetch_fail":
+                client["fetch_fail_count"] += 1
+            elif event["kind"] == "rtt":
+                if event.get("value") is not None:
+                    client["rtts"].append(float(event["value"]))
+                try:
+                    detail = json.loads(event.get("detail") or "{}")
+                except (TypeError, json.JSONDecodeError):
+                    detail = {}
+                if isinstance(detail, dict) and (client["last_rtt"] is None or (ts or "") > (client["last_rtt"].get("ts") or "")):
+                    client["last_rtt"] = {"ts": ts, **detail}
+            elif event["kind"] == "speed" and event.get("value") is not None:
+                client["speeds"].append(float(event["value"]))
+        else:
+            client = None
+        if client is not None and ts and (client["last_seen"] is None or ts > client["last_seen"]):
+            client["last_seen"] = ts
+        elif event["kind"] == "mqtt_disconnect":
+            mqtt_disconnects += 1
+            device_row(event.get("device_id") or "unknown")["mqtt_disconnect_count"] += 1
+        elif event["kind"] == "state_gap" and event.get("device_id") and event.get("value") is not None:
+            device_row(event["device_id"])["gaps"].append(float(event["value"]))
+
+    client_rows = []
+    for client in clients.values():
+        latencies = client.pop("latencies")
+        rtts = client.pop("rtts")
+        speeds = client.pop("speeds")
+        last_rtt = client.pop("last_rtt") or {}
+        client["request_count"] = len(latencies)
+        client["p50_latency_ms"] = None if not latencies else _percentile(latencies, 0.50) * 1000
+        client["p95_latency_ms"] = None if not latencies else _percentile(latencies, 0.95) * 1000
+        client["rtt_median_ms"] = _percentile(rtts, 0.50)
+        client["rtt_p95_ms"] = _percentile(rtts, 0.95)
+        client["rtt_max_ms"] = max(rtts) if rtts else None
+        client["jitter_ms"] = last_rtt.get("jitter")
+        client["loss_pct"] = last_rtt.get("loss_pct")
+        client["speed_latest_mbps"] = speeds[0] if speeds else None
+        client["speed_median_mbps"] = _percentile(speeds, 0.50)
+        if not last_rtt:
+            client["status"] = "no data"
+        elif (client["rtt_p95_ms"] or 0) > 300 or (client["loss_pct"] or 0) > 5 or client["ws_drops"] >= 3 or client["fetch_fail_count"] >= 3:
+            client["status"] = "bad"
+        elif (client["rtt_p95_ms"] or 0) > 100 or (client["loss_pct"] or 0) > 1 or client["slow_count"] >= 3:
+            client["status"] = "warn"
+        else:
+            client["status"] = "ok"
+        client_rows.append(client)
+    device_rows = []
+    for device in devices.values():
+        gaps = device.pop("gaps")
+        device["max_gap_s"] = max(gaps) if gaps else None
+        device["p95_gap_s"] = _percentile(gaps, 0.95)
+        device_rows.append(device)
+    return {
+        "clients": sorted(client_rows, key=lambda item: item["client_ip"]),
+        "mqtt_disconnect_count": mqtt_disconnects,
+        "state_gaps": sorted(device_rows, key=lambda item: item["device_id"]),
+        "last_events": [event for event in events if event["kind"] in _RECENT_PROBLEM_KINDS][:20],
+    }
+
+
+def _diagnostic_events_since(hours: int) -> list[dict]:
+    since = (datetime.now(timezone.utc) - timedelta(hours=hours)).isoformat()
+    return db.query_net_events(since)
+
+
+def _insert_client_network_events(validated: list[tuple], client_ip: str, client_id: str | None) -> None:
+    for kind, value, detail, ts in validated:
+        db.insert_net_event(
+            kind, client_ip=client_ip, client_id=client_id,
+            value=value, detail=detail, ts=ts,
+        )
+
+
+@router.get("/api/diagnostics/network", dependencies=[Depends(require_auth)])
+def network_diagnostics(
+    hours: int = Query(default=1),
+    principal: Principal = Depends(_rmc_principal),
+):
+    require_role(principal, "operator", "admin")
+    if hours not in _NETWORK_HOURS:
+        raise HTTPException(status_code=400, detail="hours must be one of 1, 6, 24, 168")
+    return _network_summary(_diagnostic_events_since(hours))
+
+
+@router.get("/api/diagnostics/network.csv", dependencies=[Depends(require_auth)])
+def network_diagnostics_csv(
+    hours: int = Query(default=1),
+    principal: Principal = Depends(_rmc_principal),
+):
+    require_role(principal, "operator", "admin")
+    if hours not in _NETWORK_HOURS:
+        raise HTTPException(status_code=400, detail="hours must be one of 1, 6, 24, 168")
+    buffer = io.StringIO()
+    fields = ("id", "ts", "kind", "device_id", "client_ip", "client_id", "value", "detail")
+    writer = csv.DictWriter(buffer, fieldnames=fields)
+    writer.writeheader()
+    writer.writerows(_diagnostic_events_since(hours))
+    return Response(
+        content=buffer.getvalue(),
+        media_type="text/csv",
+        headers={"Content-Disposition": 'attachment; filename="network-diagnostics.csv"'},
+    )
+
+
+@router.post("/api/diagnostics/client-events", dependencies=[Depends(require_auth)])
+async def save_client_network_events(
+    request: Request,
+    events: list = Body(...),
+    client_id: str | None = Header(default=None, alias="X-Client-Id"),
+    principal: Principal = Depends(_rmc_principal),
+):
+    require_role(principal, "operator", "admin")
+    if len(events) > 50:
+        raise HTTPException(status_code=400, detail="At most 50 events are allowed")
+    validated = []
+    for event in events:
+        if not isinstance(event, dict) or event.get("kind") not in _CLIENT_EVENT_KINDS:
+            raise HTTPException(status_code=400, detail="Invalid client event kind")
+        detail = event.get("detail")
+        if detail is not None and (not isinstance(detail, str) or len(detail) > 500):
+            raise HTTPException(status_code=400, detail="Invalid event detail")
+        value = event.get("value")
+        if value is not None and (isinstance(value, bool) or not isinstance(value, (int, float)) or not math.isfinite(value)):
+            raise HTTPException(status_code=400, detail="Invalid event value")
+        if event["kind"] == "rtt":
+            try:
+                rtt_detail = json.loads(detail or "")
+            except (TypeError, json.JSONDecodeError) as exc:
+                raise HTTPException(status_code=400, detail="Invalid rtt detail") from exc
+            if not isinstance(rtt_detail, dict) or set(rtt_detail) != {"min", "max", "jitter", "loss_pct", "n"}:
+                raise HTTPException(status_code=400, detail="Invalid rtt detail")
+            if not isinstance(rtt_detail["n"], int) or isinstance(rtt_detail["n"], bool) or not 0 <= rtt_detail["n"] <= 20:
+                raise HTTPException(status_code=400, detail="Invalid rtt sample count")
+            for name in ("min", "max", "jitter"):
+                number = rtt_detail[name]
+                if number is not None and (isinstance(number, bool) or not isinstance(number, (int, float)) or not math.isfinite(number) or not 0 <= number <= 30000):
+                    raise HTTPException(status_code=400, detail="Invalid rtt detail")
+            loss_pct = rtt_detail["loss_pct"]
+            if isinstance(loss_pct, bool) or not isinstance(loss_pct, (int, float)) or not math.isfinite(loss_pct) or not 0 <= loss_pct <= 100:
+                raise HTTPException(status_code=400, detail="Invalid rtt loss")
+            if value is not None and not 0 <= value <= 30000:
+                raise HTTPException(status_code=400, detail="Invalid rtt value")
+            if rtt_detail["n"] and value is None:
+                raise HTTPException(status_code=400, detail="Missing rtt value")
+        elif event["kind"] == "speed" and (value is None or not 0 <= value <= 100000):
+            raise HTTPException(status_code=400, detail="Invalid speed value")
+        ts = event.get("ts")
+        if ts is not None:
+            if not isinstance(ts, str) or len(ts) > 64:
+                raise HTTPException(status_code=400, detail="Invalid event timestamp")
+            try:
+                datetime.fromisoformat(ts.replace("Z", "+00:00"))
+            except ValueError as exc:
+                raise HTTPException(status_code=400, detail="Invalid event timestamp") from exc
+        validated.append((event["kind"], float(value) if value is not None else None, detail, ts))
+    client_ip = _client_ip(request)
+    asyncio.create_task(asyncio.to_thread(_insert_client_network_events, validated, client_ip, client_id))
+    return {"accepted": len(validated)}
+
+@router.get("/snapshots", dependencies=[Depends(require_auth)])
 def get_snapshots(device_id: str):
     if not device_id or device_id.strip() == "":
         return {"error": "invalid device_id"}
@@ -542,7 +851,7 @@ def get_snapshots(device_id: str):
 DATA_DIR = os.path.join(os.path.dirname(__file__), "data")
 DB_PATH = os.path.join(DATA_DIR, "params.db")
 
-@router.get("/devices")
+@router.get("/devices", dependencies=[Depends(require_auth)])
 def get_devices():
     conn = sqlite3.connect(DB_PATH)
     conn.row_factory = sqlite3.Row
@@ -551,23 +860,36 @@ def get_devices():
     return [dict(r) for r in rows]
 
 
-@router.get("/devices/{device_id}/sessions")
+@router.get("/devices/{device_id}/sessions", dependencies=[Depends(require_auth)])
 def get_device_sessions(device_id: str):
     return get_sessions_by_device(device_id)
 
 
-@router.get("/api/media/devices/{device_id}/playback")
-def get_media_playback(device_id: str):
+@router.get("/api/media/devices/{device_id}/playback", dependencies=[Depends(require_auth)])
+def get_media_playback(device_id: str, request: Request):
     """Return an opt-in MediaMTX playback endpoint for the selected machine."""
     provider = stream_provider()
     if provider != "webrtc":
         return {"provider": "mjpeg", "enabled": False}
     try:
-        stream = stream_for(device_id)
+        stream = playback_for_host(stream_for(device_id), request.url.hostname)
     except LookupError as exc:
         raise HTTPException(status_code=404, detail=str(exc)) from exc
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
+    if _is_https_request(request):
+        # WebRTC/UDP and :8889 are unreachable from the public https origin;
+        # serve MediaMTX's HLS player same-origin instead. "webrtc_url" stays the
+        # iframe player URL the dashboard already loads.
+        player_url = hls_proxy_url(device_id)
+        return {
+            "provider": "webrtc",
+            "transport": "hls",
+            "enabled": True,
+            "webrtc_url": player_url,
+            "hls_url": f"{player_url}index.m3u8",
+            "health": media_health(stream),
+        }
     return {
         "provider": "webrtc",
         "enabled": True,
@@ -576,13 +898,48 @@ def get_media_playback(device_id: str):
         "health": media_health(stream),
     }
 
-@router.get("/sessions/{session_id}/runtime")
+def _is_https_request(request: Request) -> bool:
+    forwarded = request.headers.get("x-forwarded-proto", "").split(",")[0].strip().lower()
+    return request.url.scheme == "https" or forwarded == "https"
+
+
+def _is_known_media_device(device_id: str) -> bool:
+    if device_id in configured_device_ids():
+        return True
+    with sqlite3.connect(DB_PATH) as conn:
+        return conn.execute("SELECT 1 FROM devices WHERE device_id=?", (device_id,)).fetchone() is not None
+
+
+@router.get("/api/media/devices/{device_id}/hls/{file:path}", dependencies=[Depends(require_auth)])
+async def proxy_media_hls(device_id: str, file: str, request: Request):
+    """Relay MediaMTX HLS (player page, playlists, segments) same-origin."""
+    if not valid_hls_file(file):
+        raise HTTPException(status_code=400, detail="Invalid HLS path")
+    loop = asyncio.get_running_loop()
+    try:
+        known = await loop.run_in_executor(None, _is_known_media_device, device_id)
+        target = hls_upstream_target(device_id, file, dict(request.query_params))
+    except ValueError as exc:
+        raise HTTPException(status_code=404, detail="Unknown device") from exc
+    if not known:
+        raise HTTPException(status_code=404, detail="Unknown device")
+    try:
+        status, headers, body = await open_hls_upstream(target)
+    except (OSError, asyncio.TimeoutError, asyncio.IncompleteReadError, ValueError, IndexError):
+        raise HTTPException(status_code=502, detail="Media gateway unavailable") from None
+    if file == "" or file.endswith(".m3u8"):
+        headers["cache-control"] = "no-cache"
+    media_type = headers.pop("content-type", None)
+    return StreamingResponse(body, status_code=status, media_type=media_type, headers=headers)
+
+
+@router.get("/sessions/{session_id}/runtime", dependencies=[Depends(require_auth)])
 def get_session_runtime(session_id: str):
     if not session_id or session_id.strip() == "":
         return {"error": "invalid session_id"}
     return get_runtime_latest(session_id)
 
-@router.delete("/sessions/{session_id}")
+@router.delete("/sessions/{session_id}", dependencies=[Depends(require_auth)])
 def delete_session(session_id: str):
     if not session_id or session_id.strip() == "":
         return {"error": "invalid session_id"}
@@ -592,7 +949,7 @@ def delete_session(session_id: str):
         conn.execute("DELETE FROM sessions WHERE session_id=?", (session_id,))
     return {"deleted": session_id}
 
-@router.get("/logs/fetch")
+@router.get("/logs/fetch", dependencies=[Depends(require_auth)])
 async def fetch_logs(ip: str, port: int = 2121):
     ip = ip.strip()
     if not ip:
@@ -612,7 +969,7 @@ async def fetch_logs(ip: str, port: int = 2121):
         headers={"Content-Disposition": f"attachment; filename=ufameasy_logs_{ip}.csv"},
     )
 
-@router.get("/logs/view")
+@router.get("/logs/view", dependencies=[Depends(require_auth)])
 async def view_logs(ip: str, limit: int = 1000):
     ip = ip.strip()
     if not ip:
@@ -625,7 +982,7 @@ async def view_logs(ip: str, limit: int = 1000):
         raise HTTPException(status_code=exc.status_code, detail=exc.detail) from exc
     return {"logs": rows}
 
-@router.get("/camera/check")
+@router.get("/camera/check", dependencies=[Depends(require_auth)])
 async def check_camera(ip: str, port: int = 8765, device_id: str | None = None):
     ip = ip.strip()
     if not ip:
@@ -653,7 +1010,10 @@ async def check_camera(ip: str, port: int = 8765, device_id: str | None = None):
         except Exception:
             pass
 
-        if not reported_dev and (ip in ("127.0.0.1", "localhost", "192.168.0.104")):
+        if not reported_dev:
+            # Machines report their own IP over MQTT; no hard-coded LAN IPs here.
+            reported_dev = db.get_device_by_ip(ip)
+        if not reported_dev and ip in ("127.0.0.1", "localhost"):
             reported_dev = "device_001"
 
         if device_id and reported_dev:
@@ -667,7 +1027,7 @@ async def check_camera(ip: str, port: int = 8765, device_id: str | None = None):
 
     return await loop.run_in_executor(None, _check)
 
-@router.get("/recordings")
+@router.get("/recordings", dependencies=[Depends(require_auth)])
 async def get_recordings(ip: str, device_id: str | None = None):
     ip = ip.strip()
     if not ip:
@@ -679,7 +1039,7 @@ async def get_recordings(ip: str, device_id: str | None = None):
     except RecordingFetchError as exc:
         raise HTTPException(status_code=exc.status_code, detail=exc.detail) from exc
 
-@router.get("/recordings/download")
+@router.get("/recordings/download", dependencies=[Depends(require_auth)])
 async def download_recording(ip: str, file: str, download: bool = False):
     ip = ip.strip()
     if not ip:
@@ -712,7 +1072,7 @@ async def download_recording(ip: str, file: str, download: bool = False):
         headers={"Content-Disposition": f'{disposition}; filename="{filename}"'},
     )
 
-@router.delete("/recordings/{filename:path}")
+@router.delete("/recordings/{filename:path}", dependencies=[Depends(require_auth)])
 async def delete_recording(filename: str, ip: str):
     ip = ip.strip()
     if not ip:
@@ -728,7 +1088,7 @@ async def delete_recording(filename: str, ip: str):
         raise HTTPException(status_code=exc.status_code, detail=exc.detail) from exc
     return {"deleted": filename}
 
-@router.get("/sessions")
+@router.get("/sessions", dependencies=[Depends(require_auth)])
 def list_sessions(device_id: str | None = None):
     conn = sqlite3.connect(DB_PATH)
     conn.row_factory = sqlite3.Row
@@ -742,7 +1102,7 @@ def list_sessions(device_id: str | None = None):
     conn.close()
     return [dict(r) for r in rows]
 
-@router.get("/sessions/{session_id}")
+@router.get("/sessions/{session_id}", dependencies=[Depends(require_auth)])
 def get_session(session_id: str):
     if not session_id or session_id.strip() == "":
         return {"error": "invalid session_id"}
@@ -752,7 +1112,7 @@ def get_session(session_id: str):
     conn.close()
     return dict(row) if row else {"error": "not found"}
 
-@router.get("/sessions/{session_id}/replay")
+@router.get("/sessions/{session_id}/replay", dependencies=[Depends(require_auth)])
 def get_session_replay(session_id: str):
     if not session_id or session_id.strip() == "":
         return {"error": "invalid session_id"}
@@ -796,19 +1156,35 @@ def get_session_replay(session_id: str):
 # Remote Machine Control API
 # ---------------------------------------------------------------------------
 
-@router.post("/api/devices/{device_id}/commands")
+@router.get("/api/rmc/config", dependencies=[Depends(require_auth)])
+def get_rmc_config():
+    return {"state_fresh_s": rmc_service.fresh_s}
+
+
+@router.post("/api/devices/{device_id}/commands", dependencies=[Depends(require_auth)])
 def issue_rmc_command(
     device_id: str,
     request: Request,
+    response: Response,
     body: dict = Body(...),
+    client_id: str = Header(..., alias="X-Client-Id"),
+    operator_name: str = Header(..., alias="X-Operator-Name"),
+    username: str = Depends(require_auth),
     principal: Principal = Depends(_rmc_principal),
 ):
     require_role(principal, "operator", "admin")
+    action = body.get("action") if isinstance(body, dict) else None
+    control_session = get_control_session(request.cookies.get(CONTROL_COOKIE_NAME), username)
+    if action in {"load", "start", "resume"}:
+        control_session = require_control(request.cookies.get(CONTROL_COOKIE_NAME), username)
     base_url = str(request.base_url).rstrip("/")
-    return rmc_service.issue_command(device_id, body, principal.name, request_base_url=base_url)
+    result = rmc_service.issue_command(device_id, body, principal.name, client_id, operator_name, request_base_url=base_url)
+    if control_session:
+        result["control_expires_at"] = refresh_control_cookie(response, control_session)
+    return result
 
 
-@router.get("/api/devices/{device_id}/commands/{cmd_id}")
+@router.get("/api/devices/{device_id}/commands/{cmd_id}", dependencies=[Depends(require_auth)])
 def get_rmc_command(device_id: str, cmd_id: str, principal: Principal = Depends(_rmc_principal)):
     command = db.get_rmc_command(cmd_id)
     if command is None or command["device_id"] != device_id:
@@ -816,53 +1192,97 @@ def get_rmc_command(device_id: str, cmd_id: str, principal: Principal = Depends(
     return command
 
 
-@router.get("/api/devices/{device_id}/commands")
+@router.get("/api/devices/{device_id}/commands", dependencies=[Depends(require_auth)])
 def list_rmc_commands(device_id: str, limit: int = 50, principal: Principal = Depends(_rmc_principal)):
     return db.list_rmc_commands(device_id, max(1, min(limit, 100)))
 
 
-@router.post("/api/devices/{device_id}/lock")
-def acquire_rmc_lock(device_id: str, body: dict = Body(default={}), principal: Principal = Depends(_rmc_principal)):
+@router.post("/api/devices/{device_id}/lock", dependencies=[Depends(require_auth)])
+def acquire_rmc_lock(
+    device_id: str,
+    request: Request,
+    response: Response,
+    body: dict = Body(default={}),
+    client_id: str = Header(..., alias="X-Client-Id"),
+    operator_name: str = Header(..., alias="X-Operator-Name"),
+    username: str = Depends(require_auth),
+    principal: Principal = Depends(_rmc_principal),
+):
     require_role(principal, "operator", "admin")
+    control_session = require_control(request.cookies.get(CONTROL_COOKIE_NAME), username)
     override = bool(body.get("override", False))
     if override:
         require_role(principal, "admin")
-    return rmc_service.acquire_lock(device_id, principal.name, admin_override=override)
+    result = rmc_service.acquire_lock(device_id, principal.name, client_id, operator_name, admin_override=override)
+    result["control_expires_at"] = refresh_control_cookie(response, control_session)
+    return result
 
 
-@router.delete("/api/devices/{device_id}/lock")
-def release_rmc_lock(device_id: str, override: bool = False, principal: Principal = Depends(_rmc_principal)):
+@router.delete("/api/devices/{device_id}/lock", dependencies=[Depends(require_auth)])
+def release_rmc_lock(device_id: str, override: bool = False, client_id: str = Header(..., alias="X-Client-Id"), principal: Principal = Depends(_rmc_principal)):
     require_role(principal, "operator", "admin")
     if override:
         require_role(principal, "admin")
-    rmc_service.release_lock(device_id, principal.name, admin_override=override)
-    return {"released": True}
+    return rmc_service.release_lock(device_id, principal.name, client_id, admin_override=override)
 
 
-@router.get("/api/devices/{device_id}/lock")
+@router.post("/api/devices/{device_id}/lock/request-release", dependencies=[Depends(require_auth)])
+def request_rmc_lock_release(
+    device_id: str,
+    operator_name: str = Header(..., alias="X-Operator-Name"),
+    principal: Principal = Depends(_rmc_principal),
+):
+    require_role(principal, "operator", "admin")
+    return rmc_service.request_release(device_id, principal.name, operator_name)
+
+
+@router.post("/api/devices/{device_id}/lock/heartbeat", dependencies=[Depends(require_auth)])
+def touch_rmc_lock(
+    device_id: str,
+    request: Request,
+    response: Response,
+    client_id: str = Header(..., alias="X-Client-Id"),
+    operator_name: str = Header(..., alias="X-Operator-Name"),
+    username: str = Depends(require_auth),
+    principal: Principal = Depends(_rmc_principal),
+):
+    require_role(principal, "operator", "admin")
+    control_session = require_control(request.cookies.get(CONTROL_COOKIE_NAME), username)
+    result = rmc_service.touch_lock(device_id, principal.name, client_id, operator_name)
+    result["control_expires_at"] = refresh_control_cookie(response, control_session)
+    return result
+
+
+@router.get("/api/devices/{device_id}/lock", dependencies=[Depends(require_auth)])
 def get_rmc_lock(device_id: str, principal: Principal = Depends(_rmc_principal)):
-    return rmc_service.get_lock(device_id) or {"device_id": device_id, "issued_by": None}
+    return rmc_service.get_lock(device_id) or {"device_id": device_id, "issued_by": None, "client_id": None, "operator_name": None}
 
 
 # ---------------------------------------------------------------------------
 # RMC Server File Registry & Transfer Endpoints (Phase 6A)
 # ---------------------------------------------------------------------------
 
-@router.post("/api/rmc/files")
+@router.post("/api/rmc/files", dependencies=[Depends(require_auth)])
 async def upload_rmc_file(
+    request: Request,
+    response: Response,
     file: UploadFile = File(...),
+    username: str = Depends(require_auth),
     principal: Principal = Depends(_rmc_principal),
 ):
     require_role(principal, "operator", "admin")
-    return await save_uploaded_file(file, principal.name)
+    control_session = require_control(request.cookies.get(CONTROL_COOKIE_NAME), username)
+    result = await save_uploaded_file(file, principal.name)
+    result["control_expires_at"] = refresh_control_cookie(response, control_session)
+    return result
 
 
-@router.get("/api/rmc/files")
+@router.get("/api/rmc/files", dependencies=[Depends(require_auth)])
 def list_rmc_files(principal: Principal = Depends(_rmc_principal)):
     return db.list_rmc_server_files()
 
 
-@router.delete("/api/rmc/files/{file_id}")
+@router.delete("/api/rmc/files/{file_id}", dependencies=[Depends(require_auth)])
 def delete_rmc_file(file_id: str, principal: Principal = Depends(_rmc_principal)):
     require_role(principal, "operator", "admin")
     file_record = db.get_rmc_server_file(file_id)

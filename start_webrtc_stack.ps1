@@ -7,14 +7,16 @@ if (-not (Test-Path -LiteralPath $config)) {
 }
 . $config
 $cfg = $UFAMeasyMediaGateway
-foreach ($field in "DeviceId", "EdgeIp", "MediaMtxExe", "MediaMtxConfig") {
+foreach ($field in "DeviceId", "MediaMtxExe", "MediaMtxConfig") {
     if (-not $cfg[$field]) { throw "$field is required in streaming.local.ps1." }
 }
 if (-not (Test-Path -LiteralPath $cfg.MediaMtxExe)) { throw "MediaMTX not found: $($cfg.MediaMtxExe)" }
 if (-not (Test-Path -LiteralPath $cfg.MediaMtxConfig)) { throw "MediaMTX config not found: $($cfg.MediaMtxConfig)" }
 
 $env:UFAMEASY_STREAM_PROVIDER = "webrtc"
-$deviceJson = @{ $cfg.DeviceId = @{ playback_url = "http://$($cfg.EdgeIp):8889"; control_url = "http://127.0.0.1:9997"; path = "machines/$($cfg.DeviceId)/main" } } | ConvertTo-Json -Compress -Depth 4
+# The API substitutes the current dashboard host, so a DHCP IP change needs
+# no update to this configuration.
+$deviceJson = @{ $cfg.DeviceId = @{ playback_url = "http://127.0.0.1:8889"; control_url = "http://127.0.0.1:9997"; path = "machines/$($cfg.DeviceId)/main" } } | ConvertTo-Json -Compress -Depth 4
 $env:UFAMEASY_MEDIA_DEVICES_JSON = $deviceJson
 
 function Test-MediaMtxApi {

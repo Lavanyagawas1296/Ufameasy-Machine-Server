@@ -1,0 +1,2 @@
+"use strict";
+document.getElementById("loginForm").addEventListener("submit",async(event)=>{event.preventDefault();const form=event.currentTarget,error=document.getElementById("error");error.textContent="";try{const response=await fetch("login",{method:"POST",headers:{"Content-Type":"application/json"},credentials:"same-origin",body:JSON.stringify({username:form.username.value,password:form.password.value})});if(!response.ok)throw Error();location.replace("/")}catch{error.textContent="Invalid username or password."}});
