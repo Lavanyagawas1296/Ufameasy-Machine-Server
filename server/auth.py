@@ -134,15 +134,15 @@ def control_password_matches(password: str) -> bool:
     return bool(expected_password) and password_matches
 
 
-def failed_control_unlock_retry_after(username: str, client_ip: str) -> int | None:
+def failed_control_unlock_retry_after(username: str, client_ip: str, window_seconds: int = 300) -> int | None:
     now = time.monotonic()
     key = (username, client_ip)
     with _unlock_failures_lock:
         attempts = _unlock_failures.setdefault(key, deque())
-        while attempts and now - attempts[0] >= 300:
+        while attempts and now - attempts[0] >= window_seconds:
             attempts.popleft()
         if len(attempts) >= 5:
-            return max(1, int(300 - (now - attempts[0])) + 1)
+            return max(1, int(window_seconds - (now - attempts[0])) + 1)
         attempts.append(now)
     return None
 

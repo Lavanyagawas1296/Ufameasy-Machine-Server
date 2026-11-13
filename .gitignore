@@ -4,3 +4,13 @@ server/data/*.db
 media-devices.local.json
 .env
 streaming.local.ps1
+.env
+.venv/
+__pycache__/
+*.db
+*.sqlite
+server/data/
+tests/network_report/har/
+tests/network_report/raw/
+tests/network_report/screenshots/
+tests/network_report/sandbox/

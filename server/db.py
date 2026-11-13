@@ -2,16 +2,49 @@ import json
 import sqlite3
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
+from threading import Lock
 
 
 DB_PATH = Path(__file__).resolve().parent / "data" / "params.db"
+DATA_DIR = Path(__file__).resolve().parent / "data"
 RMC_FILES_DIR = Path(__file__).resolve().parent / "data" / "rmc_files"
+_telemetry_index_attempted: set[Path] = set()
+_telemetry_index_lock = Lock()
 
 
 def get_conn():
     conn = sqlite3.connect(DB_PATH)
     conn.row_factory = sqlite3.Row
     return conn
+
+
+def ensure_telemetry_timestamp_index(db_path: Path) -> None:
+    """Add the telemetry timestamp index only when the external DB lacks one."""
+    path = Path(db_path).resolve()
+    if not path.is_file():
+        return
+    with _telemetry_index_lock:
+        if path in _telemetry_index_attempted:
+            return
+        _telemetry_index_attempted.add(path)
+    conn = None
+    try:
+        conn = sqlite3.connect(f"{path.as_uri()}?mode=rw", uri=True, timeout=0)
+        indexes = conn.execute("PRAGMA index_list(telemetry_events)").fetchall()
+        for index in indexes:
+            index_name = index[1]
+            columns = conn.execute(f'PRAGMA index_info("{index_name}")').fetchall()
+            if columns and columns[0][2] == "timestamp":
+                return
+        conn.execute("CREATE INDEX IF NOT EXISTS idx_telemetry_timestamp ON telemetry_events(timestamp)")
+        conn.commit()
+    except (sqlite3.Error, OSError):
+        # The active workbench database may be exclusively locked.  Customer
+        # reads remain available through the immutable read-only connection.
+        return
+    finally:
+        if conn is not None:
+            conn.close()
 
 
 def init_db():
@@ -150,6 +183,9 @@ def init_db():
             )
             """
         )
+        device_columns = {row[1] for row in conn.execute("PRAGMA table_info(devices)")}
+        if "machine_ip" not in device_columns:
+            conn.execute("ALTER TABLE devices ADD COLUMN machine_ip TEXT")
         lock_columns = {row[1] for row in conn.execute("PRAGMA table_info(rmc_control_locks)")}
         if "client_id" not in lock_columns:
             conn.execute("ALTER TABLE rmc_control_locks ADD COLUMN client_id TEXT NOT NULL DEFAULT ''")
@@ -168,6 +204,18 @@ def init_db():
                 uploaded_by TEXT NOT NULL,
                 uploaded_at TEXT NOT NULL,
                 stored_name TEXT NOT NULL
+            )
+            """
+        )
+        conn.execute(
+            """
+            CREATE TABLE IF NOT EXISTS gcode_files (
+                sha256 TEXT PRIMARY KEY,
+                file_name TEXT NOT NULL,
+                size INTEGER NOT NULL,
+                first_seen TEXT NOT NULL,
+                last_seen TEXT NOT NULL,
+                device_id TEXT
             )
             """
         )
@@ -255,6 +303,18 @@ def register_device(device_id, name):
     finally:
         if conn is not None:
             conn.close()
+
+
+def set_device_ip(device_id, machine_ip):
+    """Store the LAN IP the machine reported for itself (replaces hard-coded IPs)."""
+    with sqlite3.connect(DB_PATH) as conn:
+        conn.execute("UPDATE devices SET machine_ip = ? WHERE device_id = ?", (machine_ip, device_id))
+
+
+def get_device_by_ip(machine_ip):
+    with sqlite3.connect(DB_PATH) as conn:
+        row = conn.execute("SELECT device_id FROM devices WHERE machine_ip = ?", (machine_ip,)).fetchone()
+    return row[0] if row else None
 
 
 def create_session(session_id, device_id, file_name, total_layers):

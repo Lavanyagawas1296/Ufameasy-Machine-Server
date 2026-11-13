@@ -6,6 +6,7 @@ machine updates and by FastAPI endpoints to serve the latest known state.
 The module intentionally avoids external dependencies so it can be imported
 by both runtime code and small diagnostic scripts.
 """
+from datetime import datetime, timezone
 from threading import Lock
 
 from server.rmc_contract import JOB_STATES, default_state
@@ -52,11 +53,24 @@ class StateStore:
                 current_seq = int(current.get("seq", 0))
             except (TypeError, ValueError) as exc:
                 raise ValueError("RMC state seq must be an integer") from exc
-            if incoming_seq < current_seq:
+            restarted = incoming_seq <= 1 or self._is_newer(update_dict, current)
+            if incoming_seq < current_seq and not restarted:
                 return dict(current)
             current.update(update_dict)
             current["device_id"] = device_id
+            # Freshness is judged on the server clock; the machine clock may skew.
+            current["received_at"] = datetime.now(timezone.utc).isoformat()
             return dict(current)
+
+    @staticmethod
+    def _is_newer(incoming, current):
+        """A lower seq with a newer timestamp means the machine app restarted."""
+        try:
+            new = datetime.fromisoformat(str(incoming.get("recorded_at")).replace("Z", "+00:00"))
+            old = datetime.fromisoformat(str(current.get("recorded_at")).replace("Z", "+00:00"))
+            return (new - old).total_seconds() > 1.0
+        except (TypeError, ValueError):
+            return False
 
     def get_rmc_files(self, device_id):
         with self.lock:
@@ -109,7 +123,6 @@ class StateStore:
             self.slice_snapshots.clear()
     
     def add_event(self, event_type: str, details: dict):
-        from datetime import datetime
         self.events.append({
             "type": event_type,
             "timestamp": datetime.now().strftime("%d-%m-%Y %H:%M:%S"),

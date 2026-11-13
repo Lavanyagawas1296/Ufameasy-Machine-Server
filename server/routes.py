@@ -64,6 +64,18 @@ UFAMEASY_HOME = Path.home() / ".ufameasy"
 LOCAL_RECORDINGS_ROOT = UFAMEASY_HOME / "recordings"
 LOCAL_TELEMETRY_DIR = UFAMEASY_HOME / "telemetry"
 LOCAL_TELEMETRY_DB_NAMES = ("ufameasy_sys.u5d", "ufameasy_sys.U5LOG", "ufameasy_logs.db")
+ODOMETER_PATH = UFAMEASY_HOME / "odometer.json"
+MACHINE_OVERVIEW_TELEMETRY_DB = LOCAL_TELEMETRY_DIR / "ufameasy_sys.U5LOG"
+MACHINE_OVERVIEW_WINDOWS = {
+    "24h": timedelta(hours=24),
+    "7d": timedelta(days=7),
+    "30d": timedelta(days=30),
+}
+_PRINT_JOB_EVENT_TYPE = "PrintJobEvent"
+_JOB_START_STATUS = "started"
+# The workbench records a normal finish as "completed" and an operator stop
+# as "stopped" (adapters/gcode_executor.py).
+_JOB_END_STATUSES = ("stopped", "completed")
 
 
 class LogFetchError(Exception):
@@ -78,6 +90,63 @@ class RecordingFetchError(Exception):
         super().__init__(detail)
         self.status_code = status_code
         self.detail = detail
+
+
+def _parse_telemetry_timestamp(value: str) -> datetime | None:
+    """Parse the timestamp format written by the UFAMeasy telemetry consumer."""
+    for fmt in ("%d/%m/%Y %I:%M:%S.%f %p", "%d/%m/%Y %I:%M:%S %p"):
+        try:
+            return datetime.strptime(value, fmt)
+        except (TypeError, ValueError):
+            pass
+    return None
+
+
+def _machine_hours_from_odometer() -> float | None:
+    """Use the same persisted source/formula as OdometerManager.get_metrics()."""
+    try:
+        data = json.loads(ODOMETER_PATH.read_text(encoding="utf-8"))
+        return float(data.get("machine_seconds", 0.0)) / 3600.0
+    except (OSError, ValueError, TypeError, json.JSONDecodeError):
+        return None
+
+
+def _count_finished_jobs(db_path: Path, window: timedelta, *, now: datetime | None = None) -> int | None:
+    """Count start -> stopped/completed pairs whose end is inside *window*."""
+    if not db_path.is_file():
+        return None
+    conn = None
+    try:
+        conn = sqlite3.connect(f"{db_path.as_uri()}?mode=ro", uri=True, timeout=2)
+        rows = conn.execute(
+            """
+            SELECT id, timestamp, json_extract(payload, '$.status') AS status
+            FROM telemetry_events
+            WHERE event_type = ?
+              AND json_extract(payload, '$.status') IN (?, ?, ?)
+            ORDER BY id ASC
+            """,
+            (_PRINT_JOB_EVENT_TYPE, _JOB_START_STATUS, *_JOB_END_STATUSES),
+        ).fetchall()
+    except (sqlite3.DatabaseError, OSError):
+        return None
+    finally:
+        if conn is not None:
+            conn.close()
+
+    cutoff = (now or datetime.now()) - window
+    open_starts = 0
+    completed = 0
+    for _, timestamp, status in rows:
+        if status == _JOB_START_STATUS:
+            open_starts += 1
+            continue
+        if status in _JOB_END_STATUSES and open_starts:
+            open_starts -= 1
+            ended_at = _parse_telemetry_timestamp(timestamp)
+            if ended_at is not None and ended_at >= cutoff:
+                completed += 1
+    return completed
 
 
 def _download_log_bytes(ip: str, port: int) -> bytes:
@@ -501,6 +570,21 @@ def get_state(device_id: str):
         return {"error": "invalid device_id"}
     return state.get_parameters(device_id)
 
+
+@router.get("/api/devices/{device_id}/overview", dependencies=[Depends(require_auth)])
+def get_device_overview(device_id: str, window: str = Query(default="7d")):
+    """Return host-local odometer and completed-job metrics for a device view."""
+    if not device_id.strip():
+        raise HTTPException(status_code=400, detail="device_id is required")
+    interval = MACHINE_OVERVIEW_WINDOWS.get(window)
+    if interval is None:
+        raise HTTPException(status_code=400, detail="window must be one of 24h, 7d, 30d")
+    return {
+        "device_id": device_id,
+        "machine_hours": _machine_hours_from_odometer(),
+        "jobs_run": _count_finished_jobs(MACHINE_OVERVIEW_TELEMETRY_DB, interval),
+    }
+
 @router.get("/parameter/{name}", dependencies=[Depends(require_auth)])
 def get_parameter(name: str, device_id: str):
     """
@@ -552,7 +636,9 @@ def health():
     return {"status": "ok"}
 
 
-_CLIENT_EVENT_KINDS = {"fetch_fail", "fetch_slow", "ws_drop"}
+_CLIENT_EVENT_KINDS = {"fetch_fail", "fetch_slow", "ws_drop", "rtt", "speed"}
+_NETWORK_HOURS = {1, 6, 24, 168}
+_RECENT_PROBLEM_KINDS = {"slow_request", "fetch_fail", "fetch_slow", "ws_drop", "state_gap", "mqtt_disconnect"}
 
 
 def _client_ip(request: Request) -> str:
@@ -569,40 +655,91 @@ def _percentile(values: list[float], percentile: float) -> float | None:
 
 def _network_summary(events: list[dict]) -> dict:
     clients: dict[str, dict] = {}
-    state_gaps: dict[str, list[float]] = {}
+    devices: dict[str, dict] = {}
     mqtt_disconnects = 0
+
+    def client_row(client_ip: str) -> dict:
+        return clients.setdefault(client_ip, {
+            "client_ip": client_ip, "latencies": [], "slow_count": 0,
+            "ws_drops": 0, "fetch_fail_count": 0, "rtts": [], "speeds": [],
+            "last_seen": None, "last_rtt": None,
+        })
+
+    def device_row(device_id: str) -> dict:
+        return devices.setdefault(device_id, {"device_id": device_id, "gaps": [], "mqtt_disconnect_count": 0})
+
     for event in events:
         client_ip = event.get("client_ip") or "unknown"
+        ts = event.get("ts")
         if event["kind"] in {"request", "slow_request"}:
-            client = clients.setdefault(client_ip, {"client_ip": client_ip, "latencies": [], "slow_count": 0, "ws_drops": 0})
+            client = client_row(client_ip)
             if event["kind"] == "request" and event.get("value") is not None:
                 client["latencies"].append(float(event["value"]))
             if event["kind"] == "slow_request":
                 client["slow_count"] += 1
-        elif event["kind"] == "ws_drop":
-            client = clients.setdefault(client_ip, {"client_ip": client_ip, "latencies": [], "slow_count": 0, "ws_drops": 0})
-            client["ws_drops"] += 1
+        elif event["kind"] in {"ws_drop", "fetch_fail", "fetch_slow", "rtt", "speed"}:
+            client = client_row(client_ip)
+            if event["kind"] == "ws_drop":
+                client["ws_drops"] += 1
+            elif event["kind"] == "fetch_fail":
+                client["fetch_fail_count"] += 1
+            elif event["kind"] == "rtt":
+                if event.get("value") is not None:
+                    client["rtts"].append(float(event["value"]))
+                try:
+                    detail = json.loads(event.get("detail") or "{}")
+                except (TypeError, json.JSONDecodeError):
+                    detail = {}
+                if isinstance(detail, dict) and (client["last_rtt"] is None or (ts or "") > (client["last_rtt"].get("ts") or "")):
+                    client["last_rtt"] = {"ts": ts, **detail}
+            elif event["kind"] == "speed" and event.get("value") is not None:
+                client["speeds"].append(float(event["value"]))
+        else:
+            client = None
+        if client is not None and ts and (client["last_seen"] is None or ts > client["last_seen"]):
+            client["last_seen"] = ts
         elif event["kind"] == "mqtt_disconnect":
             mqtt_disconnects += 1
+            device_row(event.get("device_id") or "unknown")["mqtt_disconnect_count"] += 1
         elif event["kind"] == "state_gap" and event.get("device_id") and event.get("value") is not None:
-            state_gaps.setdefault(event["device_id"], []).append(float(event["value"]))
+            device_row(event["device_id"])["gaps"].append(float(event["value"]))
 
     client_rows = []
     for client in clients.values():
         latencies = client.pop("latencies")
+        rtts = client.pop("rtts")
+        speeds = client.pop("speeds")
+        last_rtt = client.pop("last_rtt") or {}
         client["request_count"] = len(latencies)
-        client["p50_latency"] = _percentile(latencies, 0.50)
-        client["p95_latency"] = _percentile(latencies, 0.95)
+        client["p50_latency_ms"] = None if not latencies else _percentile(latencies, 0.50) * 1000
+        client["p95_latency_ms"] = None if not latencies else _percentile(latencies, 0.95) * 1000
+        client["rtt_median_ms"] = _percentile(rtts, 0.50)
+        client["rtt_p95_ms"] = _percentile(rtts, 0.95)
+        client["rtt_max_ms"] = max(rtts) if rtts else None
+        client["jitter_ms"] = last_rtt.get("jitter")
+        client["loss_pct"] = last_rtt.get("loss_pct")
+        client["speed_latest_mbps"] = speeds[0] if speeds else None
+        client["speed_median_mbps"] = _percentile(speeds, 0.50)
+        if not last_rtt:
+            client["status"] = "no data"
+        elif (client["rtt_p95_ms"] or 0) > 300 or (client["loss_pct"] or 0) > 5 or client["ws_drops"] >= 3 or client["fetch_fail_count"] >= 3:
+            client["status"] = "bad"
+        elif (client["rtt_p95_ms"] or 0) > 100 or (client["loss_pct"] or 0) > 1 or client["slow_count"] >= 3:
+            client["status"] = "warn"
+        else:
+            client["status"] = "ok"
         client_rows.append(client)
-    gap_rows = [
-        {"device_id": device_id, "max_gap": max(gaps), "p95_gap": _percentile(gaps, 0.95)}
-        for device_id, gaps in state_gaps.items()
-    ]
+    device_rows = []
+    for device in devices.values():
+        gaps = device.pop("gaps")
+        device["max_gap_s"] = max(gaps) if gaps else None
+        device["p95_gap_s"] = _percentile(gaps, 0.95)
+        device_rows.append(device)
     return {
         "clients": sorted(client_rows, key=lambda item: item["client_ip"]),
         "mqtt_disconnect_count": mqtt_disconnects,
-        "state_gaps": sorted(gap_rows, key=lambda item: item["device_id"]),
-        "last_events": events[:50],
+        "state_gaps": sorted(device_rows, key=lambda item: item["device_id"]),
+        "last_events": [event for event in events if event["kind"] in _RECENT_PROBLEM_KINDS][:20],
     }
 
 
@@ -621,19 +758,23 @@ def _insert_client_network_events(validated: list[tuple], client_ip: str, client
 
 @router.get("/api/diagnostics/network", dependencies=[Depends(require_auth)])
 def network_diagnostics(
-    hours: int = Query(default=24, ge=1, le=24 * 14),
+    hours: int = Query(default=1),
     principal: Principal = Depends(_rmc_principal),
 ):
     require_role(principal, "operator", "admin")
+    if hours not in _NETWORK_HOURS:
+        raise HTTPException(status_code=400, detail="hours must be one of 1, 6, 24, 168")
     return _network_summary(_diagnostic_events_since(hours))
 
 
 @router.get("/api/diagnostics/network.csv", dependencies=[Depends(require_auth)])
 def network_diagnostics_csv(
-    hours: int = Query(default=24, ge=1, le=24 * 14),
+    hours: int = Query(default=1),
     principal: Principal = Depends(_rmc_principal),
 ):
     require_role(principal, "operator", "admin")
+    if hours not in _NETWORK_HOURS:
+        raise HTTPException(status_code=400, detail="hours must be one of 1, 6, 24, 168")
     buffer = io.StringIO()
     fields = ("id", "ts", "kind", "device_id", "client_ip", "client_id", "value", "detail")
     writer = csv.DictWriter(buffer, fieldnames=fields)
@@ -666,6 +807,28 @@ async def save_client_network_events(
         value = event.get("value")
         if value is not None and (isinstance(value, bool) or not isinstance(value, (int, float)) or not math.isfinite(value)):
             raise HTTPException(status_code=400, detail="Invalid event value")
+        if event["kind"] == "rtt":
+            try:
+                rtt_detail = json.loads(detail or "")
+            except (TypeError, json.JSONDecodeError) as exc:
+                raise HTTPException(status_code=400, detail="Invalid rtt detail") from exc
+            if not isinstance(rtt_detail, dict) or set(rtt_detail) != {"min", "max", "jitter", "loss_pct", "n"}:
+                raise HTTPException(status_code=400, detail="Invalid rtt detail")
+            if not isinstance(rtt_detail["n"], int) or isinstance(rtt_detail["n"], bool) or not 0 <= rtt_detail["n"] <= 20:
+                raise HTTPException(status_code=400, detail="Invalid rtt sample count")
+            for name in ("min", "max", "jitter"):
+                number = rtt_detail[name]
+                if number is not None and (isinstance(number, bool) or not isinstance(number, (int, float)) or not math.isfinite(number) or not 0 <= number <= 30000):
+                    raise HTTPException(status_code=400, detail="Invalid rtt detail")
+            loss_pct = rtt_detail["loss_pct"]
+            if isinstance(loss_pct, bool) or not isinstance(loss_pct, (int, float)) or not math.isfinite(loss_pct) or not 0 <= loss_pct <= 100:
+                raise HTTPException(status_code=400, detail="Invalid rtt loss")
+            if value is not None and not 0 <= value <= 30000:
+                raise HTTPException(status_code=400, detail="Invalid rtt value")
+            if rtt_detail["n"] and value is None:
+                raise HTTPException(status_code=400, detail="Missing rtt value")
+        elif event["kind"] == "speed" and (value is None or not 0 <= value <= 100000):
+            raise HTTPException(status_code=400, detail="Invalid speed value")
         ts = event.get("ts")
         if ts is not None:
             if not isinstance(ts, str) or len(ts) > 64:
@@ -847,7 +1010,10 @@ async def check_camera(ip: str, port: int = 8765, device_id: str | None = None):
         except Exception:
             pass
 
-        if not reported_dev and (ip in ("127.0.0.1", "localhost", "192.168.0.104")):
+        if not reported_dev:
+            # Machines report their own IP over MQTT; no hard-coded LAN IPs here.
+            reported_dev = db.get_device_by_ip(ip)
+        if not reported_dev and ip in ("127.0.0.1", "localhost"):
             reported_dev = "device_001"
 
         if device_id and reported_dev:

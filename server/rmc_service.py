@@ -38,7 +38,8 @@ class RMCService:
         self._lock = threading.RLock()
         self._timers: dict[str, threading.Timer] = {}
         self._recent: dict[tuple, deque] = defaultdict(deque)
-        self.fresh_s = int(os.getenv("RMC_STATE_FRESH_S", "30"))
+        # A 90s window tolerates missed 20s machine heartbeats and brief Qt/Wi-Fi delays.
+        self.fresh_s = int(os.getenv("RMC_STATE_FRESH_S", "90"))
         self.received_timeout_s = int(os.getenv("RMC_RECEIVED_TIMEOUT_S", "10"))
         self.done_timeout_s = max(60, int(os.getenv("RMC_DONE_TIMEOUT_S", "120")))
         self.lock_ttl_s = 90
@@ -64,7 +65,7 @@ class RMCService:
 
     def _device_state(self, device_id: str) -> dict:
         current = state.get_rmc_state(device_id)
-        recorded_at = current.get("recorded_at")
+        recorded_at = current.get("received_at") or current.get("recorded_at")
         diagnostic = {
             "recorded_at": recorded_at,
             "seq": current.get("seq"),
@@ -94,8 +95,15 @@ class RMCService:
             if conn is not None:
                 conn.close()
 
+    def _prune_recent(self, now: float) -> None:
+        """Drop rate-limit and duplicate buckets whose entries have all expired."""
+        horizon = max(self.rate_window_s, 5)
+        for key in [k for k, q in self._recent.items() if not q or now - q[-1] > horizon]:
+            del self._recent[key]
+
     def _rate_check(self, device_id: str, user: str) -> None:
         now = self._now().timestamp()
+        self._prune_recent(now)
         bucket = self._recent[(device_id, user)]
         while bucket and now - bucket[0] > self.rate_window_s:
             bucket.popleft()
@@ -246,9 +254,8 @@ class RMCService:
                 device_id=device_id,
                 expiry=download_expiry or int(self._now().timestamp()) + 300,
             )
-            machine_base = os.getenv(
-                "RMC_MACHINE_BASE_URL", "http://192.168.31.237:8000"
-            ).strip()
+            # No hard-coded LAN IP default: fall back to the host the browser used.
+            machine_base = os.getenv("RMC_MACHINE_BASE_URL", "").strip()
             if machine_base:
                 base_url = machine_base.rstrip("/")
             else:
@@ -372,7 +379,9 @@ class RMCService:
         recent.append(now.timestamp())
         command = {
             "cmd_id": str(uuid.uuid4()), "device_id": device_id, "action": action, "params": params,
-            "issued_by": user, "issued_at": now.isoformat(),
+            # Show the operator's typed name; keep the login account for the audit trail.
+            "issued_by": operator_name if operator_name == user else f"{operator_name} ({user})",
+            "issued_at": now.isoformat(),
             "expires_at": (now + timedelta(seconds=ttl)).isoformat(), "source": "remote",
         }
         db.create_rmc_command(command)
