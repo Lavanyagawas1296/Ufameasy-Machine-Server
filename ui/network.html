@@ -3,33 +3,57 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Network diagnostics · UFAMeasy</title>
+  <title>Network diagnostics - UFAMeasy</title>
   <style>
     body { font: 14px system-ui,sans-serif; margin: 24px; color: #172033; background: #f6f8fb; }
-    header { display:flex; align-items:center; gap:16px; margin-bottom:20px; } h1 { margin:0; font-size:22px; }
-    button { padding:8px 12px; } section { background:#fff; border:1px solid #dce3ee; border-radius:8px; padding:16px; margin:16px 0; overflow:auto; }
-    table { border-collapse:collapse; width:100%; } th,td { text-align:left; padding:8px; border-bottom:1px solid #e7ecf3; white-space:nowrap; }
-    th { color:#526174; font-weight:600; } .alert { color:#a61b1b; font-weight:700; } #status { color:#526174; margin-left:auto; }
+    header { display:flex; align-items:center; gap:12px; margin-bottom:20px; } h1 { margin:0; font-size:22px; } #status { margin-left:auto; color:#5c667a; }
+    section { background:#fff; border:1px solid #dbe2ee; border-radius:8px; padding:16px; margin:16px 0; overflow:auto; } h2 { margin:0 0 12px; font-size:16px; }
+    table { border-collapse:collapse; width:100%; min-width:820px; } th,td { padding:8px; border-bottom:1px solid #edf0f5; text-align:left; white-space:nowrap; } th { color:#5c667a; font-size:12px; } .alert { color:#b42318; font-weight:600; }
+    .chip { display:inline-block; border-radius:999px; padding:2px 8px; font-size:12px; font-weight:700; } .ok { color:#087443; background:#dcfae6; } .warn { color:#8a5b00; background:#fff2c7; } .bad { color:#b42318; background:#fee4e2; } .no-data { color:#596579; background:#edf0f5; }
+    button,select { font:inherit; padding:6px 9px; border:1px solid #b8c2d3; border-radius:5px; background:#fff; }
   </style>
 </head>
 <body>
-  <header><h1>Network diagnostics</h1><a href="/">Dashboard</a><button id="download">Download CSV</button><span id="status"></span></header>
-  <section><h2>Clients</h2><table><thead><tr><th>Client IP</th><th>Requests</th><th>p50 latency</th><th>p95 latency</th><th>Slow requests</th><th>WS drops</th></tr></thead><tbody id="clients"></tbody></table></section>
-  <section><h2>Device state gaps</h2><table><thead><tr><th>Device</th><th>Max gap</th><th>p95 gap</th></tr></thead><tbody id="devices"></tbody></table></section>
-  <section><h2>Recent events</h2><table><thead><tr><th>Time</th><th>Kind</th><th>Client</th><th>Device</th><th>Value</th><th>Detail</th></tr></thead><tbody id="events"></tbody></table></section>
+  <header><h1>Network diagnostics</h1><a href="/">Dashboard</a><label>Window <select id="hours"><option value="1">1h</option><option value="6">6h</option><option value="24">24h</option><option value="168">7d</option></select></label><button id="download">Download CSV</button><span id="status"></span></header>
+  <section><h2>Clients</h2><table><thead><tr><th>Client IP</th><th>Status</th><th>Requests</th><th>RTT median / p95 / max</th><th>Jitter</th><th>Loss</th><th>Speed latest / median</th><th>Server p95</th><th>WS drops</th><th>Last seen</th></tr></thead><tbody id="clients"></tbody></table></section>
+  <section><h2>Devices</h2><table><thead><tr><th>Device</th><th>MQTT disconnects</th><th>State gap max / p95</th></tr></thead><tbody id="devices"></tbody></table></section>
+  <section><h2>Recent problems</h2><table><thead><tr><th>Time</th><th>Kind</th><th>Client</th><th>Device</th><th>Value</th><th>Detail</th></tr></thead><tbody id="events"></tbody></table></section>
   <script>
-    const seconds = value => value == null ? "—" : `${Number(value).toFixed(3)} s`;
-    const cell = (value, alert = false) => `<td${alert ? ' class="alert"' : ""}>${String(value ?? "—").replace(/[&<>]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;'}[c]))}</td>`;
+    const ms = value => value == null ? "-" : `${Number(value).toFixed(1)} ms`;
+    const mbps = value => value == null ? "-" : `${Number(value).toFixed(2)} Mbps`;
+    const seconds = value => value == null ? "-" : `${Number(value).toFixed(1)} s`;
+    const esc = value => String(value ?? "-").replace(/[&<>]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;"}[c]));
+    const cell = (value, alert = false) => `<td${alert ? ' class="alert"' : ""}>${esc(value)}</td>`;
+    const htmlCell = value => `<td>${value}</td>`;
+    function relativeTime(timestamp) {
+      if (!timestamp) return { text: "-", stale: false };
+      const age = Math.max(0, (Date.now() - new Date(timestamp).getTime()) / 1000);
+      return { text: age < 60 ? `${Math.round(age)}s ago` : age < 3600 ? `${Math.floor(age / 60)}m ago` : `${Math.floor(age / 3600)}h ago`, stale: age > 60 };
+    }
+    function eventValue(event) {
+      if (event.value == null) return "-";
+      if (event.kind === "speed") return mbps(event.value);
+      if (["slow_request", "fetch_fail", "fetch_slow", "state_gap"].includes(event.kind)) return ms(Number(event.value) * 1000);
+      return Number(event.value).toFixed(1);
+    }
+    function statusChip(status) { return `<span class="chip ${status === "no data" ? "no-data" : status}">${esc(status)}</span>`; }
     async function refresh() {
+      const hours = document.querySelector("#hours").value;
       try {
-        const data = await (await fetch("/api/diagnostics/network", { cache: "no-store" })).json();
-        document.querySelector("#clients").innerHTML = data.clients.map(c => `<tr>${cell(c.client_ip)}${cell(c.request_count)}${cell(seconds(c.p50_latency))}${cell(seconds(c.p95_latency), c.p95_latency > 1)}${cell(c.slow_count)}${cell(c.ws_drops, c.ws_drops > 0)}</tr>`).join("") || "<tr><td colspan=6>No client data in this window.</td></tr>";
-        document.querySelector("#devices").innerHTML = data.state_gaps.map(d => `<tr>${cell(d.device_id)}${cell(seconds(d.max_gap), d.max_gap > 20)}${cell(seconds(d.p95_gap), d.p95_gap > 20)}</tr>`).join("") || "<tr><td colspan=3>No state gaps in this window.</td></tr>";
-        document.querySelector("#events").innerHTML = data.last_events.map(e => `<tr>${cell(e.ts)}${cell(e.kind)}${cell(e.client_ip)}${cell(e.device_id)}${cell(e.value)}${cell(e.detail)}</tr>`).join("");
-        document.querySelector("#status").textContent = `MQTT disconnects: ${data.mqtt_disconnect_count} · updated ${new Date().toLocaleTimeString()}`;
+        const response = await fetch(`/api/diagnostics/network?hours=${hours}`, { cache: "no-store" });
+        if (!response.ok) throw new Error("request failed");
+        const data = await response.json();
+        document.querySelector("#clients").innerHTML = data.clients.map(c => {
+          const lastSeen = relativeTime(c.last_seen);
+          return `<tr>${cell(c.client_ip)}${htmlCell(statusChip(c.status))}${cell(c.request_count)}${cell(`${ms(c.rtt_median_ms)} / ${ms(c.rtt_p95_ms)} / ${ms(c.rtt_max_ms)}`)}${cell(ms(c.jitter_ms))}${cell(c.loss_pct == null ? "-" : `${Number(c.loss_pct).toFixed(1)}%`)}${cell(`${mbps(c.speed_latest_mbps)} / ${mbps(c.speed_median_mbps)}`)}${cell(ms(c.p95_latency_ms), c.p95_latency_ms > 1000)}${cell(c.ws_drops, c.ws_drops > 0)}${cell(lastSeen.text, lastSeen.stale)}</tr>`;
+        }).join("") || "<tr><td colspan=10>No client data in this window.</td></tr>";
+        document.querySelector("#devices").innerHTML = data.state_gaps.map(d => `<tr>${cell(d.device_id)}${cell(d.mqtt_disconnect_count)}${cell(`${seconds(d.max_gap_s)} / ${seconds(d.p95_gap_s)}`, d.max_gap_s > 20)}</tr>`).join("") || "<tr><td colspan=3>No device network events in this window.</td></tr>";
+        document.querySelector("#events").innerHTML = data.last_events.map(e => `<tr>${cell(relativeTime(e.ts).text)}${cell(e.kind)}${cell(e.client_ip)}${cell(e.device_id)}${cell(eventValue(e))}${cell(e.detail)}</tr>`).join("") || "<tr><td colspan=6>No recent problems in this window.</td></tr>";
+        document.querySelector("#status").textContent = `MQTT disconnects: ${data.mqtt_disconnect_count} - updated ${new Date().toLocaleTimeString()}`;
       } catch (_) { document.querySelector("#status").textContent = "Unable to refresh diagnostics"; }
     }
-    document.querySelector("#download").onclick = () => { window.location.href = "/api/diagnostics/network.csv"; };
+    document.querySelector("#hours").addEventListener("change", refresh);
+    document.querySelector("#download").onclick = () => { window.location.href = `/api/diagnostics/network.csv?hours=${document.querySelector("#hours").value}`; };
     refresh(); setInterval(refresh, 10000);
   </script>
 </body>

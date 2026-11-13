@@ -260,6 +260,12 @@
       background: currentColor;
     }
 
+    .network-badge { position: relative; }
+    .network-badge button { font: inherit; color: inherit; background: transparent; border: 0; cursor: pointer; padding: 0; }
+    .network-badge.warn { background: rgba(255, 190, 70, 0.12); border-color: rgba(255, 190, 70, 0.3); color: #f4bc45; }
+    .network-badge.bad { background: rgba(255, 92, 114, 0.1); border-color: rgba(255, 92, 114, 0.25); color: var(--red); }
+    .network-details { position: absolute; z-index: 20; top: calc(100% + 8px); left: 0; width: 245px; padding: 10px; border: 1px solid var(--border); border-radius: 8px; background: var(--panel); color: var(--text); box-shadow: 0 10px 24px rgba(0,0,0,.25); font-size: 12px; line-height: 1.6; }
+
     .topbar-right {
       display: flex;
       align-items: center;
@@ -2053,7 +2059,7 @@
       .side-footer .status-row span:last-child {
         display: none;
       }
-      #sideMachineIp {
+      #sideMachineIp, #sideIpManual {
         display: none;
       }
       .topbar {
@@ -2475,6 +2481,10 @@
         max-width: 130px;
       }
     }
+    .side-ip-manual { display: flex; align-items: center; justify-content: center; gap: 6px; margin-top: 4px; font-size: 11px; }
+    .side-ip-manual[hidden] { display: none; }
+    .side-ip-manual-tag { padding: 1px 6px; border-radius: 4px; background: rgba(245, 158, 11, 0.15); color: #f59e0b; }
+    .side-ip-manual button { background: none; border: 1px solid currentColor; border-radius: 4px; color: inherit; font-size: 11px; padding: 0 6px; cursor: pointer; }
   </style>
 </head>
 <body>
@@ -2522,7 +2532,11 @@
         <span class="pulse-dot"></span>
         <span>Machine Online</span>
       </div>
-      <div id="sideMachineIp">192.168.0.104:8000</div>
+      <div id="sideMachineIp">—</div>
+      <div id="sideIpManual" class="side-ip-manual" hidden>
+        <span class="side-ip-manual-tag">manual</span>
+        <button id="sideIpReset" type="button" title="Use the IP reported by the machine">reset</button>
+      </div>
     </div>
   </aside>
 
@@ -2544,6 +2558,10 @@
         <div id="topbarStatusBadge" class="topbar-status-badge disconnected">
           <span class="dot" id="statusDot"></span>
           <span id="statusText">Disconnected</span>
+        </div>
+        <div id="networkBadge" class="topbar-status-badge network-badge bad" title="Network diagnostics">
+          <button id="networkBadgeButton" type="button" aria-expanded="false" aria-controls="networkDetails"><span class="dot"></span><span id="networkBadgeText">Network: checking</span></button>
+          <div id="networkDetails" class="network-details" hidden></div>
         </div>
       </div>
 
@@ -2582,6 +2600,15 @@
           </div>
           <div class="kpi-val" id="kpiConnVal" style="color:var(--green);">Connected</div>
           <div class="kpi-sub" id="kpiConnSub">WebSocket live</div>
+        </div>
+
+        <div class="kpi-card">
+          <div class="kpi-header">
+            <span>Machine hrs</span>
+            <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>
+          </div>
+          <div class="kpi-val" id="machineOverviewHours">—</div>
+          <div class="kpi-sub">Machine uptime</div>
         </div>
 
         <!-- Current File -->
@@ -3444,27 +3471,33 @@
   let redirectingToLogin = false;
   const networkEventQueue = [];
   const diagnosticsEventUrl = "/api/diagnostics/client-events";
+  let flushingNetworkEvents = false;
   function queueNetworkEvent(kind, value, detail) {
-    if (networkEventQueue.length < 50) {
+    if (networkEventQueue.length < 100) {
       networkEventQueue.push({ kind, value, detail: String(detail || "").slice(0, 500), ts: new Date().toISOString() });
     }
   }
   async function flushNetworkEvents() {
-    if (!networkEventQueue.length) return;
+    if (flushingNetworkEvents || !networkEventQueue.length || !navigator.onLine) return;
+    flushingNetworkEvents = true;
     const events = networkEventQueue.splice(0, 50);
     try {
-      await nativeFetch(diagnosticsEventUrl, {
+      const response = await nativeFetch(diagnosticsEventUrl, {
         method: "POST", credentials: "same-origin", keepalive: true,
         headers: { "Content-Type": "application/json", "X-Client-Id": myClientId || "" },
         body: JSON.stringify(events),
       });
+      if (!response.ok) throw new Error(`Diagnostics upload failed: ${response.status}`);
     } catch (_) {
       // Diagnostics must never interfere with the operator UI.
       networkEventQueue.unshift(...events);
-      networkEventQueue.length = Math.min(networkEventQueue.length, 50);
+      networkEventQueue.length = Math.min(networkEventQueue.length, 100);
+    } finally {
+      flushingNetworkEvents = false;
     }
   }
   setInterval(flushNetworkEvents, 30000);
+  window.addEventListener("online", () => { flushNetworkEvents(); sampleRtt(); });
   // Hung GETs on flaky Wi-Fi otherwise hold the browser's per-host connection
   // slots indefinitely. Only idempotent GETs get a timeout; commands/locks
   // (POST/DELETE) and legitimately slow transfers are left untouched.
@@ -3498,6 +3531,91 @@
       if (timer) clearTimeout(timer);
     }
   };
+
+  const rttSamples = [];
+  let latestSpeedMbps = null;
+  let speedTestInProgress = false;
+  const networkBadge = document.getElementById("networkBadge");
+  const networkBadgeText = document.getElementById("networkBadgeText");
+  const networkDetails = document.getElementById("networkDetails");
+  const networkBadgeButton = document.getElementById("networkBadgeButton");
+  const median = values => {
+    if (!values.length) return null;
+    const sorted = [...values].sort((a, b) => a - b);
+    const middle = Math.floor(sorted.length / 2);
+    return sorted.length % 2 ? sorted[middle] : (sorted[middle - 1] + sorted[middle]) / 2;
+  };
+  function rttStats() {
+    const successes = rttSamples.filter(Number.isFinite);
+    const differences = successes.slice(1).map((value, index) => Math.abs(value - successes[index]));
+    return {
+      median: median(successes), min: successes.length ? Math.min(...successes) : null,
+      max: successes.length ? Math.max(...successes) : null,
+      jitter: differences.length ? differences.reduce((sum, value) => sum + value, 0) / differences.length : 0,
+      loss_pct: rttSamples.length ? ((rttSamples.length - successes.length) * 100) / rttSamples.length : 100,
+      n: successes.length,
+    };
+  }
+  function updateNetworkBadge() {
+    const stats = rttStats();
+    const online = navigator.onLine;
+    const state = online && stats.median !== null && stats.median < 100 && stats.loss_pct === 0 ? "ok"
+      : online && stats.median !== null && stats.median < 300 && stats.loss_pct < 5 ? "warn" : "bad";
+    networkBadge.className = `topbar-status-badge network-badge ${state}`;
+    networkBadgeText.textContent = stats.median === null ? "Network: unavailable" : `Network: ${stats.median.toFixed(1)} ms`;
+    const connection = navigator.connection;
+    const connectionText = connection ? `${connection.effectiveType || "unknown"}, ${connection.downlink ?? "—"} Mbps, ${connection.rtt ?? "—"} ms` : "Unavailable";
+    networkDetails.textContent = `Median: ${stats.median === null ? "—" : `${stats.median.toFixed(1)} ms`} · Jitter: ${stats.jitter.toFixed(1)} ms · Max: ${stats.max === null ? "—" : `${stats.max.toFixed(1)} ms`} · Loss: ${stats.loss_pct.toFixed(1)}% · Speed: ${latestSpeedMbps === null ? "—" : `${latestSpeedMbps.toFixed(2)} Mbps`} · Browser connection: ${connectionText}`;
+  }
+  async function sampleRtt() {
+    const controller = new AbortController();
+    const started = performance.now();
+    const timeout = setTimeout(() => controller.abort(), 3000);
+    let sample = null;
+    try {
+      const response = await nativeFetch("/api/ping", { cache: "no-store", credentials: "same-origin", signal: controller.signal });
+      if (!response.ok) throw new Error(`Ping failed: ${response.status}`);
+      await response.json();
+      sample = performance.now() - started;
+    } catch (_) {
+      // A failed or timed-out probe is explicitly retained as loss.
+    } finally {
+      clearTimeout(timeout);
+      rttSamples.push(sample);
+      if (rttSamples.length > 20) rttSamples.shift();
+      const stats = rttStats();
+      queueNetworkEvent("rtt", stats.median, JSON.stringify({ min: stats.min, max: stats.max, jitter: stats.jitter, loss_pct: stats.loss_pct, n: stats.n }));
+      updateNetworkBadge();
+      flushNetworkEvents();
+    }
+  }
+  async function sampleSpeed() {
+    if (speedTestInProgress || document.visibilityState !== "visible" || !navigator.onLine) return;
+    speedTestInProgress = true;
+    const started = performance.now();
+    try {
+      const response = await nativeFetch("/api/speedtest?kb=256", { cache: "no-store", credentials: "same-origin" });
+      if (!response.ok) throw new Error(`Speed test failed: ${response.status}`);
+      const bytes = (await response.arrayBuffer()).byteLength;
+      latestSpeedMbps = (bytes * 8) / ((performance.now() - started) / 1000) / 1000000;
+      if (Number.isFinite(latestSpeedMbps)) queueNetworkEvent("speed", latestSpeedMbps, "");
+    } catch (_) {
+      // The speed probe is optional and must never disrupt the UI.
+    } finally {
+      speedTestInProgress = false;
+      updateNetworkBadge();
+      flushNetworkEvents();
+    }
+  }
+  networkBadgeButton.addEventListener("click", () => {
+    networkDetails.hidden = !networkDetails.hidden;
+    networkBadgeButton.setAttribute("aria-expanded", String(!networkDetails.hidden));
+  });
+  updateNetworkBadge();
+  sampleRtt();
+  setInterval(sampleRtt, 10000);
+  setInterval(sampleSpeed, 60000);
+  document.addEventListener("visibilitychange", () => { if (document.visibilityState === "visible") sampleSpeed(); });
 
   // DOM References
   const tableBody = document.getElementById("tableBody");
@@ -3586,6 +3704,35 @@
   const kpiConnVal = document.getElementById("kpiConnVal");
   const kpiConnSub = document.getElementById("kpiConnSub");
   const topbarClock = document.getElementById("topbarClock");
+  const machineOverviewHours = document.getElementById("machineOverviewHours");
+  let machineOverviewRequestInFlight = false;
+
+  function formatMachineHours(hours) {
+    const numeric = Number(hours);
+    if (!Number.isFinite(numeric) || numeric < 0) return "—";
+    const totalMinutes = Math.floor(numeric * 60);
+    return `${Math.floor(totalMinutes / 60)}h ${totalMinutes % 60}m`;
+  }
+
+  function clearMachineOverviewMetrics() {
+    if (machineOverviewHours) machineOverviewHours.textContent = "—";
+  }
+
+  async function refreshMachineHours() {
+    const did = deviceSelect?.value;
+    if (!did || machineOverviewRequestInFlight) return;
+    machineOverviewRequestInFlight = true;
+    try {
+      const response = await fetch(`/api/devices/${encodeURIComponent(did)}/overview`);
+      if (!response.ok) throw new Error("Machine overview request failed");
+      const overview = await response.json();
+      if (machineOverviewHours) machineOverviewHours.textContent = formatMachineHours(overview.machine_hours);
+    } catch (_) {
+      clearMachineOverviewMetrics();
+    } finally {
+      machineOverviewRequestInFlight = false;
+    }
+  }
 
   // RMC DOM Elements
   const rmcJobBadge = document.getElementById("rmcJobBadge");
@@ -4371,38 +4518,65 @@
   }
 
   // Per-Device IP Management (Prevents device cross-talk)
-  function getDeviceIp(did) {
-    if (!did) did = deviceSelect.value;
-    if (!did) return "";
+  // One-time cleanup of the old machine-IP cache (stale IPs showed in the sidebar).
+  // Only "ufameasy_machine_ip*" keys are removed; operator name / selected device stay.
+  const IP_OVERRIDE_PREFIX = "ufameasy_machine_ip_override_";
+  if (!localStorage.getItem("ufameasy_ip_cache_v2")) {
+    Object.keys(localStorage)
+      .filter(k => k.startsWith("ufameasy_machine_ip") && !k.startsWith(IP_OVERRIDE_PREFIX))
+      .forEach(k => localStorage.removeItem(k));
+    localStorage.setItem("ufameasy_ip_cache_v2", "1");
+  }
+
+  function getIpOverride(did) {
+    return did ? (localStorage.getItem(IP_OVERRIDE_PREFIX + did) || "").trim() : "";
+  }
+
+  // Automatic IP: (a) machine_ip from the devices API, (b) device_001 only: address-bar host.
+  function getAutoDeviceIp(did) {
     const d = devicesById.get(did);
     if (d && typeof d === 'object') {
-      const ip = d.machine_ip || d.ip || d.host;
+      const ip = d.machine_ip;
       if (ip) return String(ip).trim();
     }
-    const savedDevIp = localStorage.getItem(`ufameasy_machine_ip_${did}`);
-    if (savedDevIp && savedDevIp.trim()) return savedDevIp.trim();
-
-    // Default 192.168.0.104 ONLY applies to device_001
     if (did === "device_001") {
-      const legacySaved = localStorage.getItem("ufameasy_machine_ip");
-      if (legacySaved && legacySaved.trim()) return legacySaved.trim();
       const host = window.location.hostname;
       if (host && host !== "localhost" && host !== "127.0.0.1") return host;
-      return "192.168.0.104";
     }
-
-    // For any other device (e.g. nidhi), NEVER default to device_001's IP
     return "";
   }
 
+  function getDeviceIp(did) {
+    if (!did) did = deviceSelect.value;
+    if (!did) return "";
+    return getIpOverride(did) || getAutoDeviceIp(did);
+  }
+
+  // Manual edit: stored only as an explicit override; matching the auto IP clears it.
   function setDeviceIp(did, ip) {
     if (!did) did = deviceSelect.value;
     if (!did || !ip) return;
-    localStorage.setItem(`ufameasy_machine_ip_${did}`, ip.trim());
-    if (did === "device_001") {
-      localStorage.setItem("ufameasy_machine_ip", ip.trim());
-    }
+    ip = ip.trim();
+    if (ip === getAutoDeviceIp(did)) localStorage.removeItem(IP_OVERRIDE_PREFIX + did);
+    else localStorage.setItem(IP_OVERRIDE_PREFIX + did, ip);
+    renderSideMachineIp(did);
   }
+
+  function renderSideMachineIp(did) {
+    const ip = getDeviceIp(did);
+    const sideIp = document.getElementById("sideMachineIp");
+    if (sideIp) sideIp.textContent = ip ? `${ip}:8000` : "—";
+    const manual = document.getElementById("sideIpManual");
+    if (manual) manual.hidden = !getIpOverride(did);
+  }
+
+  document.getElementById("sideIpReset")?.addEventListener("click", () => {
+    const did = deviceSelect.value;
+    if (!did) return;
+    localStorage.removeItem(IP_OVERRIDE_PREFIX + did);
+    if (sharedIpInput) sharedIpInput.value = getDeviceIp(did);
+    renderSideMachineIp(did);
+  });
 
   function getSharedIp() {
     const did = deviceSelect.value;
@@ -4460,6 +4634,7 @@
     if (!selectedDid) {
       stopCamera();
       clearRuntime();
+      clearMachineOverviewMetrics();
       resetTrendHistory();
       liveRuntimeData = {};
       latestPositionSets = { xma: null, xmr: null, xwa: null, xwr: null };
@@ -4487,6 +4662,7 @@
 
     // 2. CRITICAL: Clear all prior runtime KPIs, positions & trends
     clearRuntime();
+    clearMachineOverviewMetrics();
     resetTrendHistory();
     liveRuntimeData = {};
     latestPositionSets = { xma: null, xmr: null, xwa: null, xwr: null };
@@ -4505,8 +4681,7 @@
       sharedIpInput.value = devIp;
       sharedIpInput.placeholder = devIp ? "e.g. 192.168.0.104" : `Enter IP for ${selectedDid} (e.g. 192.168.1.100)`;
     }
-    const sideIp = document.getElementById("sideMachineIp");
-    if (sideIp) sideIp.textContent = devIp ? `${devIp}:8000` : "No IP configured";
+    renderSideMachineIp(selectedDid);
 
     const idleDesc = document.querySelector("#cameraCollapsed .idle-desc");
     if (idleDesc) {
@@ -4572,6 +4747,7 @@
 
     // 8. Fetch RMC device data (lock, commands audit) and render card
     await fetchRmcDeviceData(selectedDid);
+    await refreshMachineHours();
 
     logEvent("device_selected", selectedDid);
   }
@@ -5125,7 +5301,8 @@
     return false;
   }
 
-  let RMC_STALE_MS = 30000;
+  // Fallback used only until /api/rmc/config responds.
+  let RMC_STALE_MS = 90000;
 
   async function fetchRmcConfig() {
     try {
@@ -6672,7 +6849,7 @@
             if (st) {
               rmcStates[did] = st;
               rmcLastSeq[did] = Number(st.seq) || 0;
-              const recordedAt = new Date(st.recorded_at).getTime();
+              const recordedAt = new Date(st.received_at || st.recorded_at).getTime();
               if (Number.isFinite(recordedAt)) rmcLastStateReceivedAt[did] = recordedAt;
               else delete rmcLastStateReceivedAt[did];
             }
@@ -6907,6 +7084,7 @@
         light_enabled:   s.light_enabled   ?? s.RT031,
         laser_power_pct: s.laser_power_pct ?? s.DS010 ?? s.laser_power,
       });
+      await refreshMachineHours();
     } catch (_) { /* silently ignore network errors */ }
     finally { _equipPollInFlight = false; }
   }
