@@ -177,6 +177,39 @@ def _state_change_values(parameter_key: str) -> list[tuple[datetime, int, object
     return sorted(values, key=lambda item: (item[0], item[1]))
 
 
+def _connection_state_values() -> list[tuple[datetime, int, str]]:
+    """Read machine-authoritative connection changes from UFAMeasy telemetry."""
+    rows = _read_rows(
+        """SELECT id, timestamp, event_type, payload FROM telemetry_events
+           WHERE event_type IN (?, ?, ?)""",
+        ("MachineConnectionEvent", "machine_connect", "machine_disconnect"),
+    )
+    values: list[tuple[datetime, int, str]] = []
+    for row in rows:
+        timestamp = parse_telemetry_timestamp(row["timestamp"])
+        if timestamp is None:
+            continue
+        event_type = str(row["event_type"])
+        if event_type == "machine_disconnect":
+            values.append((timestamp, int(row["id"]), "disconnected"))
+            continue
+        if event_type == "machine_connect":
+            values.append((timestamp, int(row["id"]), "connected"))
+            continue
+        try:
+            payload = json.loads(row["payload"])
+        except (TypeError, json.JSONDecodeError):
+            continue
+        if not isinstance(payload, dict):
+            continue
+        state_name = str(
+            payload.get("state") or payload.get("status") or payload.get("connection_state") or ""
+        ).strip().lower()
+        if state_name:
+            values.append((timestamp, int(row["id"]), state_name))
+    return sorted(values, key=lambda item: (item[0], item[1]))
+
+
 _JOB_END_STATUSES = frozenset({"stopped", "completed", "aborted"})
 _JOB_FILE_KEYS = ("gcode_file", "file_name", "current_file", "file")
 
@@ -287,10 +320,19 @@ def _device_last_seen(device_id: str) -> datetime | None:
 
 def device_status(device_id: str, *, now: datetime | None = None) -> dict[str, str | None]:
     del device_id, now
-    values = _state_change_values("execution_state")
-    if not values:
+    execution_values = _state_change_values("execution_state")
+    connection_values = _connection_state_values()
+    if connection_values:
+        timestamp, event_id, connection_state = connection_values[-1]
+        # A later UFAMeasy disconnect is authoritative: do not leave the
+        # dashboard showing the stale execution state (for example, "idle").
+        if connection_state in {"disconnected", "offline"} and (
+            not execution_values or (timestamp, event_id) >= execution_values[-1][:2]
+        ):
+            return {"state": "disconnected", "last_seen": iso_utc(timestamp)}
+    if not execution_values:
         return {"state": "unknown", "last_seen": None}
-    timestamp, _event_id, value = values[-1]
+    timestamp, _event_id, value = execution_values[-1]
     state_name = str(value).strip().lower() if value is not None else "unknown"
     return {"state": state_name or "unknown", "last_seen": iso_utc(timestamp)}
 
