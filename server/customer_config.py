@@ -42,3 +42,43 @@ LEGACY_GCODE_ROOTS = tuple(
     if value.strip()
 )
 GZIP_MIN_SIZE = 500
+
+
+def machine_label(device_id: str) -> str:
+    return os.getenv("CUSTOMER_MACHINE_LABEL", "").strip() or device_id
+
+
+REPORT_MAX_DAYS = 92
+REPORT_MAX_JOBS = 500
+
+
+def _shift_minutes(name: str, default: str) -> int:
+    raw = os.getenv(name, default).strip() or default
+    try:
+        hours, minutes = (int(part) for part in raw.split(":", 1))
+    except ValueError:
+        hours, minutes = (int(part) for part in default.split(":", 1))
+    if not (0 <= hours <= 24 and 0 <= minutes < 60) or hours * 60 + minutes > 24 * 60:
+        hours, minutes = (int(part) for part in default.split(":", 1))
+    return hours * 60 + minutes
+
+
+def shift_window() -> tuple[int, int]:
+    """Shift start and end as minutes after local midnight (CUSTOMER_SHIFT_START/END, HH:MM).
+
+    Falls back to 09:00-18:00 when a value is missing, malformed, or the end is not after the start.
+    """
+    start = _shift_minutes("CUSTOMER_SHIFT_START", "09:00")
+    end = _shift_minutes("CUSTOMER_SHIFT_END", "18:00")
+    if end <= start:
+        return 9 * 60, 18 * 60
+    return start, end
+
+
+def show_operator() -> bool:
+    """True when CUSTOMER_SHOW_OPERATOR=1: job history may name the operator.
+
+    Off by default: operator names are personal data. Read on every call so the
+    setting can change without a restart. Never applies to log messages or CSV.
+    """
+    return os.getenv("CUSTOMER_SHOW_OPERATOR", "0").strip().lower() in {"1", "true", "yes", "on"}

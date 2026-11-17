@@ -271,6 +271,19 @@ class CustomerApiTests(unittest.TestCase):
         self.assertEqual(status["state"], "paused")
         self.assertEqual(status["last_seen"], "2026-11-06T12:00:00Z")
 
+    def test_disconnect_event_overrides_stale_idle_state(self):
+        now = datetime(2026, 11, 6, 12, 0, tzinfo=timezone.utc)
+        self._add_event(
+            1, now - timedelta(seconds=1), "StateChangedEvent",
+            {"parameter_key": "execution_state", "new_value": "idle"},
+        )
+        self._add_event(2, now, "machine_disconnect", {})
+
+        status = customer_stats.device_status("test", now=now)
+
+        self.assertEqual(status["state"], "disconnected")
+        self.assertEqual(status["last_seen"], "2026-11-06T12:00:00Z")
+
     def test_machine_status_is_unknown_without_ufameasy_state(self):
         self.assertEqual(customer_stats.device_status("customer-test-device")["state"], "unknown")
 

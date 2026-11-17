@@ -20,7 +20,7 @@ from fastapi import APIRouter, Depends, Header, HTTPException, Query, Request
 from fastapi.responses import FileResponse, Response, StreamingResponse
 
 from server import customer_config as config
-from server import customer_stats
+from server import customer_report, customer_report_pdf, customer_stats
 from server.auth import AUTH_COOKIE_NAME, require_auth
 from server.rmc_auth import Principal, require_role, resolve_principal
 
@@ -242,6 +242,61 @@ def get_history(
     except customer_stats.CustomerDataError:
         raise _generic_error(503, "service_unavailable") from None
     return _json_response(history, request, if_none_match)
+
+
+def _usage_report(customer_device_id: str, from_value: str | None, to_value: str | None) -> dict[str, Any]:
+    try:
+        start, end = customer_report.parse_period(
+            from_value, to_value, today=customer_report.local_today()
+        )
+        return customer_report.usage_report(customer_device_id, start, end)
+    except customer_report.InvalidPeriod:
+        raise _invalid() from None
+    except customer_stats.CustomerDataError:
+        raise _generic_error(503, "service_unavailable") from None
+
+
+@router.get("/report")
+def get_report(
+    request: Request,
+    from_value: str | None = Query(default=None, alias="from"),
+    to: str | None = None,
+    if_none_match: str | None = Header(default=None, alias="If-None-Match"),
+    customer_device_id: str = Depends(_require_access),
+):
+    report = _usage_report(customer_device_id, from_value, to)
+    return _json_response(report, request, if_none_match)
+
+
+@router.get("/report/jobs.csv")
+def download_report_jobs(
+    from_value: str | None = Query(default=None, alias="from"),
+    to: str | None = None,
+    customer_device_id: str = Depends(_require_access),
+):
+    report = _usage_report(customer_device_id, from_value, to)
+    period = report["period"]
+    return StreamingResponse(
+        customer_report.jobs_csv(report),
+        media_type="text/csv; charset=utf-8",
+        headers=_attachment_headers(f"usage_jobs_{period['from']}_{period['to']}.csv"),
+    )
+
+
+@router.get("/report/usage.pdf")
+def download_report_pdf(
+    from_value: str | None = Query(default=None, alias="from"),
+    to: str | None = None,
+    customer_device_id: str = Depends(_require_access),
+):
+    """The one-page A4 report as a file (same layout as the page's print view)."""
+    report = _usage_report(customer_device_id, from_value, to)
+    period = report["period"]
+    return Response(
+        content=customer_report_pdf.render(report),
+        media_type="application/pdf",
+        headers=_attachment_headers(f"usage_report_{period['from']}_{period['to']}.pdf"),
+    )
 
 
 @router.get("/files/view")
