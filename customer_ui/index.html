@@ -1,8 +1,170 @@
 <!doctype html>
-<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><meta name="color-scheme" content="light"><title>Overview</title><link rel="stylesheet" href="customer-assets/app.css?v=3"><script src="customer-assets/app.js?v=6" defer></script></head>
-<body><a class="skip-link" href="#main-content">Skip to content</a><header class="topbar"><div class="topbar-inner header-row"><div class="brand-block"><span class="product-name">UFAMeasy</span><span>Machine monitoring</span></div><div class="header-actions"><span class="machine-context" id="machineIdentity">Machine</span><span class="freshness" id="freshness" aria-live="polite">Updated —</span><button class="button" id="refreshData" type="button">Refresh</button><form action="logout" method="post"><button class="logout" type="submit">Log out</button></form></div></div><nav class="topbar-inner page-nav" aria-label="Primary"><a href="#overview" data-route-link="overview">Overview</a><a href="#logs" data-route-link="logs">Logs</a><a href="#history" data-route-link="history">Job history</a></nav></header>
-<main class="shell" id="main-content"><section class="notice" id="offlineNotice" hidden aria-live="polite">Connection is delayed. Showing the last available data.</section>
-<section class="page" id="page-overview" data-page="overview"><h1>Overview</h1><div class="overview-grid"><article class="card status-card state-unknown" id="statusHero"><div class="state-accent"></div><h2>Machine status</h2><div class="state-line"><span class="state-icon" id="statusIcon" aria-hidden="true">●</span><strong class="state-label skeleton-text" id="statusLabel">Loading</strong></div><p class="last-seen">Last seen <time class="skeleton-text" id="lastSeen">—</time></p><p class="status-explainer">Offline means the server has not recently received a message from the machine.</p><div class="loaded-block"><h2>Loaded file</h2><p class="loaded-file skeleton-text" id="loadedFile">Loading</p></div></article><article class="card metric-card"><h2>Total machine hours</h2><p class="metric-value skeleton-text" id="machineHours">Loading</p></article><article class="card recent-card"><div class="card-heading"><h2>Recent activity</h2><a href="#logs">View all logs</a></div><ul class="event-list" id="recentEvents"></ul><p class="empty-state" id="recentEventsEmpty" hidden>No recent activity</p></article></div></section>
-<section class="page" id="page-logs" data-page="logs" hidden><h1>Logs</h1><section class="card"><div class="filters-row"><div class="filters"><fieldset><legend>Time range</legend><div class="segmented" id="rangeButtons"><button type="button" data-log-range="24h" aria-pressed="false">24h</button><button type="button" data-log-range="7d" aria-pressed="true">7d</button><button type="button" data-log-range="30d" aria-pressed="false">30d</button><button type="button" data-log-range="custom" aria-pressed="false">Custom</button></div></fieldset><fieldset><legend>Events</legend><div class="segmented" id="eventButtons"><button type="button" data-severity="WARNINGS_ERRORS" aria-pressed="true">Warnings and errors</button><button type="button" data-severity="" aria-pressed="false">All events</button></div></fieldset><div class="date-fields"><label for="logsFrom">From</label><input id="logsFrom" type="datetime-local" disabled><label for="logsTo">To</label><input id="logsTo" type="datetime-local" disabled><button class="button" id="applyLogs" type="button" disabled>Apply</button></div></div><div class="table-actions"><button class="button" id="refreshLogs" type="button">Refresh</button><a class="button primary" id="downloadLogs" href="api/customer/logs/download" download="logs.csv">Download logs</a></div></div><p class="inline-error" id="logsError" role="alert" hidden></p><div class="table-wrap"><table><caption class="visually-hidden">Machine log events</caption><thead><tr><th>Time</th><th>Severity</th><th>Message</th></tr></thead><tbody id="logsBody"></tbody></table></div><p id="logsEmpty" hidden>No log events</p><div class="table-footer"><p id="logsState" aria-live="polite"></p><button class="button" id="loadMore" type="button" hidden>Load more</button></div></section></section>
-<section class="page" id="page-history" data-page="history" hidden><div class="page-heading"><h1>Job history</h1><div><label for="historyWindow">Period</label><select id="historyWindow"><option value="24h">Last 24 hours</option><option value="7d">Last 7 days</option><option value="30d" selected>Last 30 days</option><option value="all">All time</option></select></div></div><section class="card"><p id="historySummary"></p><div class="table-wrap"><table><caption class="visually-hidden">Print job history</caption><thead><tr><th>File name</th><th aria-sort="descending">Times run</th><th>Last run</th><th id="historyActionsHead">Actions</th></tr></thead><tbody id="historyBody"></tbody></table></div><p id="historyEmpty" hidden>No print jobs in this period</p></section></section></main>
-<footer>Times shown in Asia/Kolkata (IST, UTC+5:30)</footer><div id="toast" role="status" hidden></div><dialog id="fileModal" aria-labelledby="fileModalTitle"><button class="modal-close" id="closeFileModal" aria-label="Close file preview" type="button">×</button><h2 id="fileModalTitle">File preview</h2><p id="filePreviewMeta"></p><pre id="filePreview"></pre><a id="downloadPreviewFile" download>Download full file</a></dialog></body></html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="color-scheme" content="light">
+<title>Usage report</title>
+<link rel="icon" href="data:,">
+<link rel="stylesheet" href="customer-assets/app.css?v=6">
+<script src="customer-assets/app.js?v=9" defer></script>
+</head>
+<body>
+<a class="skip-link" href="#main-content">Skip to content</a>
+<header class="topbar">
+  <div class="topbar-inner">
+    <div class="brand"><img class="brand-logo" src="customer-assets/unnati.svg" alt="" width="29" height="32"><span class="product-name">UFAMeasy</span><span class="product-sub">Machine monitoring</span></div>
+    <nav class="page-nav" aria-label="Primary">
+      <a href="#report" data-route-link="report">Usage report</a>
+      <a href="#logs" data-route-link="logs">Logs</a>
+    </nav>
+    <div class="header-meta">
+      <span>Machine: <strong id="machineName">—</strong></span>
+      <span class="subtle" id="freshness" aria-live="polite">· Updated —</span>
+      <form action="logout" method="post"><button class="link-button" type="submit">Log out</button></form>
+    </div>
+  </div>
+</header>
+
+<main class="shell" id="main-content">
+  <p class="notice" id="offlineNotice" hidden aria-live="polite">Connection is delayed. Showing the last available data.</p>
+
+  <section class="page" id="page-report" data-page="report">
+    <header class="print-header print-only">
+      <img class="print-logo" src="customer-assets/unnati.svg" alt="Company logo">
+      <div class="print-title">
+        <p class="print-h1">Usage report</p>
+        <p class="print-sub">How the machine was used in the selected period.</p>
+      </div>
+      
+      <dl class="print-meta">
+        <div><dt>Machine:</dt><dd id="printMachine"></dd></div>
+        <div><dt>Period:</dt><dd id="printPeriod"></dd></div>
+        <div><dt>Generated:</dt><dd id="printGenerated"></dd></div>
+      </dl>
+    </header>
+
+    <div class="report-title no-print">
+      <h1>Usage report</h1>
+      <p class="subtle">How the machine was used in the selected period.</p>
+    </div>
+
+    <section class="card period-card no-print" aria-label="Report period">
+      <div class="period-controls">
+        <span class="field-label" id="periodLabel">Period</span>
+        <div class="segmented" id="periodButtons" role="group" aria-labelledby="periodLabel">
+          <button type="button" data-period="today" aria-pressed="false">Today</button>
+          <button type="button" data-period="week" aria-pressed="true">This week</button>
+          <button type="button" data-period="month" aria-pressed="false">This month</button>
+          <button type="button" data-period="custom" aria-pressed="false">Custom</button>
+        </div>
+        <div class="custom-dates" id="customDates" hidden>
+          <label class="date-field"><span class="field-label">From</span><input id="fromDate" type="date" disabled aria-describedby="dateError"></label>
+          <label class="date-field"><span class="field-label">To</span><input id="toDate" type="date" disabled aria-describedby="dateError"></label>
+        </div>
+        <span class="loading-note" id="reportLoading" role="status" aria-live="polite"></span>
+      </div>
+      <div class="period-actions">
+        <a class="button primary" id="downloadPdf" href="api/customer/report/usage.pdf" download>Download PDF</a>
+        <button class="button" id="printReport" type="button">Print</button>
+        <a class="button" id="downloadCsv" href="api/customer/report/jobs.csv" download>Download CSV</a>
+      </div>
+      <p class="inline-error date-error" id="dateError" role="alert" hidden></p>
+    </section>
+    <p class="inline-error no-print" id="reportError" role="alert" hidden></p>
+
+    <section class="card running-card no-print" id="runningNow" hidden aria-label="Job running now">
+      <span class="pill pill-running" id="runningState">Running now</span>
+      <div class="running-file"><strong id="runningFile"></strong></div>
+      <span class="subtle" id="runningSince"></span>
+      <div class="progress" id="runningProgressWrap" hidden><div class="progress-bar" id="runningProgress"></div></div>
+      <span class="subtle" id="runningLine"></span>
+      <span class="running-operator subtle" id="runningOperator"></span>
+    </section>
+
+    <div class="report-body" id="reportBody">
+      <section class="kpis" aria-label="Summary">
+        <article class="card kpi kpi-wide"><h2>Total run time</h2><p class="kpi-value" id="kpiRun">—</p><p class="kpi-sub" id="kpiRunSub"></p></article>
+        <article class="card kpi kpi-wide kpi-waiting"><h2>Parts completed</h2><p class="kpi-value muted">—</p><p class="kpi-sub">Not counted yet</p></article>
+        <article class="card kpi"><h2>Jobs run</h2><p class="kpi-value" id="kpiJobs">—</p><p class="kpi-sub">jobs started</p><p class="kpi-sub" id="kpiJobsSub"></p></article>
+        <article class="card kpi"><h2>Completed</h2><p class="kpi-value tone-good" id="kpiDone">—</p><p class="kpi-sub" id="kpiDoneSub"></p></article>
+        <article class="card kpi"><h2>Stopped early</h2><p class="kpi-value tone-warn" id="kpiStopped">—</p><p class="kpi-sub">stopped before the end</p></article>
+        <article class="card kpi"><h2>Machine faults</h2><p class="kpi-value tone-bad" id="kpiFaults">—</p><p class="kpi-sub">emergency stop or lost connection</p></article>
+      </section>
+
+      <section class="card timeline-card" aria-labelledby="timelineTitle">
+        <div class="card-head">
+          <h2 id="timelineTitle">Timeline</h2>
+          <span class="subtle" id="timelineHint"></span>
+        </div>
+        <div class="timeline" id="timeline"></div>
+        <ul class="legend">
+          <li><span class="swatch st-running"></span>Running</li>
+          <li><span class="swatch st-paused"></span>Paused</li>
+          <li><span class="swatch st-idle"></span>Idle</li>
+          <li><span class="swatch st-off"></span>Off</li>
+          <li><span class="swatch swatch-fault"></span>Machine fault</li>
+        </ul>
+      </section>
+
+      <section class="card jobs-card" aria-labelledby="jobsTitle">
+        <div class="card-head">
+          <h2 id="jobsTitle">Job Execution History</h2>
+          <span class="subtle" id="jobsHint"></span>
+        </div>
+        <div class="table-wrap">
+          <table class="data-table jobs-table">
+            <caption class="visually-hidden">Jobs started in the period</caption>
+            <colgroup><col class="c-date"><col class="c-operator"><col class="c-file"><col class="c-time"><col class="c-time"><col class="c-run"><col class="c-result"><col class="c-reason"></colgroup>
+            <thead><tr><th scope="col">Date</th><th scope="col">Operator</th><th scope="col">File</th><th scope="col">Start</th><th scope="col">End</th><th scope="col">Run time</th><th scope="col">Result</th><th scope="col">Reason</th></tr></thead>
+            <tbody id="jobsBody"></tbody>
+            <tfoot id="jobsFoot"></tfoot>
+          </table>
+        </div>
+        <p class="empty-state" id="jobsEmpty" hidden>No jobs in this period.</p>
+        <button class="link-button more-button no-print" id="moreJobs" type="button" hidden></button>
+      </section>
+
+      <section class="about" aria-labelledby="aboutTitle">
+        <h2 id="aboutTitle">About this report</h2>
+        <p>Times are in IST. Run time excludes paused time.</p>
+        <p id="aboutTimeline"></p>
+      </section>
+    </div>
+
+    <footer class="print-footer print-only">
+      <span>Reviewed by:</span><span class="sign-line"></span>
+      <span>Date:</span><span class="sign-line sign-line-short"></span>
+    </footer>
+  </section>
+
+  <section class="page" id="page-logs" data-page="logs" hidden>
+    <h1>Logs</h1>
+    <section class="card">
+      <div class="filters-row">
+        <div class="filters">
+          <fieldset><legend>Time range</legend><div class="segmented" id="rangeButtons"><button type="button" data-log-range="24h" aria-pressed="false">24h</button><button type="button" data-log-range="7d" aria-pressed="true">7d</button><button type="button" data-log-range="30d" aria-pressed="false">30d</button><button type="button" data-log-range="custom" aria-pressed="false">Custom</button></div></fieldset>
+          <fieldset><legend>Events</legend><div class="segmented" id="eventButtons"><button type="button" data-severity="WARNINGS_ERRORS" aria-pressed="false">Warnings and errors</button><button type="button" data-severity="" aria-pressed="true">All events</button></div></fieldset>
+          <div class="date-fields"><label for="logsFrom">From</label><input id="logsFrom" type="datetime-local" disabled><label for="logsTo">To</label><input id="logsTo" type="datetime-local" disabled><button class="button" id="applyLogs" type="button" disabled>Apply</button></div>
+        </div>
+        <div class="table-actions"><button class="button" id="refreshLogs" type="button">Refresh</button><a class="button primary" id="downloadLogs" href="api/customer/logs/download" download="logs.csv">Download logs</a></div>
+      </div>
+      <p class="inline-error" id="logsError" role="alert" hidden></p>
+      <div class="table-wrap"><table class="data-table"><caption class="visually-hidden">Machine log events</caption><thead><tr><th>Time</th><th>Severity</th><th>Message</th></tr></thead><tbody id="logsBody"></tbody></table></div>
+      <p class="empty-state" id="logsEmpty" hidden>No log events</p>
+      <div class="table-footer"><p class="subtle" id="logsState" aria-live="polite"></p><button class="button" id="loadMore" type="button" hidden>Load more</button></div>
+    </section>
+  </section>
+</main>
+
+<footer>Times shown in Asia/Kolkata (IST, UTC+5:30)</footer>
+<div class="toast" id="toast" role="status" hidden></div>
+<dialog id="fileModal" aria-labelledby="fileModalTitle">
+  <button class="modal-close" id="closeFileModal" aria-label="Close file preview" type="button">×</button>
+  <h2 id="fileModalTitle">File preview</h2>
+  <p class="subtle" id="filePreviewMeta"></p>
+  <pre id="filePreview"></pre>
+  <a class="button" id="downloadPreviewFile" download>Download full file</a>
+</dialog>
+</body>
+</html>

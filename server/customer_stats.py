@@ -210,66 +210,193 @@ def _connection_state_values() -> list[tuple[datetime, int, str]]:
     return sorted(values, key=lambda item: (item[0], item[1]))
 
 
-_JOB_END_STATUSES = frozenset({"stopped", "completed", "aborted"})
+# "failed" = the workbench ended the job itself (E-stop, lost controller, start failure).
+_JOB_END_STATUSES = frozenset({"stopped", "completed", "aborted", "failed"})
 _JOB_FILE_KEYS = ("gcode_file", "file_name", "current_file", "file")
+UNKNOWN_OPERATOR = "Unknown"
+# Legacy `user` values that name no person (workbench fallbacks before/without login).
+_NO_OPERATOR_VALUES = frozenset({"", "unknown", "system"})
+_MAX_OPERATOR_LEN = 64
 
 
 def _job_file_name(*payloads: dict[str, Any]) -> str:
-    """Get the file the machine reported for a job attempt, if any."""
-    for payload in payloads:
-        for key in _JOB_FILE_KEYS:
+    """Get the file the machine reported for a job attempt, if any.
+
+    ``gcode_file`` wins over the other keys in every payload, so a real name on
+    the start event is not hidden by a generic key on the end event.
+    """
+    for key in _JOB_FILE_KEYS:
+        for payload in payloads:
             value = payload.get(key)
             if isinstance(value, str) and value.strip():
                 return file_basename(value)
     return ""
 
 
-def _closed_job_attempts() -> list[tuple[datetime, str, str]]:
-    """Pair telemetry job starts with their terminal events.
+def _clean_operator(value: object) -> str | None:
+    """A display-safe operator name, or None when the value names nobody."""
+    if not isinstance(value, str):
+        return None
+    printable = "".join(ch for ch in value if ch.isprintable())
+    name = " ".join(printable.split())[:_MAX_OPERATOR_LEN].strip()
+    if name.casefold() in _NO_OPERATOR_VALUES:
+        return None
+    return name
 
-    The machine's telemetry log is authoritative for runs initiated locally,
-    including an operator abort, which may not create a server-side session.
+
+def _legacy_user_name(value: object) -> str | None:
+    """Name part of the workbench's legacy ``user`` field, "name (Role)"."""
+    if not isinstance(value, str):
+        return None
+    text = value.strip()
+    if text.endswith(")") and " (" in text:
+        text = text.rsplit(" (", 1)[0]
+    return _clean_operator(text)
+
+
+def _job_operator(*payloads: dict[str, Any]) -> str:
+    """Operator of a job: ``operator`` (frozen at Start), else legacy ``user``, else Unknown.
+
+    Pass the start event first: the person who pressed Start owns the job, even
+    if someone else is logged in when it ends.
     """
-    open_jobs: dict[str, tuple[dict[str, Any], str]] = {}
-    closed: list[tuple[datetime, str, str]] = []
+    for payload in payloads:
+        name = _clean_operator(payload.get("operator"))
+        if name:
+            return name
+    for payload in payloads:
+        name = _legacy_user_name(payload.get("user"))
+        if name:
+            return name
+    return UNKNOWN_OPERATOR
+
+
+def _job_key(session_id: str, payload: dict[str, Any]) -> str:
+    """Pair start and end events by ``job_id`` when the workbench sends one."""
+    job_id = payload.get("job_id")
+    if isinstance(job_id, str) and job_id.strip():
+        return f"job:{job_id.strip()}"
+    return f"session:{session_id}"
+
+
+def _real_file_name(reported_file: str, *payloads: dict[str, Any]) -> str:
+    """File name from the job events; the controller's temp copy is replaced by the
+    ``current_file`` the machine reported when the job started."""
+    file_name = _job_file_name(*payloads)
+    if _CONTROLLER_GCODE_RE.fullmatch(file_name) and reported_file:
+        return reported_file
+    return file_name
+
+
+def _number(value: object) -> float | None:
+    if isinstance(value, bool) or not isinstance(value, (int, float)):
+        return None
+    return float(value) if value >= 0 else None
+
+
+def _job_reason(status: str, payload: dict[str, Any]) -> str:
+    """Short, display-safe reason a job ended early ("" when it completed)."""
+    if status == "failed":
+        return redact_message(payload.get("error_message"), "Fault (reason not reported)")
+    if status == "aborted":
+        return "Aborted"
+    return ""
+
+
+def _job_runs() -> list[dict[str, Any]]:
+    """Every job attempt in the telemetry, in the order it was settled.
+
+    ``status`` is the end status for a closed job, ``"open"`` for a start with no
+    end yet, or ``"unrecorded"`` when a new start replaced a start that never got
+    an end event (UFAMeasy closed or crashed during the job).
+    """
+    open_jobs: dict[str, dict[str, Any]] = {}
+    runs: list[dict[str, Any]] = []
     current_file = ""
     file_changes = _state_change_values("current_file")
     file_index = 0
+
+    def opened_run(timestamp: datetime, payload: dict[str, Any], reported_file: str) -> dict[str, Any]:
+        total_lines = _number(payload.get("total_lines"))
+        return {
+            "started_at": timestamp,
+            "ended_at": None,
+            "status": "open",
+            "file_name": _real_file_name(reported_file, payload),
+            "operator": _job_operator(payload),
+            "run_seconds": None,
+            "reason": "",
+            "total_lines": int(total_lines) if total_lines is not None else None,
+            "_start_payload": payload,
+            "_reported_file": reported_file,
+        }
+
     for timestamp, event_id, session_id, payload in _print_events():
         while file_index < len(file_changes) and file_changes[file_index][:2] <= (timestamp, event_id):
             value = file_changes[file_index][2]
             current_file = file_basename(value) if isinstance(value, str) and value.strip() else ""
             file_index += 1
         status = str(payload.get("status") or "").lower()
+        key = _job_key(session_id, payload)
         if status == "started":
-            open_jobs[session_id] = (payload, current_file)
+            replaced = open_jobs.pop(key, None)
+            if replaced is not None:
+                replaced["status"] = "unrecorded"
+                runs.append(replaced)
+            open_jobs[key] = opened_run(timestamp, payload, current_file)
         elif status in _JOB_END_STATUSES:
-            opened = open_jobs.pop(session_id, None)
-            if opened is not None:
-                start_payload, reported_file = opened
-                file_name = _job_file_name(payload, start_payload)
-                if _CONTROLLER_GCODE_RE.fullmatch(file_name) and reported_file:
-                    file_name = reported_file
-                closed.append((timestamp, status, file_name))
+            run = open_jobs.pop(key, None)
+            if run is None:
+                continue
+            start_payload = run["_start_payload"]
+            elapsed = _number(payload.get("elapsed_seconds"))
+            run.update(
+                ended_at=timestamp,
+                status=status,
+                file_name=_real_file_name(run["_reported_file"], payload, start_payload),
+                operator=_job_operator(start_payload, payload),
+                run_seconds=elapsed if elapsed is not None else max(0.0, (timestamp - run["started_at"]).total_seconds()),
+                reason=_job_reason(status, payload),
+            )
+            runs.append(run)
         # paused and resumed preserve an already-open job.
-    return closed
+    runs.extend(open_jobs.values())
+    for run in runs:
+        run.pop("_start_payload", None)
+        run.pop("_reported_file", None)
+    return runs
+
+
+def _closed_job_attempts() -> list[tuple[datetime, str, str, str]]:
+    """Pair telemetry job starts with their terminal events.
+
+    Returns (ended_at, status, file_name, operator) per closed job. The machine's
+    telemetry log is authoritative for runs initiated locally, including an
+    operator abort, which may not create a server-side session.
+    """
+    return [
+        (run["ended_at"], run["status"], run["file_name"], run["operator"])
+        for run in _job_runs()
+        if run["status"] in _JOB_END_STATUSES
+    ]
 
 
 def _closed_jobs() -> list[tuple[datetime, str]]:
     """Return closed attempts for the overview counters."""
-    return [(ended_at, status) for ended_at, status, _file_name in _closed_job_attempts()]
+    return [(ended_at, status) for ended_at, status, _file_name, _operator in _closed_job_attempts()]
 
 
 def _has_active_job() -> bool:
     """True while telemetry has a started job without a terminal event."""
-    active_sessions: set[str] = set()
+    active_jobs: set[str] = set()
     for _timestamp, _event_id, session_id, payload in _print_events():
         status = str(payload.get("status") or "").lower()
+        key = _job_key(session_id, payload)
         if status == "started":
-            active_sessions.add(session_id)
+            active_jobs.add(key)
         elif status in _JOB_END_STATUSES:
-            active_sessions.discard(session_id)
-    return bool(active_sessions)
+            active_jobs.discard(key)
+    return bool(active_jobs)
 
 
 def job_summary(window: str, *, now: datetime | None = None) -> dict[str, Any]:
@@ -278,15 +405,24 @@ def job_summary(window: str, *, now: datetime | None = None) -> dict[str, Any]:
     total = 0
     completed = 0
     stopped = 0
+    failed = 0
     for closed_at, status in _closed_jobs():
         if not cutoff <= closed_at <= now_utc:
             continue
         total += 1
         if status == "completed":
             completed += 1
+        elif status == "failed":
+            failed += 1
         else:
             stopped += 1
-    return {"window": window, "count": total, "completed": completed, "stopped": stopped}
+    return {
+        "window": window,
+        "count": total,
+        "completed": completed,
+        "stopped": stopped,
+        "failed": failed,
+    }
 
 
 def _device_last_seen(device_id: str) -> datetime | None:
@@ -513,8 +649,8 @@ def customer_history(device_id: str, window: str, *, now: datetime | None = None
     now_utc = _as_utc(now or datetime.now(timezone.utc))
     start, end = _history_bounds(window, now_utc)
     runs = [
-        (ended_at, file_name)
-        for ended_at, _status, file_name in _closed_job_attempts()
+        (ended_at, file_name, operator)
+        for ended_at, _status, file_name, operator in _closed_job_attempts()
         if (start is None or ended_at >= start) and (end is None or ended_at <= end)
     ]
 
@@ -539,15 +675,16 @@ def customer_history(device_id: str, window: str, *, now: datetime | None = None
         finally:
             conn.close()
         runs = [
-            (started_at, file_basename(row["file_name"]))
+            (started_at, file_basename(row["file_name"]), UNKNOWN_OPERATOR)
             for row in rows
             if (started_at := parse_server_timestamp(row["started_at"])) is not None
         ]
 
+    show_operator = config.show_operator()
     groups: dict[str, dict[str, Any]] = {}
     total_runs = 0
     unnamed_runs = 0
-    for started_at, original_name in runs:
+    for started_at, original_name, operator in runs:
         total_runs += 1
         name = _history_display_name(original_name)
         if _is_unnamed_file(original_name):
@@ -561,12 +698,14 @@ def customer_history(device_id: str, window: str, *, now: datetime | None = None
                 "runs": 0,
                 "last_run": started_at,
                 "available": name != "No file name",
+                "last_operator": operator,
             },
         )
         group["runs"] += 1
         if started_at > group["last_run"]:
             group["last_run"] = started_at
             group["file_name"] = original_name if name != "No file name" else ""
+            group["last_operator"] = operator
 
     selected_groups = sorted(
         groups.values(),
@@ -576,15 +715,17 @@ def customer_history(device_id: str, window: str, *, now: datetime | None = None
     files: list[dict[str, Any]] = []
     for group in selected_groups:
         name = str(group["file_name"])
-        files.append(
-            {
-                "file_name": name,
-                "display_name": group["display_name"],
-                "runs": group["runs"],
-                "last_run": iso_utc(group["last_run"]),
-                "available": bool(group["available"]) and _available_gcode_file(name) is not None,
-            }
-        )
+        item = {
+            "file_name": name,
+            "display_name": group["display_name"],
+            "runs": group["runs"],
+            "last_run": iso_utc(group["last_run"]),
+            "available": bool(group["available"]) and _available_gcode_file(name) is not None,
+        }
+        if show_operator:
+            # Operator of the newest run of this file. Off by default (personal data).
+            item["last_operator"] = group["last_operator"]
+        files.append(item)
     return {"window": window, "total_runs": total_runs, "unnamed_runs": unnamed_runs, "files": files}
 
 
@@ -642,6 +783,10 @@ def _safe_message(event_type: str, payload: object) -> str:
             values.get("state") or values.get("status") or values.get("connection_state") or ""
         ).strip().lower()
         return f"Machine {state_name}" if state_name else "Machine connection updated"
+    if event_type == "RoleChangedEvent":
+        # Who signed in stays out of the logs; only the role is shown.
+        role = redact_message(values.get("new_role"), "")
+        return f"UFAMeasy sign-in ({role})" if role else "UFAMeasy sign-in"
     if event_type == "machine_connect":
         return "Machine connected"
     if event_type == "machine_disconnect":
